@@ -1,13 +1,11 @@
 package statesDict
 
-type state string
-
-type StatesDictionary struct{
-	States map[string]int
+type StatesDictionary struct {
+	States map[int64]string
 }
 
 func NewStatesDictionary() StatesDictionary {
 	return StatesDictionary{
-		States: map[string]int{},
+		States: map[int64]string{},
 	}
 }
