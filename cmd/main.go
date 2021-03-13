@@ -54,10 +54,10 @@ func connectToDB() (*sql.DB, error) {
 func main() {
 	server := echo.New()
 
-	db, _ := connectToDB()
-	//if err != nil {
-	//	zap.S().Fatalf("failed to connect to db, %v", err)
-	//}
+	db, err := connectToDB()
+	if err != nil {
+		zap.S().Infof("failed to connect to db, %v", err)
+	}
 	defer func() {
 		err := db.Close()
 		if err != nil {
