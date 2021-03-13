@@ -6,6 +6,7 @@ import (
 	eHandlers "github.com/calendar-bot/pkg/events/handlers"
 	eStorage "github.com/calendar-bot/pkg/events/storage"
 	eUsecase "github.com/calendar-bot/pkg/events/usecase"
+	"github.com/calendar-bot/pkg/statesDict"
 
 	uHandlers "github.com/calendar-bot/pkg/users/handlers"
 	uStorage "github.com/calendar-bot/pkg/users/storage"
@@ -25,9 +26,10 @@ func newRequestHandler(db *sql.DB) *RequestHandlers {
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
 	eventHandlers := eHandlers.NewEventHandlers(eventUseCase)
 
+	states := statesDict.NewStatesDictionary()
 	userStorage := uStorage.NewUserStorage(db)
 	userUseCase := uUsecase.NewUserUseCase(userStorage)
-	userHandlers := uHandlers.NewUserHandlers(userUseCase)
+	userHandlers := uHandlers.NewUserHandlers(userUseCase, states)
 
 	return &(RequestHandlers{
 		eventHandlers: eventHandlers,
@@ -48,13 +50,14 @@ func connectToDB() (*sql.DB, error) {
 	return db, nil
 }
 
+
 func main() {
 	server := echo.New()
 
-	db, err := connectToDB()
-	if err != nil {
-		zap.S().Fatalf("failed to connect to db, %v", err)
-	}
+	db, _ := connectToDB()
+	//if err != nil {
+	//	zap.S().Fatalf("failed to connect to db, %v", err)
+	//}
 	defer func() {
 		err := db.Close()
 		if err != nil {
@@ -62,9 +65,11 @@ func main() {
 		}
 	}()
 
+
 	allHandler := newRequestHandler(db)
 
 	allHandler.eventHandlers.InitHandlers(server)
+	allHandler.userHandlers.InitHandlers(server)
 
 	server.Logger.Fatal(server.Start(":8080"))
 }
