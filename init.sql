@@ -1,15 +1,27 @@
-create extension if not exists CITEXT;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS events CASCADE;
 
-drop table if exists users cascade ;
+CREATE EXTENSION IF NOT EXISTS CITEXT;
 
-create table users (
-user_id integer not null,
-nickname CITEXT NOT NULL,
-fullname CITEXT
+CREATE TABLE users
+(
+    id               BIGSERIAL PRIMARY KEY NOT NULL UNIQUE,
+    mail_user_id     VARCHAR(128)          NOT NULL UNIQUE CHECK ( mail_user_id <> '' ),
+
+    telegram_user_id BIGINT                NOT NULL UNIQUE
+
+--     nickname         VARCHAR(256)          NOT NULL,
+--     fullname         VARCHAR(512)          NOT NULL,
 );
 
-CREATE TABLE events (
-event_id serial,
-event_name CITEXT,
-user_id integer not null
+CREATE TABLE events
+(
+    id          BIGSERIAL PRIMARY KEY NOT NULL UNIQUE,
+    user_id     BIGINT                NOT NULL,
+    name        CITEXT,
+    description CITEXT,
+
+    FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
