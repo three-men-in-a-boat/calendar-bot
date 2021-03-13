@@ -28,8 +28,8 @@ func newRequestHandler(db *sql.DB) *RequestHandlers {
 
 func connectToDB(server *echo.Echo) (*sql.DB, error) {
 	usernameDB := "main"
-	passwordDB := os.Getenv("main")
-	nameDB := os.Getenv("mainnet")
+	passwordDB := "main"
+	nameDB := "mainnet"
 	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
 
 	db, err := sql.Open("postgres", connectString)
