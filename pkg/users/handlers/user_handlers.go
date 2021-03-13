@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"encoding/json"
 	"github.com/calendar-bot/pkg/statesDict"
+	"github.com/calendar-bot/pkg/types"
 	"github.com/calendar-bot/pkg/users/usecase"
 	"github.com/labstack/echo"
 	"math/rand"
@@ -35,6 +37,19 @@ func (e *UserHandlers) changeStateInLink(c echo.Context) error {
 	return c.String(http.StatusOK, link)
 }
 
+func (e *UserHandlers) getEvents(c echo.Context) error {
+	var events []types.Event
+	event1 := types.Event{Name: "Meeting in Zoom", Participants: []string{"Nikolay, Alexey, Alexandr"}, Time: "Today 23:00"}
+	event2 := types.Event{Name: "Meeting in university", Participants: []string{"Mike, Alex, Gabe"}, Time: "Tomorrow 23:00"}
+	events = append(events, event1, event2)
+	b, err := json.Marshal(events)
+	if err != nil {
+		return err
+	}
+	return c.String(http.StatusOK, string(b))
+}
+
 func (e *UserHandlers) InitHandlers(server *echo.Echo) {
 	server.GET("/api/v1/oauth/telegram/:name/ref", e.changeStateInLink)
+	server.GET("/api/v1/oauth/telegram/events", e.getEvents)
 }
