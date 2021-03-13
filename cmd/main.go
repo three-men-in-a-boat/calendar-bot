@@ -5,14 +5,13 @@ import (
 	_ "database/sql"
 	eHandlers "github.com/calendar-bot/pkg/events/handlers"
 	eStorage "github.com/calendar-bot/pkg/events/storage"
-	eUsecase"github.com/calendar-bot/pkg/events/usecase"
+	eUsecase "github.com/calendar-bot/pkg/events/usecase"
 
 	uHandlers "github.com/calendar-bot/pkg/users/handlers"
 	uStorage "github.com/calendar-bot/pkg/users/storage"
-	uUsecase"github.com/calendar-bot/pkg/users/usecase"
+	uUsecase "github.com/calendar-bot/pkg/users/usecase"
 	"github.com/labstack/echo"
 	"go.uber.org/zap"
-	"os"
 )
 
 type RequestHandlers struct {
@@ -38,8 +37,8 @@ func newRequestHandler(db *sql.DB) *RequestHandlers {
 
 func connectToDB() (*sql.DB, error) {
 	usernameDB := "main"
-	passwordDB := os.Getenv("main")
-	nameDB := os.Getenv("mainnet")
+	passwordDB := "main"
+	nameDB := "mainnet"
 	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
 
 	db, err := sql.Open("postgres", connectString)
