@@ -12,12 +12,13 @@ import (
 	uStorage "github.com/calendar-bot/pkg/users/storage"
 	uUsecase "github.com/calendar-bot/pkg/users/usecase"
 	"github.com/labstack/echo"
+	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
 type RequestHandlers struct {
 	eventHandlers eHandlers.EventHandlers
-	userHandlers uHandlers.UserHandlers
+	userHandlers  uHandlers.UserHandlers
 }
 
 func newRequestHandler(db *sql.DB) *RequestHandlers {
@@ -33,7 +34,7 @@ func newRequestHandler(db *sql.DB) *RequestHandlers {
 
 	return &(RequestHandlers{
 		eventHandlers: eventHandlers,
-		userHandlers: userHandlers,
+		userHandlers:  userHandlers,
 	})
 }
 
@@ -47,9 +48,11 @@ func connectToDB() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := db.Ping(); err != nil {
+		return nil, err
+	}
 	return db, nil
 }
-
 
 func main() {
 	server := echo.New()
@@ -57,6 +60,7 @@ func main() {
 	db, err := connectToDB()
 	if err != nil {
 		zap.S().Infof("failed to connect to db, %v", err)
+		println(err.Error())
 	}
 	defer func() {
 		err := db.Close()
@@ -64,7 +68,6 @@ func main() {
 			zap.S().Errorf("failed to close db connection, %v", err)
 		}
 	}()
-
 
 	allHandler := newRequestHandler(db)
 

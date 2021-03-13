@@ -11,9 +11,11 @@ import (
 	"strconv"
 )
 
+const RedirectUrlProd = "https://t.me/three_man_in_boat_bot"
+
 type UserHandlers struct {
 	userUseCase usecase.UserUseCase
-	statesDict statesDict.StatesDictionary
+	statesDict  statesDict.StatesDictionary
 }
 
 func NewUserHandlers(eventUseCase usecase.UserUseCase, states statesDict.StatesDictionary) UserHandlers {
@@ -28,7 +30,6 @@ func (e *UserHandlers) changeStateInLink(c echo.Context) error {
 	}
 	rand.Seed(int64(seed))
 	state := rand.Int()
-
 
 	e.statesDict.States[int64(state)] = name
 
@@ -56,20 +57,30 @@ func (e *UserHandlers) InitHandlers(server *echo.Echo) {
 }
 
 func (uh *UserHandlers) TelegramOauth(rwContext echo.Context) error {
-	values :=rwContext.Request().URL.Query()
+	values := rwContext.Request().URL.Query()
 
 	code := values.Get("code")
 	state := values.Get("state")
 
 	stateInt, err := strconv.Atoi(state)
 	if err != nil {
+		println(err.Error())
 		return err
 	}
 
 	tgId, err := strconv.Atoi(uh.statesDict.States[int64(stateInt)])
 	if err != nil {
+		println(err.Error())
 		return err
 	}
 
-	return uh.userUseCase.TelegramCreateUser(int64(tgId), code)
+	if err := uh.userUseCase.TelegramCreateUser(int64(tgId), code); err != nil {
+		return err
+	}
+
+	if err := rwContext.Redirect(http.StatusTemporaryRedirect, RedirectUrlProd); err != nil {
+		return err
+	}
+
+	return nil
 }

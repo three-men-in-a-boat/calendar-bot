@@ -1,8 +1,6 @@
 package statesDict
 
-type state string
-
-type StatesDictionary struct{
+type StatesDictionary struct {
 	States map[int64]string
 }
 

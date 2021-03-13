@@ -34,6 +34,7 @@ func (us *UserStorage) CreateUser(user models.User) error {
 	)
 
 	if err != nil {
+		println(err.Error())
 		return err
 	}
 
