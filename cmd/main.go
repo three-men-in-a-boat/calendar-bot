@@ -42,8 +42,11 @@ func connectToDB(server *echo.Echo) (*sql.DB, error) {
 func main() {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 fmt.Println("dfdf")
 =======
+=======
+>>>>>>> d263136... Added events and users levels
 =======
 >>>>>>> d263136... Added events and users levels
 	server := echo.New()
@@ -65,6 +68,9 @@ fmt.Println("dfdf")
 
 	server.Logger.Fatal(server.Start(":8080"))
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> d263136... Added events and users levels
+=======
 >>>>>>> d263136... Added events and users levels
 =======
 >>>>>>> d263136... Added events and users levels
