@@ -3,30 +3,40 @@ package main
 import (
 	"database/sql"
 	_ "database/sql"
-	"github.com/calendar-bot/pkg/events/handlers"
-	"github.com/calendar-bot/pkg/events/storage"
-	"github.com/calendar-bot/pkg/events/usecase"
+	eHandlers "github.com/calendar-bot/pkg/events/handlers"
+	eStorage "github.com/calendar-bot/pkg/events/storage"
+	eUsecase"github.com/calendar-bot/pkg/events/usecase"
+
+	uHandlers "github.com/calendar-bot/pkg/users/handlers"
+	uStorage "github.com/calendar-bot/pkg/users/storage"
+	uUsecase"github.com/calendar-bot/pkg/users/usecase"
 	"github.com/labstack/echo"
 	"go.uber.org/zap"
 	"os"
 )
 
 type RequestHandlers struct {
-	eventHandlers handlers.EventHandlers
+	eventHandlers eHandlers.EventHandlers
+	userHandlers uHandlers.UserHandlers
 }
 
 func newRequestHandler(db *sql.DB) *RequestHandlers {
 
-	eventStorage := storage.NewEventStorage(db)
-	eventUseCase := usecase.NewEventUseCase(eventStorage)
-	eventHandlers := handlers.NewEventHandlers(eventUseCase)
+	eventStorage := eStorage.NewEventStorage(db)
+	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
+	eventHandlers := eHandlers.NewEventHandlers(eventUseCase)
+
+	userStorage := uStorage.NewUserStorage(db)
+	userUseCase := uUsecase.NewUserUseCase(userStorage)
+	userHandlers := uHandlers.NewUserHandlers(userUseCase)
 
 	return &(RequestHandlers{
 		eventHandlers: eventHandlers,
+		userHandlers: userHandlers,
 	})
 }
 
-func connectToDB(server *echo.Echo) (*sql.DB, error) {
+func connectToDB() (*sql.DB, error) {
 	usernameDB := "main"
 	passwordDB := os.Getenv("main")
 	nameDB := os.Getenv("mainnet")
@@ -42,7 +52,7 @@ func connectToDB(server *echo.Echo) (*sql.DB, error) {
 func main() {
 	server := echo.New()
 
-	db, err := connectToDB(server)
+	db, err := connectToDB()
 	if err != nil {
 		zap.S().Fatalf("failed to connect to db, %v", err)
 	}
