@@ -1,23 +1,25 @@
 package handlers
 
 import (
+	"github.com/calendar-bot/pkg/events/usecase"
 	"github.com/labstack/echo"
-	"go.uber.org/zap"
 )
 
 type EventHandlers struct {
-	//albumLogic albums.AlbumUseCase
-	logger     *zap.SugaredLogger
+	eventUseCase usecase.EventUseCase
 }
 
-func NewEventHandlers(log *zap.SugaredLogger, albumRealisation albums.AlbumUseCase) AlbumDeliveryRealisation {
-	return AlbumDeliveryRealisation{albumLogic: albumRealisation, logger: log}
+func NewEventHandlers(eventUseCase usecase.EventUseCase) EventHandlers {
+	return EventHandlers{eventUseCase: eventUseCase}
 }
 
-func (event AlbumDeliveryRealisation) InitHandlers(server *echo.Echo) {
+func (e *EventHandlers) getEvents(rwContext echo.Context) error {
 
-	server.POST("api/v1/album", albumD.CreateAlbum)
+	return nil
+}
 
-	server.GET("api/v1/albums", albumD.GetAlbums)
+func (e *EventHandlers) InitHandlers(server *echo.Echo) {
+
+	server.GET("api/v1/getEvents", e.getEvents)
 
 }

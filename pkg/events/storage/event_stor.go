@@ -1,16 +1,12 @@
-package database
+package storage
 
 import "database/sql"
 
-type EventDatabase struct {
+type EventStorage struct {
 	storage *sql.DB
 }
 
-
-
-
-
-func NewAlbumRepositoryRealisation(db *sql.DB) AlbumRepositoryRealisation {
-	return AlbumRepositoryRealisation{storage: db}
+func NewEventStorage(db *sql.DB) EventStorage {
+	return EventStorage{storage: db}
 
 }
