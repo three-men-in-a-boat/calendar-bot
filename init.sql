@@ -7,10 +7,11 @@ CREATE TABLE users
 (
     id                    BIGSERIAL PRIMARY KEY                              NOT NULL UNIQUE,
     mail_user_id          VARCHAR(128)                                       NOT NULL UNIQUE CHECK ( mail_user_id <> '' ),
+    mail_user_email       VARCHAR(512)                                       NOT NULL UNIQUE CHECK ( mail_user_email <> '' ),
 
     mail_access_token     VARCHAR(128)                                       NOT NULL UNIQUE CHECK ( mail_access_token <> '' ),
     mail_refresh_token    VARCHAR(128)                                       NOT NULL UNIQUE CHECK ( mail_refresh_token <> '' ),
-    mail_token_expires_in INTERVAL                                           NOT NULL,
+    mail_token_expires_in TIMESTAMP WITH TIME ZONE                           NOT NULL,
 
     telegram_user_id      BIGINT                                             NOT NULL UNIQUE,
 
