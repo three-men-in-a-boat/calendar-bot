@@ -39,10 +39,10 @@ func newRequestHandler(db *sql.DB) *RequestHandlers {
 }
 
 func connectToDB() (*sql.DB, error) {
-	usernameDB := "main"
+	usernameD := "main"
 	passwordDB := "main"
 	nameDB := "mainnet"
-	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
+	connectString := "user=" + usernameD + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
 
 	db, err := sql.Open("postgres", connectString)
 	if err != nil {
