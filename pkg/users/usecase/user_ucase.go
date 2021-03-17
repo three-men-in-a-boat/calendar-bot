@@ -16,10 +16,10 @@ const ClientID = "885a013d102b40c7a46a994bc49e68f1"
 const ClientSecret = "e16021defba34d869f0e1cfe7461ef2d"
 
 type UserUseCase struct {
-	userRepository repository.UserStorage
+	userRepository repository.UserRepository
 }
 
-func NewUserUseCase(userRepo repository.UserStorage) UserUseCase {
+func NewUserUseCase(userRepo repository.UserRepository) UserUseCase {
 	return UserUseCase{
 		userRepository: userRepo,
 	}

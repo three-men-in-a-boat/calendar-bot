@@ -30,7 +30,7 @@ func newRequestHandler(db *sql.DB) *RequestHandlers {
 	eventHandlers := eHandlers.NewEventHandlers(eventUseCase)
 
 	states := types.NewStatesDictionary()
-	userStorage := uRepo.NewUserStorage(db)
+	userStorage := uRepo.NewUserRepository(db)
 	userUseCase := uUsecase.NewUserUseCase(userStorage)
 	userHandlers := uHandlers.NewUserHandlers(userUseCase, states)
 
