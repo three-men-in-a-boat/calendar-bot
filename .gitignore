@@ -1,6 +1,8 @@
 # Binaries for programs and plugins
 .idea/
 build/
+project.env
+init.sql
 *.exe
 *.exe~
 *.dll
