@@ -33,5 +33,5 @@ vendor:
 	go mod vendor
 
 vetcheck:
-	go list ./... | grep -v bn254 | xargs go vet
+	go vet ./...
 	golangci-lint run

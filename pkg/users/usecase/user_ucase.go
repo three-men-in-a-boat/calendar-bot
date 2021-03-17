@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/calendar-bot/pkg/models"
-	"github.com/calendar-bot/pkg/users/storage"
+	"github.com/calendar-bot/pkg/types"
+	"github.com/calendar-bot/pkg/users/repository"
 	"net/http"
 	"net/url"
 	"time"
@@ -16,12 +16,12 @@ const ClientID = "885a013d102b40c7a46a994bc49e68f1"
 const ClientSecret = "e16021defba34d869f0e1cfe7461ef2d"
 
 type UserUseCase struct {
-	userStorage storage.UserStorage
+	userRepository repository.UserStorage
 }
 
-func NewUserUseCase(userStor storage.UserStorage) UserUseCase {
+func NewUserUseCase(userRepo repository.UserStorage) UserUseCase {
 	return UserUseCase{
-		userStorage: userStor,
+		userRepository: userRepo,
 	}
 }
 
@@ -107,7 +107,7 @@ func (uuc UserUseCase) TelegramCreateUser(tgUserID int64, mailAuthCode string) (
 	email := userInfo["email"]
 	userID := userInfo["id"]
 
-	user := models.User{
+	user := types.User{
 		ID:                 0,
 		UserID:             userID,
 		MailUserEmail:      email,
@@ -120,5 +120,5 @@ func (uuc UserUseCase) TelegramCreateUser(tgUserID int64, mailAuthCode string) (
 
 	fmt.Println(user)
 
-	return uuc.userStorage.CreateUser(user)
+	return uuc.userRepository.CreateUser(user)
 }

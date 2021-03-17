@@ -1,8 +1,8 @@
-package storage
+package repository
 
 import (
 	"database/sql"
-	"github.com/calendar-bot/pkg/models"
+	"github.com/calendar-bot/pkg/types"
 )
 
 type UserStorage struct {
@@ -14,7 +14,7 @@ func NewUserStorage(db *sql.DB) UserStorage {
 
 }
 
-func (us *UserStorage) CreateUser(user models.User) error {
+func (us *UserStorage) CreateUser(user types.User) error {
 
 	_, err := us.storage.Exec(`
 			INSERT INTO users(
