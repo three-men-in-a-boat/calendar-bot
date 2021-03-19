@@ -84,7 +84,7 @@ func (uh *UserHandlers) telegramOauth(ctx echo.Context) error {
 
 func (uh *UserHandlers) generateOAuthLink(state string) string {
 	return fmt.Sprintf(
-		"https://oauth.mail.ru/xlogin?client_id=%s&response_type=code&scope=%s&redirect_uri=%s&state=%s",
+		"https://oauth.mail.ru/login?client_id=%s&response_type=code&scope=%s&redirect_uri=%s&state=%s",
 		uh.conf.OAuth.ClientID,
 		uh.conf.OAuth.Scope,
 		uh.conf.OAuth.RedirectURI,
