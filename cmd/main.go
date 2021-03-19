@@ -61,25 +61,13 @@ func connectToDB(conf *config.App) (*sql.DB, error) {
 
 func initLog() error {
 	logConfig := config.LoadLogConfig()
+	if logConfig.Level == "" {
+		logConfig.Level = config.LogLevelInfo
+	}
 
 	var zapLoglevel zapcore.Level
-	switch logConfig.Level {
-	case config.LogLevelDebug:
-		zapLoglevel = zapcore.DebugLevel
-	case config.LogLevelInfo:
-		zapLoglevel = zapcore.InfoLevel
-	case config.LogLevelWarn:
-		zapLoglevel = zapcore.WarnLevel
-	case config.LogLevelError:
-		zapLoglevel = zapcore.ErrorLevel
-	case config.LogLevelDevPanic:
-		zapLoglevel = zapcore.DPanicLevel
-	case config.LogLevelPanic:
-		zapLoglevel = zapcore.PanicLevel
-	case config.LogLevelFatal:
-		zapLoglevel = zapcore.FatalLevel
-	default:
-		zapLoglevel = zapcore.InfoLevel
+	if errLogLevel := zapLoglevel.Set(logConfig.Level); errLogLevel != nil {
+		return errors.Wrapf(errLogLevel, "cannot parse log level '%s'", logConfig.Level)
 	}
 
 	var zapLogConfig zap.Config
@@ -89,6 +77,7 @@ func initLog() error {
 	case config.LogTypeProd:
 		zapLogConfig = zap.NewProductionConfig()
 	default:
+		logConfig.Type = config.LogTypeProd
 		zapLogConfig = zap.NewProductionConfig()
 	}
 
@@ -96,7 +85,7 @@ func initLog() error {
 
 	logger, err := zapLogConfig.Build()
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrapf(err, "cannot build '%s' logger", logConfig.Type)
 	}
 	zap.ReplaceGlobals(logger)
 

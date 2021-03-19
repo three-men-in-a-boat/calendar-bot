@@ -17,14 +17,14 @@ const (
 	LogLevelInfo     = "info"
 	LogLevelWarn     = "warn"
 	LogLevelError    = "error"
-	LogLevelDevPanic = "dev-panic"
+	LogLevelDevPanic = "dpanic"
 	LogLevelPanic    = "panic"
 	LogLevelFatal    = "fatal"
 )
 
 type Log struct {
 	Type  string `validate:"optional,in(dev|prod)"`
-	Level string `validate:"optional,in(debug|info|warn|error|dev-panic|panic|fatal)"`
+	Level string `validate:"-"`
 }
 
 func LoadLogConfig() Log {
