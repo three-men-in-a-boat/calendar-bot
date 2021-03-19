@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"github.com/calendar-bot/pkg/types"
+	"github.com/pkg/errors"
 )
 
 type UserRepository struct {
@@ -34,8 +35,7 @@ func (us *UserRepository) CreateUser(user types.User) error {
 	)
 
 	if err != nil {
-		println(err.Error())
-		return err
+		return errors.Wrapf(err, "cannot create user=%v", user)
 	}
 
 	return nil

@@ -17,9 +17,7 @@ func NewEventHandlers(eventUseCase usecase.EventUseCase) EventHandlers {
 }
 
 func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
-
 	server.GET("/api/v1/oauth/telegram/events", eh.getEvents)
-
 }
 
 func (eh *EventHandlers) getEvents(ctx echo.Context) error {

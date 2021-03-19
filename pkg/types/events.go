@@ -3,12 +3,12 @@ package types
 import "time"
 
 type StatesDictionary struct {
-	States map[int64]string
+	States map[string]string
 }
 
 func NewStatesDictionary() StatesDictionary {
 	return StatesDictionary{
-		States: map[int64]string{},
+		States: map[string]string{},
 	}
 }
 

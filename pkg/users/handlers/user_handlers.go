@@ -1,24 +1,34 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"fmt"
+	"github.com/calendar-bot/cmd/config"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/calendar-bot/pkg/users/usecase"
 	"github.com/labstack/echo"
-	"math/rand"
+	"github.com/pkg/errors"
 	"net/http"
 	"strconv"
 )
 
-const RedirectUrlProd = "https://t.me/three_man_in_boat_bot"
-const linkForGeneratingState = "https://oauth.mail.ru/xlogin?client_id=885a013d102b40c7a46a994bc49e68f1&response_type=code&scope=&redirect_uri=https://calendarbot.xyz/api/v1/oauth&state="
+const (
+	nonceBitsLength = 256
+	nonceBase       = 16
+)
 
 type UserHandlers struct {
 	userUseCase usecase.UserUseCase
 	statesDict  types.StatesDictionary
+	conf        *config.App
 }
 
-func NewUserHandlers(eventUseCase usecase.UserUseCase, states types.StatesDictionary) UserHandlers {
-	return UserHandlers{userUseCase: eventUseCase, statesDict: states}
+func NewUserHandlers(eventUseCase usecase.UserUseCase, states types.StatesDictionary, conf *config.App) UserHandlers {
+	return UserHandlers{
+		userUseCase: eventUseCase,
+		statesDict:  states,
+		conf:        conf,
+	}
 }
 
 func (uh *UserHandlers) InitHandlers(server *echo.Echo) {
@@ -27,17 +37,19 @@ func (uh *UserHandlers) InitHandlers(server *echo.Echo) {
 }
 
 func (uh *UserHandlers) changeStateInLink(ctx echo.Context) error {
+	// TODO(nickeskov): check type of id == int64
 	id := ctx.Param("id")
-	seed, err := strconv.Atoi(id)
+
+	bigInt, err := rand.Prime(rand.Reader, nonceBitsLength)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	rand.Seed(int64(seed))
-	state := rand.Int()
 
-	uh.statesDict.States[int64(state)] = id
+	state := bigInt.Text(nonceBase)
 
-	link := linkForGeneratingState + strconv.Itoa(state)
+	uh.statesDict.States[state] = id
+
+	link := uh.generateOAuthLink(state)
 
 	return ctx.String(http.StatusOK, link)
 }
@@ -45,18 +57,17 @@ func (uh *UserHandlers) changeStateInLink(ctx echo.Context) error {
 func (uh *UserHandlers) telegramOauth(ctx echo.Context) error {
 	values := ctx.Request().URL.Query()
 
+	// TODO(nickeskov): check that parameters
 	code := values.Get("code")
 	state := values.Get("state")
 
-	stateInt, err := strconv.Atoi(state)
-	if err != nil {
-		println(err.Error())
-		return err
+	id, ok := uh.statesDict.States[state]
+	if !ok {
+		return fmt.Errorf("cannot find state=%s in states dictionary", state)
 	}
 
-	tgId, err := strconv.Atoi(uh.statesDict.States[int64(stateInt)])
+	tgId, err := strconv.Atoi(id)
 	if err != nil {
-		println(err.Error())
 		return err
 	}
 
@@ -64,9 +75,19 @@ func (uh *UserHandlers) telegramOauth(ctx echo.Context) error {
 		return err
 	}
 
-	if err := ctx.Redirect(http.StatusTemporaryRedirect, RedirectUrlProd); err != nil {
+	if err := ctx.Redirect(http.StatusTemporaryRedirect, uh.conf.OAuth.TelegramBotRedirectURI); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (uh *UserHandlers) generateOAuthLink(state string) string {
+	return fmt.Sprintf(
+		"https://oauth.mail.ru/xlogin?client_id=%s&response_type=code&scope=%s&redirect_uri=%s&state=%s",
+		uh.conf.OAuth.ClientID,
+		uh.conf.OAuth.Scope,
+		uh.conf.OAuth.RedirectURI,
+		state,
+	)
 }
