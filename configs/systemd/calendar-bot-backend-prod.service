@@ -1,0 +1,14 @@
+[Unit]
+Description=CalendarBot API backend
+After=network.target
+
+[Service]
+Type=simple
+User=centos
+Group=centos
+WorkingDirectory=/home/centos/calendar-bot-backend-prod/
+EnvironmentFile=/home/centos/calendar-bot-backend-prod/.env
+ExecStart=/home/centos/calendar-bot-backend-prod/build/bin/botbackend
+
+[Install]
+WantedBy=multi-user.target
