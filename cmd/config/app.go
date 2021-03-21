@@ -41,12 +41,12 @@ func LoadAppConfig() (App, error) {
 
 	db, err := LoadDBConfig()
 	if err != nil {
-		return App{}, errors.WithMessage(err, "cannot load DB config")
+		return App{}, errors.WithMessage(err, "failed to load DB config")
 	}
 
 	redis, err := LoadRedisConfig()
 	if err != nil {
-		return App{}, errors.WithMessage(err, "cannot load Redis config")
+		return App{}, errors.WithMessage(err, "failed to load Redis config")
 	}
 
 	// TODO(nickeskov): validate struct

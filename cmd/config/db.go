@@ -31,7 +31,7 @@ func LoadDBConfig() (DB, error) {
 		value, err := strconv.Atoi(maxOpenConnectionsStr)
 		if err != nil {
 			return DB{},
-				errors.WithMessagef(err, "cannot parse %s environment variable as int", EnvDBMaxOpenConnections)
+				errors.WithMessagef(err, "failed to parse %s environment variable as int", EnvDBMaxOpenConnections)
 		}
 		maxOpenConnections = value
 	}

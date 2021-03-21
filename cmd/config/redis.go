@@ -28,7 +28,7 @@ func LoadRedisConfig() (Redis, error) {
 	if dbStr := os.Getenv(EnvRedisDB); dbStr != "" {
 		num, err := strconv.Atoi(dbStr)
 		if err != nil {
-			return Redis{}, errors.WithMessagef(err, "cannot parse %s environment variable as int", EnvRedisDB)
+			return Redis{}, errors.WithMessagef(err, "failed to parse %s environment variable as int", EnvRedisDB)
 		}
 		db = num
 	}
