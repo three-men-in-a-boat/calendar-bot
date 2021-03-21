@@ -1,7 +1,10 @@
 package config
 
 import (
+	"database/sql"
+	_ "database/sql"
 	"github.com/asaskevich/govalidator"
+	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"os"
 	"strconv"
@@ -57,4 +60,22 @@ func (db *DB) ToEnv() map[string]string {
 		EnvDBPassword:           db.Password,
 		EnvDBMaxOpenConnections: strconv.Itoa(db.MaxOpenConnections),
 	}
+}
+
+
+func ConnectToDB(conf *App) (*sql.DB, error) {
+	nameDB := conf.DB.Name
+	usernameDB := conf.DB.Username
+	passwordDB := conf.DB.Password
+
+	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
+
+	db, err := sql.Open("postgres", connectString)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if err := db.Ping(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return db, nil
 }

@@ -15,9 +15,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 type RequestHandlers struct {
@@ -42,61 +40,11 @@ func newRequestHandler(db *sql.DB, conf *config.App) RequestHandlers {
 	}
 }
 
-func connectToDB(conf *config.App) (*sql.DB, error) {
-	nameDB := conf.DB.Name
-	usernameDB := conf.DB.Username
-	passwordDB := conf.DB.Password
-
-	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
-
-	db, err := sql.Open("postgres", connectString)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	if err := db.Ping(); err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return db, nil
-}
-
-func initLog() error {
-	logConfig := config.LoadLogConfig()
-	if logConfig.Level == "" {
-		logConfig.Level = config.LogLevelInfo
-	}
-
-	var zapLoglevel zapcore.Level
-	if errLogLevel := zapLoglevel.Set(logConfig.Level); errLogLevel != nil {
-		return errors.Wrapf(errLogLevel, "cannot parse log level '%s'", logConfig.Level)
-	}
-
-	var zapLogConfig zap.Config
-	switch logConfig.Type {
-	case config.LogTypeDev:
-		zapLogConfig = zap.NewDevelopmentConfig()
-	case config.LogTypeProd:
-		zapLogConfig = zap.NewProductionConfig()
-	default:
-		logConfig.Type = config.LogTypeProd
-		zapLogConfig = zap.NewProductionConfig()
-	}
-
-	zapLogConfig.Level.SetLevel(zapLoglevel)
-
-	logger, err := zapLogConfig.Build()
-	if err != nil {
-		return errors.Wrapf(err, "cannot build '%s' logger", logConfig.Type)
-	}
-	zap.ReplaceGlobals(logger)
-
-	return nil
-}
-
 func init() {
 	// nickeskov: error != nil if no .env file
 	dotenvErr := godotenv.Load()
 
-	if err := initLog(); err != nil {
+	if err := config.InitLog(); err != nil {
 		// nickeskov: in this case this we can do only one thing - start panicking. Or maybe use log.Fatal(...)
 		panic(err)
 	}
@@ -115,7 +63,7 @@ func main() {
 	}
 	server := echo.New()
 
-	db, err := connectToDB(&appConf)
+	db, err := config.ConnectToDB(&appConf)
 	if err != nil {
 		zap.S().Fatalf("failed to connect to db, %v", err)
 	}
