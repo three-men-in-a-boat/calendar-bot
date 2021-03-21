@@ -62,7 +62,6 @@ func (db *DB) ToEnv() map[string]string {
 	}
 }
 
-
 func ConnectToDB(conf *App) (*sql.DB, error) {
 	nameDB := conf.DB.Name
 	usernameDB := conf.DB.Username
