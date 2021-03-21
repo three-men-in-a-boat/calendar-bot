@@ -3,14 +3,16 @@ package main
 import (
 	"database/sql"
 	_ "database/sql"
+	"github.com/asaskevich/govalidator"
+	"github.com/calendar-bot/cmd/config"
 	eHandlers "github.com/calendar-bot/pkg/events/handlers"
-	eStorage "github.com/calendar-bot/pkg/events/storage"
+	eRepo "github.com/calendar-bot/pkg/events/repository"
 	eUsecase "github.com/calendar-bot/pkg/events/usecase"
-	"github.com/calendar-bot/pkg/statesDict"
-
+	"github.com/calendar-bot/pkg/types"
 	uHandlers "github.com/calendar-bot/pkg/users/handlers"
-	uStorage "github.com/calendar-bot/pkg/users/storage"
+	uRepo "github.com/calendar-bot/pkg/users/repository"
 	uUsecase "github.com/calendar-bot/pkg/users/usecase"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
@@ -21,47 +23,51 @@ type RequestHandlers struct {
 	userHandlers  uHandlers.UserHandlers
 }
 
-func newRequestHandler(db *sql.DB) *RequestHandlers {
+func newRequestHandler(db *sql.DB, conf *config.App) RequestHandlers {
 
-	eventStorage := eStorage.NewEventStorage(db)
+	eventStorage := eRepo.NewEventStorage(db)
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
 	eventHandlers := eHandlers.NewEventHandlers(eventUseCase)
 
-	states := statesDict.NewStatesDictionary()
-	userStorage := uStorage.NewUserStorage(db)
-	userUseCase := uUsecase.NewUserUseCase(userStorage)
-	userHandlers := uHandlers.NewUserHandlers(userUseCase, states)
+	states := types.NewStatesDictionary()
+	userStorage := uRepo.NewUserRepository(db)
+	userUseCase := uUsecase.NewUserUseCase(userStorage, conf)
+	userHandlers := uHandlers.NewUserHandlers(userUseCase, states, conf)
 
-	return &(RequestHandlers{
+	return RequestHandlers{
 		eventHandlers: eventHandlers,
 		userHandlers:  userHandlers,
-	})
+	}
 }
 
-func connectToDB() (*sql.DB, error) {
-	usernameDB := "main"
-	passwordDB := "main"
-	nameDB := "mainnet"
-	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
+func init() {
+	// nickeskov: error != nil if no .env file
+	dotenvErr := godotenv.Load()
 
-	db, err := sql.Open("postgres", connectString)
-	if err != nil {
-		return nil, err
+	if err := config.InitLog(); err != nil {
+		// nickeskov: in this case this we can do only one thing - start panicking. Or maybe use log.Fatal(...)
+		panic(err)
 	}
-	if err := db.Ping(); err != nil {
-		return nil, err
+
+	if dotenvErr != nil {
+		zap.S().Info("No .env file found: %v", dotenvErr)
 	}
-	return db, nil
+
+	govalidator.SetFieldsRequiredByDefault(true)
 }
 
 func main() {
+	appConf, err := config.LoadAppConfig()
+	if err != nil {
+		zap.S().Fatalf("cannot load APP config: %v", err)
+	}
 	server := echo.New()
 
-	db, err := connectToDB()
+	db, err := config.ConnectToDB(&appConf)
 	if err != nil {
-		zap.S().Infof("failed to connect to db, %v", err)
-		println(err.Error())
+		zap.S().Fatalf("failed to connect to db, %v", err)
 	}
+
 	defer func() {
 		err := db.Close()
 		if err != nil {
@@ -69,10 +75,10 @@ func main() {
 		}
 	}()
 
-	allHandler := newRequestHandler(db)
+	allHandler := newRequestHandler(db, &appConf)
 
 	allHandler.eventHandlers.InitHandlers(server)
 	allHandler.userHandlers.InitHandlers(server)
 
-	server.Logger.Fatal(server.Start(":8080"))
+	server.Logger.Fatal(server.Start(appConf.Address))
 }

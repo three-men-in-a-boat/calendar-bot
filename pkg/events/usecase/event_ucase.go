@@ -1,12 +1,12 @@
 package usecase
 
-import "github.com/calendar-bot/pkg/events/storage"
+import "github.com/calendar-bot/pkg/events/repository"
 
 type EventUseCase struct {
-	eventStorage storage.EventStorage
+	eventStorage repository.EventRepository
 }
 
-func NewEventUseCase(eventStor storage.EventStorage) EventUseCase {
+func NewEventUseCase(eventStor repository.EventRepository) EventUseCase {
 	return EventUseCase{
 		eventStorage: eventStor,
 	}

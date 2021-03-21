@@ -1,76 +1,73 @@
 package handlers
 
 import (
-	"encoding/json"
-	"github.com/calendar-bot/pkg/statesDict"
+	"crypto/rand"
+	"fmt"
+	"github.com/calendar-bot/cmd/config"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/calendar-bot/pkg/users/usecase"
 	"github.com/labstack/echo"
-	"math/rand"
+	"github.com/pkg/errors"
 	"net/http"
 	"strconv"
 )
 
-const RedirectUrlProd = "https://t.me/three_man_in_boat_bot"
+const (
+	nonceBitsLength = 256
+	nonceBase       = 16
+)
 
 type UserHandlers struct {
 	userUseCase usecase.UserUseCase
-	statesDict  statesDict.StatesDictionary
+	statesDict  types.StatesDictionary
+	conf        *config.App
 }
 
-func NewUserHandlers(eventUseCase usecase.UserUseCase, states statesDict.StatesDictionary) UserHandlers {
-	return UserHandlers{userUseCase: eventUseCase, statesDict: states}
-}
-
-func (e *UserHandlers) changeStateInLink(c echo.Context) error {
-	name := c.Param("name")
-	seed, err := strconv.Atoi(name)
-	if err != nil {
-		return err
+func NewUserHandlers(eventUseCase usecase.UserUseCase, states types.StatesDictionary, conf *config.App) UserHandlers {
+	return UserHandlers{
+		userUseCase: eventUseCase,
+		statesDict:  states,
+		conf:        conf,
 	}
-	rand.Seed(int64(seed))
-	state := rand.Int()
-
-	e.statesDict.States[int64(state)] = name
-
-	link := "https://oauth.mail.ru/xlogin?client_id=885a013d102b40c7a46a994bc49e68f1&response_type=code&scope=&redirect_uri=https://calendarbot.xyz/api/v1/oauth&state=" + strconv.Itoa(state)
-
-	return c.String(http.StatusOK, link)
 }
 
-func (e *UserHandlers) getEvents(c echo.Context) error {
-	var events []types.Event
-	event1 := types.Event{Name: "Meeting in Zoom", Participants: []string{"Nikolay, Alexey, Alexandr"}, Time: "Today 23:00"}
-	event2 := types.Event{Name: "Meeting in university", Participants: []string{"Mike, Alex, Gabe"}, Time: "Tomorrow 23:00"}
-	events = append(events, event1, event2)
-	b, err := json.Marshal(events)
+func (uh *UserHandlers) InitHandlers(server *echo.Echo) {
+	server.GET("/api/v1/oauth/telegram/:id/ref", uh.changeStateInLink)
+	server.GET("/api/v1/oauth", uh.telegramOauth)
+}
+
+func (uh *UserHandlers) changeStateInLink(ctx echo.Context) error {
+	// TODO(nickeskov): check type of id == int64
+	id := ctx.Param("id")
+
+	bigInt, err := rand.Prime(rand.Reader, nonceBitsLength)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	return c.String(http.StatusOK, string(b))
+
+	state := bigInt.Text(nonceBase)
+
+	uh.statesDict.States[state] = id
+
+	link := uh.generateOAuthLink(state)
+
+	return ctx.String(http.StatusOK, link)
 }
 
-func (e *UserHandlers) InitHandlers(server *echo.Echo) {
-	server.GET("/api/v1/oauth/telegram/:name/ref", e.changeStateInLink)
-	server.GET("/api/v1/oauth/telegram/events", e.getEvents)
-	server.GET("/api/v1/oauth", e.TelegramOauth)
-}
+func (uh *UserHandlers) telegramOauth(ctx echo.Context) error {
+	values := ctx.Request().URL.Query()
 
-func (uh *UserHandlers) TelegramOauth(rwContext echo.Context) error {
-	values := rwContext.Request().URL.Query()
-
+	// TODO(nickeskov): check that parameters
 	code := values.Get("code")
 	state := values.Get("state")
 
-	stateInt, err := strconv.Atoi(state)
-	if err != nil {
-		println(err.Error())
-		return err
+	id, ok := uh.statesDict.States[state]
+	if !ok {
+		return fmt.Errorf("cannot find state=%s in states dictionary", state)
 	}
 
-	tgId, err := strconv.Atoi(uh.statesDict.States[int64(stateInt)])
+	tgId, err := strconv.Atoi(id)
 	if err != nil {
-		println(err.Error())
 		return err
 	}
 
@@ -78,9 +75,19 @@ func (uh *UserHandlers) TelegramOauth(rwContext echo.Context) error {
 		return err
 	}
 
-	if err := rwContext.Redirect(http.StatusTemporaryRedirect, RedirectUrlProd); err != nil {
+	if err := ctx.Redirect(http.StatusTemporaryRedirect, uh.conf.OAuth.TelegramBotRedirectURI); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (uh *UserHandlers) generateOAuthLink(state string) string {
+	return fmt.Sprintf(
+		"https://oauth.mail.ru/login?client_id=%s&response_type=code&scope=%s&redirect_uri=%s&state=%s",
+		uh.conf.OAuth.ClientID,
+		uh.conf.OAuth.Scope,
+		uh.conf.OAuth.RedirectURI,
+		state,
+	)
 }

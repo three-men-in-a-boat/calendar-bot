@@ -1,20 +1,21 @@
-package storage
+package repository
 
 import (
 	"database/sql"
-	"github.com/calendar-bot/pkg/models"
+	"github.com/calendar-bot/pkg/types"
+	"github.com/pkg/errors"
 )
 
-type UserStorage struct {
+type UserRepository struct {
 	storage *sql.DB
 }
 
-func NewUserStorage(db *sql.DB) UserStorage {
-	return UserStorage{storage: db}
+func NewUserRepository(db *sql.DB) UserRepository {
+	return UserRepository{storage: db}
 
 }
 
-func (us *UserStorage) CreateUser(user models.User) error {
+func (us *UserRepository) CreateUser(user types.User) error {
 
 	_, err := us.storage.Exec(`
 			INSERT INTO users(
@@ -34,8 +35,7 @@ func (us *UserStorage) CreateUser(user models.User) error {
 	)
 
 	if err != nil {
-		println(err.Error())
-		return err
+		return errors.Wrapf(err, "cannot create user=%v", user)
 	}
 
 	return nil
