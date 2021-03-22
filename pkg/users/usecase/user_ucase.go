@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"github.com/calendar-bot/cmd/config"
@@ -11,6 +12,13 @@ import (
 	"net/url"
 	"time"
 )
+
+const (
+	nonceBitsLength = 256
+	nonceBase       = 16
+)
+
+const stateExpire = 5 * time.Minute
 
 type UserUseCase struct {
 	userRepository repository.UserRepository
@@ -31,7 +39,29 @@ type tokenGetResp struct {
 	TokenType    string `json:"token_type"`
 }
 
-func (uuc UserUseCase) TelegramCreateUser(tgUserID int64, mailAuthCode string) (err error) {
+func (uuc *UserUseCase) GenOauthLinkForTelegramID(telegramID int64) (string, error) {
+	bigInt, err := rand.Prime(rand.Reader, nonceBitsLength)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	state := bigInt.Text(nonceBase)
+
+	if err := uuc.userRepository.SetTelegramIDByState(state, telegramID, stateExpire); err != nil {
+		return "", errors.Wrapf(err, "cannot insert telegramID=%d in redis, state=%s", telegramID, state)
+	}
+
+	link := uuc.generateOAuthLink(state)
+
+	return link, nil
+
+}
+
+func (uuc *UserUseCase) GetTelegramIDByState(state string) (int64, error) {
+	return uuc.userRepository.GetTelegramIDByState(state)
+}
+
+func (uuc *UserUseCase) TelegramCreateUser(tgUserID int64, mailAuthCode string) (err error) {
 
 	response, err := http.PostForm(
 		"https://oauth.mail.ru/token",
@@ -114,4 +144,14 @@ func (uuc UserUseCase) TelegramCreateUser(tgUserID int64, mailAuthCode string) (
 	}
 
 	return uuc.userRepository.CreateUser(user)
+}
+
+func (uuc *UserUseCase) generateOAuthLink(state string) string {
+	return fmt.Sprintf(
+		"https://oauth.mail.ru/login?client_id=%s&response_type=code&scope=%s&redirect_uri=%s&state=%s",
+		uuc.conf.OAuth.ClientID,
+		uuc.conf.OAuth.Scope,
+		uuc.conf.OAuth.RedirectURI,
+		state,
+	)
 }

@@ -12,6 +12,7 @@ import (
 	uHandlers "github.com/calendar-bot/pkg/users/handlers"
 	uRepo "github.com/calendar-bot/pkg/users/repository"
 	uUsecase "github.com/calendar-bot/pkg/users/usecase"
+	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	_ "github.com/lib/pq"
@@ -23,14 +24,14 @@ type RequestHandlers struct {
 	userHandlers  uHandlers.UserHandlers
 }
 
-func newRequestHandler(db *sql.DB, conf *config.App) RequestHandlers {
+func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) RequestHandlers {
 
 	eventStorage := eRepo.NewEventStorage(db)
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
 	eventHandlers := eHandlers.NewEventHandlers(eventUseCase)
 
 	states := types.NewStatesDictionary()
-	userStorage := uRepo.NewUserRepository(db)
+	userStorage := uRepo.NewUserRepository(db, client)
 	userUseCase := uUsecase.NewUserUseCase(userStorage, conf)
 	userHandlers := uHandlers.NewUserHandlers(userUseCase, states, conf)
 
@@ -63,11 +64,10 @@ func main() {
 	}
 	server := echo.New()
 
-	db, err := config.ConnectToDB(&appConf)
+	db, err := config.ConnectToDB(&appConf.DB)
 	if err != nil {
 		zap.S().Fatalf("failed to connect to db, %v", err)
 	}
-
 	defer func() {
 		err := db.Close()
 		if err != nil {
@@ -75,7 +75,12 @@ func main() {
 		}
 	}()
 
-	allHandler := newRequestHandler(db, &appConf)
+	redisClient, err := config.ConnectToRedis(&appConf.Redis)
+	if err != nil {
+		zap.S().Fatalf("failed to connect to redis, %v", err)
+	}
+
+	allHandler := newRequestHandler(db, redisClient, &appConf)
 
 	allHandler.eventHandlers.InitHandlers(server)
 	allHandler.userHandlers.InitHandlers(server)

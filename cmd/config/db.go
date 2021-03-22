@@ -62,10 +62,10 @@ func (db *DB) ToEnv() map[string]string {
 	}
 }
 
-func ConnectToDB(conf *App) (*sql.DB, error) {
-	nameDB := conf.DB.Name
-	usernameDB := conf.DB.Username
-	passwordDB := conf.DB.Password
+func ConnectToDB(conf *DB) (*sql.DB, error) {
+	nameDB := conf.Name
+	usernameDB := conf.Username
+	passwordDB := conf.Password
 
 	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
 
