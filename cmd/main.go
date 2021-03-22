@@ -8,6 +8,7 @@ import (
 	eHandlers "github.com/calendar-bot/pkg/events/handlers"
 	eRepo "github.com/calendar-bot/pkg/events/repository"
 	eUsecase "github.com/calendar-bot/pkg/events/usecase"
+	"github.com/calendar-bot/pkg/middlewares"
 	"github.com/calendar-bot/pkg/types"
 	uHandlers "github.com/calendar-bot/pkg/users/handlers"
 	uRepo "github.com/calendar-bot/pkg/users/repository"
@@ -81,6 +82,8 @@ func main() {
 	}
 
 	allHandler := newRequestHandler(db, redisClient, &appConf)
+
+	server.Use(middlewares.LogErrorMiddleware)
 
 	allHandler.eventHandlers.InitHandlers(server)
 	allHandler.userHandlers.InitHandlers(server)

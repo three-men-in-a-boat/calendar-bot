@@ -10,8 +10,22 @@ import (
 	"time"
 )
 
+type OAuthError error
+
 var (
-	StateDoesNotExist = errors.New("state does not exist in redis")
+	StateDoesNotExist            OAuthError = errors.New("state does not exist in redis")
+	OAuthAccessTokenDoesNotExist OAuthError = errors.New("OAuth access token does not exist in redis")
+	UserUnauthorized             OAuthError = errors.New("user exist in DB, but not authorized")
+)
+
+type UserEntityError error
+
+var (
+	UserDoesNotExist UserEntityError = errors.New("user does not exist")
+)
+
+const (
+	TelegramOAuthPrefix = "telegram_id_"
 )
 
 type UserRepository struct {
@@ -26,12 +40,12 @@ func NewUserRepository(db *sql.DB, client *redis.Client) UserRepository {
 	}
 }
 
-func (us *UserRepository) SetTelegramIDByState(state string, telegramID int64, expire time.Duration) error {
+func (us *UserRepository) SetTelegramUserIDByState(state string, telegramID int64, expire time.Duration) error {
 	res := us.redisDB.Set(context.TODO(), state, fmt.Sprintf("%d", telegramID), expire)
 	return res.Err()
 }
 
-func (us *UserRepository) GetTelegramIDByState(state string) (int64, error) {
+func (us *UserRepository) GetTelegramUserIDByState(state string) (int64, error) {
 	res := us.redisDB.Get(context.TODO(), state)
 
 	if res.Err() == redis.Nil {
@@ -39,6 +53,48 @@ func (us *UserRepository) GetTelegramIDByState(state string) (int64, error) {
 	}
 
 	return res.Int64()
+}
+
+func (us *UserRepository) SetOAuthAccessTokenByTelegramUserID(telegramID int64, oauthToken string, expire time.Duration) error {
+	key := createOAuthRedisKeyForTelegram(telegramID)
+
+	res := us.redisDB.Set(context.TODO(), key, oauthToken, expire)
+
+	return res.Err()
+}
+
+func (us *UserRepository) GetOAuthAccessTokenByTelegramUserID(telegramID int64) (string, error) {
+	key := createOAuthRedisKeyForTelegram(telegramID)
+	res := us.redisDB.Get(context.TODO(), key)
+
+	if res.Err() == redis.Nil {
+		return "", OAuthAccessTokenDoesNotExist
+	}
+
+	return res.Result()
+}
+
+// Returns OAuthAccessToken
+// Error types = error, OAuthError, UserEntityError
+func (us *UserRepository) GetOAuthRefreshTokenByTelegramUserID(telegramID int64) (string, error) {
+	var refreshToken sql.NullString
+	err := us.storage.QueryRow(
+		`SELECT u.mail_refresh_token FROM users AS u WHERE u.telegram_user_id = $1`,
+		telegramID,
+	).Scan(
+		&refreshToken,
+	)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return "", UserDoesNotExist
+	case err != nil:
+		return "", errors.Wrapf(err, "failed to get mail refresh token by telegramID=%d", telegramID)
+	case !refreshToken.Valid:
+		return "", UserUnauthorized
+	}
+
+	return refreshToken.String, nil
 }
 
 func (us *UserRepository) CreateUser(user types.User) error {
@@ -65,4 +121,8 @@ func (us *UserRepository) CreateUser(user types.User) error {
 	}
 
 	return nil
+}
+
+func createOAuthRedisKeyForTelegram(telegramID int64) string {
+	return TelegramOAuthPrefix + fmt.Sprintf("%d", telegramID)
 }

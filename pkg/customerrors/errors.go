@@ -1,4 +1,4 @@
-package entityerrors
+package customerrors
 
 import "github.com/pkg/errors"
 

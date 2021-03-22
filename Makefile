@@ -5,9 +5,11 @@ SOURCE_DIRS = cmd pkg
 
 export GO111MODULE=on
 
-.PHONY: vendor vetcheck fmtcheck clean build gotest
+.PHONY: vendor vetcheck fmtcheck clean build build-debug gotest
 
 all: vendor vetcheck fmtcheck build gotest mod-clean
+
+debug: vendor vetcheck fmtcheck build-debug gotest mod-clean
 
 ver:
 	@echo Building version: $(VERSION)
@@ -35,3 +37,7 @@ vendor:
 vetcheck:
 	go vet ./...
 	golangci-lint run
+
+build-debug:
+	@mkdir -p build/debug
+	go build -o build/debug/botbackend ./cmd/main.go
