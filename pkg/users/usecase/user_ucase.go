@@ -112,14 +112,10 @@ func (uuc *UserUseCase) TelegramCreateAuthenticatedUser(tgUserID int64, mailAuth
 	}
 
 	user := types.TelegramDBUser{
-		ID:                 0,
-		UserID:             userInfo.ID,
-		MailUserEmail:      userInfo.Email,
-		MailAccessToken:    tokenResp.AccessToken,
-		MailRefreshToken:   tokenResp.RefreshToken,
-		MailTokenExpiresIn: time.Now().Add(time.Second * time.Duration(tokenResp.ExpiresInSeconds)),
-		TelegramUserId:     tgUserID,
-		CreatedAt:          time.Time{},
+		MailUserID:       userInfo.ID,
+		MailUserEmail:    userInfo.Email,
+		MailRefreshToken: tokenResp.RefreshToken,
+		TelegramUserId:   tgUserID,
 	}
 
 	if err := uuc.userRepository.CreateUser(user); err != nil {
@@ -166,15 +162,18 @@ func (uuc *UserUseCase) IsUserAuthenticatedByTelegramUserID(telegramID int64) (b
 	if err == nil {
 		return true, nil
 	}
+	if err != repository.OAuthAccessTokenDoesNotExist {
+		return false, errors.WithStack(err)
+	}
 
-	if _, ok := err.(repository.OAuthError); ok {
-		_, err = uuc.userRepository.GetOAuthRefreshTokenByTelegramUserID(telegramID)
-		if err == nil {
-			return true, nil
-		}
-		if _, ok := err.(repository.OAuthError); ok {
-			return false, nil
-		}
+	_, err = uuc.userRepository.GetOAuthRefreshTokenByTelegramUserID(telegramID)
+	if err == nil {
+		// TODO(nickeskov): maybe need RefreshOAuthTokenByTelegramUserID?
+		return true, nil
+	}
+	// nickeskov: if user does not exist in db or exists, but not authorized
+	if err == repository.UserDoesNotExist || err == repository.UserUnauthorized {
+		return false, nil
 	}
 
 	return false, errors.WithStack(err)
@@ -239,11 +238,21 @@ func (uuc *UserUseCase) obtainNewOAuthTokenByRefreshToken(refreshToken string) (
 	return tokenResp, nil
 }
 
-func (uuc *UserUseCase) SetTelegramIDByState(state string, telegramID int64, expire time.Duration) error {
-	return uuc.userRepository.SetTelegramUserIDByState(state, telegramID, expire)
+func (uuc *UserUseCase) DeleteLocalAuthenticatedUserByTelegramUserID(telegramID int64) error {
+	if err := uuc.userRepository.DeleteOAuthAccessTokenByTelegramUserID(telegramID); err != nil {
+		return errors.Wrapf(err, "failed to delete acces token in redis by telegramUserID=%d", telegramID)
+	}
+	switch err := uuc.userRepository.DeleteUserByTelegramUserID(telegramID); err {
+	case nil:
+		return nil
+	case repository.UserDoesNotExist:
+		return err
+	default:
+		return errors.WithStack(err)
+	}
 }
 
-func (uuc *UserUseCase) GetOAuthTokenByTelegramID(telegramID int64) (string, error) {
+func (uuc *UserUseCase) GetOAuthAccessTokenByTelegramUserID(telegramID int64) (string, error) {
 	return uuc.userRepository.GetOAuthAccessTokenByTelegramUserID(telegramID)
 }
 

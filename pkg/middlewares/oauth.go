@@ -58,7 +58,7 @@ func (m CheckOAuthTelegramMiddleware) Handle(next echo.HandlerFunc) echo.Handler
 			return context.String(status, http.StatusText(status))
 		}
 
-		oAuthToken, err := m.userUseCase.GetOAuthTokenByTelegramID(telegramID)
+		oAuthToken, err := m.userUseCase.GetOAuthAccessTokenByTelegramUserID(telegramID)
 		switch {
 		case err == repository.OAuthAccessTokenDoesNotExist:
 			oAuthToken, err = m.userUseCase.RefreshOAuthTokenByTelegramUserID(telegramID)

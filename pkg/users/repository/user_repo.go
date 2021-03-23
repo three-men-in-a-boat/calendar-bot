@@ -25,7 +25,7 @@ var (
 )
 
 const (
-	TelegramOAuthPrefix = "telegram_id_"
+	TelegramOAuthPrefix = "telegram_user_id_"
 )
 
 type UserRepository struct {
@@ -57,7 +57,6 @@ func (us *UserRepository) GetTelegramUserIDByState(state string) (int64, error) 
 
 func (us *UserRepository) SetOAuthAccessTokenByTelegramUserID(telegramID int64, oauthToken string, expire time.Duration) error {
 	key := createOAuthRedisKeyForTelegram(telegramID)
-
 	res := us.redisDB.Set(context.TODO(), key, oauthToken, expire)
 
 	return res.Err()
@@ -72,6 +71,18 @@ func (us *UserRepository) GetOAuthAccessTokenByTelegramUserID(telegramID int64) 
 	}
 
 	return res.Result()
+}
+
+func (us *UserRepository) DeleteOAuthAccessTokenByTelegramUserID(telegramID int64) error {
+	key := createOAuthRedisKeyForTelegram(telegramID)
+	res := us.redisDB.Del(context.TODO(), key)
+
+	err := res.Err()
+	if err == redis.Nil {
+		return nil
+	}
+
+	return err
 }
 
 // Returns OAuthAccessToken
@@ -102,22 +113,37 @@ func (us *UserRepository) CreateUser(user types.TelegramDBUser) error {
 	_, err := us.storage.Exec(`
 			INSERT INTO users(
 							  mail_user_id,
-							  mail_user_email, 
-							  mail_access_token,
-							  mail_refresh_token,
-							  mail_token_expires_in,
+							  mail_user_email,
+			                  mail_refresh_token,
 							  telegram_user_id)
-			VALUES ($1, $2, $3, $4, $5, $6)`,
-		user.UserID,
+			VALUES ($1, $2, $3, $4)`,
+		user.MailUserID,
 		user.MailUserEmail,
-		user.MailAccessToken,
 		user.MailRefreshToken,
-		user.MailTokenExpiresIn,
 		user.TelegramUserId,
 	)
 
 	if err != nil {
 		return errors.Wrapf(err, "cannot create user=%v", user)
+	}
+
+	return nil
+}
+
+func (us *UserRepository) DeleteUserByTelegramUserID(telegramID int64) error {
+
+	err := us.storage.QueryRow(
+		`DELETE FROM users WHERE telegram_user_id=$1 RETURNING telegram_user_id`,
+		telegramID,
+	).Scan(
+		&telegramID,
+	)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return UserDoesNotExist
+	case err != nil:
+		return errors.Wrapf(err, "cannot delete user with telegramUserID=%d", telegramID)
 	}
 
 	return nil
