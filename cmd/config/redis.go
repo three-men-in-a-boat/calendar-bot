@@ -1,12 +1,12 @@
 package config
 
 import (
+	"context"
+	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 	"os"
 	"strconv"
 )
-
-//"github.com/go-redis/redis/v8"
 
 const (
 	EnvRedisAddress  = "REDIS_ADDRESS"
@@ -48,4 +48,17 @@ func (r *Redis) ToEnv() map[string]string {
 		EnvRedisPassword: r.Password,
 		EnvRedisDB:       strconv.Itoa(r.DB),
 	}
+}
+
+func ConnectToRedis(conf *Redis) (*redis.Client, error) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     conf.Address,
+		Password: conf.Password,
+		DB:       conf.DB,
+	})
+
+	if err := client.Ping(context.TODO()).Err(); err != nil {
+		return nil, err
+	}
+	return client, nil
 }
