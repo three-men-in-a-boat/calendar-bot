@@ -18,6 +18,9 @@ build: $(SOURCE)
 	@mkdir -p build/bin
 	go build -o build/bin/botbackend ./cmd/main.go
 
+build-linux-amd64:
+	@CGO_ENABLE=0 GOOS=linux GOARCH=amd64 go build -o build/bin/linux-amd64/botbackend ./cmd/main.go
+
 gotest:
 	go test -cover ./...
 
