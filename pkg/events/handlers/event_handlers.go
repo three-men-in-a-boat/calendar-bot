@@ -44,6 +44,7 @@ func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
 	if todaysEvent == nil {
 		return errors.New("response from calendar api for events is empty")
 	}
+	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	return ctx.String(http.StatusOK, *todaysEvent)
 }
