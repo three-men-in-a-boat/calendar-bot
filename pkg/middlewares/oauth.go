@@ -12,8 +12,33 @@ import (
 const (
 	TelegramUserIDRouteKey     = ":telegramUserID"
 	TelegramUserIDPathParamKey = "telegramUserID"
+	OAuthAccessTokenContextKey = "#oauthAccessToken#"
 	TelegramUserIDContextKey   = "#telegramUserID#"
 )
+
+func GetOAuthAccessTokenFromContext(ctx echo.Context) (string, error) {
+	accessToken, ok := ctx.Get(OAuthAccessTokenContextKey).(string)
+	if !ok {
+		return "", errors.New("cannot get from echo.Context OAuthAccessToken")
+	}
+
+	return accessToken, nil
+}
+
+func GetTelegramUserIDFromContext(ctx echo.Context) (int64, error) {
+	telegramUserID, ok := ctx.Get(TelegramUserIDContextKey).(int64)
+	if !ok {
+		return 0, errors.New("cannot get from echo.Context TelegramUserID")
+	}
+	return telegramUserID, nil
+
+}
+
+func GetTelegramUserIDFromPathParams(ctx echo.Context) (int64, error) {
+	id := ctx.Param(TelegramUserIDPathParamKey)
+
+	return strconv.ParseInt(id, 10, 64)
+}
 
 type CheckOAuthTelegramMiddleware struct {
 	userUseCase *usecase.UserUseCase
@@ -27,9 +52,7 @@ func NewCheckOAuthTelegramMiddleware(useCase *usecase.UserUseCase) CheckOAuthTel
 
 func (m CheckOAuthTelegramMiddleware) Handle(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(context echo.Context) error {
-		telegramIDPathParam := context.Param(TelegramUserIDPathParamKey)
-
-		telegramID, err := strconv.ParseInt(telegramIDPathParam, 10, 64)
+		telegramID, err := GetTelegramUserIDFromPathParams(context)
 		if err != nil {
 			const status = http.StatusBadRequest
 			return context.String(status, http.StatusText(status))
@@ -52,7 +75,8 @@ func (m CheckOAuthTelegramMiddleware) Handle(next echo.HandlerFunc) echo.Handler
 			return errors.WithStack(err)
 		}
 
-		context.Set(TelegramUserIDContextKey, oAuthToken)
+		context.Set(OAuthAccessTokenContextKey, oAuthToken)
+		context.Set(TelegramUserIDContextKey, telegramID)
 
 		return next(context)
 	}

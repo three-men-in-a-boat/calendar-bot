@@ -19,7 +19,7 @@ const (
 	nonceBase       = 16
 )
 
-const stateExpire = 5 * time.Minute
+const stateExpire = 15 * time.Minute
 
 type UserUseCase struct {
 	userRepository repository.UserRepository
@@ -33,31 +33,18 @@ func NewUserUseCase(userRepo repository.UserRepository, conf *config.App) UserUs
 	}
 }
 
-type MailruOauthResponseErr struct {
-	ErrorName        string `json:"error"`
-	ErrorCode        int    `json:"error_code"`
-	ErrorDescription string `json:"error_description"`
-}
-
-func (o *MailruOauthResponseErr) Error() string {
-	return fmt.Sprintf(
-		"MailruOauthResponseErr: error='%s', error_code=%d, error_description='%s'",
-		o.ErrorName, o.ErrorCode, o.ErrorDescription,
-	)
-}
-
 type tokenGetResp struct {
 	ExpiresInSeconds int64  `json:"expires_in"`
 	AccessToken      string `json:"access_token"`
 	RefreshToken     string `json:"refresh_token"`
 	TokenType        string `json:"token_type"`
-	*MailruOauthResponseErr
+	*types.MailruAPIResponseErr
 }
 
 type tokenRenewalResp struct {
 	ExpiresInSeconds int64  `json:"expires_in"`
 	AccessToken      string `json:"access_token"`
-	*MailruOauthResponseErr
+	*types.MailruAPIResponseErr
 }
 
 func (uuc *UserUseCase) GenOauthLinkForTelegramID(telegramID int64) (string, error) {
@@ -82,7 +69,7 @@ func (uuc *UserUseCase) GetTelegramIDByState(state string) (int64, error) {
 	return uuc.userRepository.GetTelegramUserIDByState(state)
 }
 
-func (uuc *UserUseCase) TelegramCreateAuthentificatedUser(tgUserID int64, mailAuthCode string) (err error) {
+func (uuc *UserUseCase) TelegramCreateAuthenticatedUser(tgUserID int64, mailAuthCode string) (err error) {
 	response, err := http.PostForm(
 		"https://oauth.mail.ru/token",
 		url.Values{
@@ -106,46 +93,28 @@ func (uuc *UserUseCase) TelegramCreateAuthentificatedUser(tgUserID int64, mailAu
 	if err := json.NewDecoder(response.Body).Decode(&tokenResp); err != nil {
 		return errors.Wrap(err, "cannot decode json into tokenGetResp struct")
 	}
-	if tokenResp.MailruOauthResponseErr != nil {
-		return tokenResp.MailruOauthResponseErr
+	if tokenResp.MailruAPIResponseErr != nil {
+		return tokenResp.MailruAPIResponseErr
 	}
 	// nickeskov: in this case http status must be ok
 	if response.StatusCode != http.StatusOK {
 		return errors.New(fmt.Sprintf("something wrong with token recv and mailru API: http_status='%s'", response.Status))
 	}
 
-	accessToken := tokenResp.AccessToken
-
-	response, err = http.Get(fmt.Sprintf("https://oauth.mail.ru/userinfo?access_token=%s", accessToken))
-
+	userInfo, err := uuc.GetMailruUserInfo(tokenResp.AccessToken)
 	if err != nil {
-		return errors.Wrapf(err, "cannot get accessToken for tgUserID=%d", tgUserID)
+		return errors.WithStack(err)
 	}
 
-	defer func() {
-		err = customerrors.HandleCloser(err, response.Body)
-	}()
-
-	if response.StatusCode != http.StatusOK {
-		return errors.New("something wrong with user info recv: " + response.Status)
+	if !userInfo.IsValid() {
+		return errors.Wrapf(userInfo.GetError(),
+			"mailru oauth userinfo API, response error, telegramUserID=%d", tgUserID)
 	}
 
-	var userInfo map[string]string
-	if newErr := json.NewDecoder(response.Body).Decode(&userInfo); err != nil {
-		return newErr
-	}
-
-	if err, ok := userInfo["error"]; ok {
-		return errors.New(err)
-	}
-
-	email := userInfo["email"]
-	userID := userInfo["id"]
-
-	user := types.User{
+	user := types.TelegramDBUser{
 		ID:                 0,
-		UserID:             userID,
-		MailUserEmail:      email,
+		UserID:             userInfo.ID,
+		MailUserEmail:      userInfo.Email,
 		MailAccessToken:    tokenResp.AccessToken,
 		MailRefreshToken:   tokenResp.RefreshToken,
 		MailTokenExpiresIn: time.Now().Add(time.Second * time.Duration(tokenResp.ExpiresInSeconds)),
@@ -153,7 +122,43 @@ func (uuc *UserUseCase) TelegramCreateAuthentificatedUser(tgUserID int64, mailAu
 		CreatedAt:          time.Time{},
 	}
 
-	return uuc.userRepository.CreateUser(user)
+	if err := uuc.userRepository.CreateUser(user); err != nil {
+		return errors.Wrapf(err, "db error, failed to authenticated user, telegramUserID=%d", tgUserID)
+	}
+
+	expire := time.Duration(tokenResp.ExpiresInSeconds) * time.Second
+	if err := uuc.userRepository.SetOAuthAccessTokenByTelegramUserID(tgUserID, tokenResp.AccessToken, expire); err != nil {
+		return errors.Wrapf(err, "redis error, failed to set accessToken for telegramUserID=%d", tgUserID)
+	}
+
+	return nil
+}
+
+func (uuc *UserUseCase) GetMailruUserInfo(accessToken string) (userInfo types.MailruUserInfo, err error) {
+	response, err := http.Get(fmt.Sprintf("https://oauth.mail.ru/userinfo?access_token=%s", accessToken))
+	if err != nil {
+		return types.MailruUserInfo{}, errors.Wrap(err, "failed to send userinfo oauth request")
+	}
+	defer func() {
+		err = customerrors.HandleCloser(err, response.Body)
+	}()
+
+	if err := json.NewDecoder(response.Body).Decode(&userInfo); err != nil {
+		return types.MailruUserInfo{}, errors.Wrap(err, "cannot decode json into MailruUserInfo struct")
+	}
+
+	if userInfo.MailruAPIResponseErr == nil && response.StatusCode != http.StatusOK {
+		return types.MailruUserInfo{},
+			errors.New(
+				fmt.Sprintf("something wrong with token recv and mailru API: http_status='%s'", response.Status),
+			)
+	}
+
+	if userInfo.MailruAPIResponseErr != nil {
+		return types.MailruUserInfo{}, errors.Wrap(err, "error in userinfo oauth response from Mail.ru API")
+	}
+
+	return userInfo, nil
 }
 
 func (uuc *UserUseCase) IsUserAuthenticatedByTelegramUserID(telegramID int64) (bool, error) {
@@ -188,8 +193,8 @@ func (uuc *UserUseCase) RefreshOAuthTokenByTelegramUserID(telegramID int64) (str
 	switch {
 	case err != nil:
 		return "", errors.WithStack(err)
-	case tokenResp.MailruOauthResponseErr != nil:
-		return "", tokenResp.MailruOauthResponseErr
+	case tokenResp.MailruAPIResponseErr != nil:
+		return "", tokenResp.MailruAPIResponseErr
 	}
 
 	err = uuc.userRepository.SetOAuthAccessTokenByTelegramUserID(
@@ -224,7 +229,7 @@ func (uuc *UserUseCase) obtainNewOAuthTokenByRefreshToken(refreshToken string) (
 		return tokenResp, errors.Wrap(err, "cannot decode json into tokenGetResp struct")
 	}
 	// nickeskov: in this case http status must be ok
-	if tokenResp.MailruOauthResponseErr == nil && response.StatusCode != http.StatusOK {
+	if tokenResp.MailruAPIResponseErr == nil && response.StatusCode != http.StatusOK {
 		return tokenRenewalResp{},
 			errors.New(
 				fmt.Sprintf("something wrong with token recv and mailru API: http_status='%s'", response.Status),

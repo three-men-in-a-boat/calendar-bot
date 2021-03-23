@@ -97,7 +97,7 @@ func (us *UserRepository) GetOAuthRefreshTokenByTelegramUserID(telegramID int64)
 	return refreshToken.String, nil
 }
 
-func (us *UserRepository) CreateUser(user types.User) error {
+func (us *UserRepository) CreateUser(user types.TelegramDBUser) error {
 
 	_, err := us.storage.Exec(`
 			INSERT INTO users(
