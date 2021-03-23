@@ -15,11 +15,28 @@ func NewStatesDictionary() StatesDictionary {
 	}
 }
 
-type Event struct {
-	Name         string   `json:"name,omitempty"`
-	Participants []string `json:"participants,omitempty"`
-	Time         string   `json:"time,omitempty"`
-}
+//type Calendar struct {
+//	ID         string   `json:"uid,omitempty"`
+//	Title         string   `json:"title,omitempty"`
+//
+//}
+//
+//type Attendees struct {
+//
+//}
+//
+//type Events []Event
+//
+//type Event struct {
+//	Title         string   `json:"title,omitempty"`
+//	From string `json:"from,omitempty"`
+//	To         string   `json:"to,omitempty"`
+//	FullDay         bool   `json:"fullDay,omitempty"`
+//	Description         string   `json:"description,omitempty"`
+//	Location         string   `json:"location,omitempty"`
+//	Calendar         Calendar   `json:"calendar,omitempty"`
+//	Attendees
+//}
 
 type MailruAPIResponseErr struct {
 	ErrorName        string `json:"error,omitempty"`

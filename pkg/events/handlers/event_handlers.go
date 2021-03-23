@@ -1,33 +1,49 @@
 package handlers
 
 import (
-	"encoding/json"
-	"github.com/calendar-bot/pkg/events/usecase"
-	"github.com/calendar-bot/pkg/types"
+	eUseCase "github.com/calendar-bot/pkg/events/usecase"
+	"github.com/calendar-bot/pkg/middlewares"
+	uUseCase "github.com/calendar-bot/pkg/users/usecase"
 	"github.com/labstack/echo"
+	"github.com/pkg/errors"
 	"net/http"
 )
 
 type EventHandlers struct {
-	eventUseCase usecase.EventUseCase
+	eventUseCase eUseCase.EventUseCase
+	userUseCase  uUseCase.UserUseCase
 }
 
-func NewEventHandlers(eventUseCase usecase.EventUseCase) EventHandlers {
-	return EventHandlers{eventUseCase: eventUseCase}
+func NewEventHandlers(eventUseCase eUseCase.EventUseCase, userUseCase uUseCase.UserUseCase) EventHandlers {
+	return EventHandlers{eventUseCase: eventUseCase, userUseCase: userUseCase}
 }
 
 func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
-	server.GET("/api/v1/oauth/telegram/events", eh.getEvents)
+	oauthMiddleware := middlewares.NewCheckOAuthTelegramMiddleware(&eh.userUseCase)
+
+	userRouter := server.Group("/api/v1/telegram/user/" + middlewares.TelegramUserIDRouteKey)
+
+	userRouter.GET("/events/today", eh.getEventsToday, oauthMiddleware.Handle)
 }
 
-func (eh *EventHandlers) getEvents(ctx echo.Context) error {
-	var events []types.Event
-	event1 := types.Event{Name: "Meeting in Zoom", Participants: []string{"Nikolay, Alexey, Alexandr"}, Time: "Today 23:00"}
-	event2 := types.Event{Name: "Meeting in university", Participants: []string{"Mike, Alex, Gabe"}, Time: "Tomorrow 23:00"}
-	events = append(events, event1, event2)
-	b, err := json.Marshal(events)
+func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
+	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
-	return ctx.String(http.StatusOK, string(b))
+
+	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	todaysEvent, err := eh.eventUseCase.GetEventsToday(accessToken)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get userinfo for telegramUserID=%d", telegramID)
+	}
+	if todaysEvent == nil {
+		return errors.New("response from calendar api for events is empty")
+	}
+
+	return ctx.String(http.StatusOK, *todaysEvent)
 }

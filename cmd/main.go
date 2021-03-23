@@ -27,14 +27,14 @@ type RequestHandlers struct {
 
 func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) RequestHandlers {
 
-	eventStorage := eRepo.NewEventStorage(db)
-	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
-	eventHandlers := eHandlers.NewEventHandlers(eventUseCase)
-
 	states := types.NewStatesDictionary()
 	userStorage := uRepo.NewUserRepository(db, client)
 	userUseCase := uUsecase.NewUserUseCase(userStorage, conf)
 	userHandlers := uHandlers.NewUserHandlers(userUseCase, states, conf)
+
+	eventStorage := eRepo.NewEventStorage(db)
+	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
+	eventHandlers := eHandlers.NewEventHandlers(eventUseCase, userUseCase)
 
 	return RequestHandlers{
 		eventHandlers: eventHandlers,
