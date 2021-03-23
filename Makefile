@@ -43,4 +43,4 @@ vetcheck:
 
 build-debug:
 	@mkdir -p build/debug
-	go build -o build/debug/botbackend ./cmd/main.go
+	go build -o build/debug/botbackend -gcflags="all=-N -l" ./cmd/main.go

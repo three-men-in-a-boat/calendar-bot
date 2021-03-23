@@ -76,18 +76,12 @@ func (o *MailruAPIResponseErr) GetError() *MailruAPIResponseErr {
 }
 
 type TelegramDBUser struct {
-	ID     int64
-	UserID string // TODO(nickeskov): rename to MailUserID (in DB too)
-
+	ID               int64
+	MailUserID       string
 	MailUserEmail    string // nickeskov: maybe also remove this field?
 	MailRefreshToken string
-
-	MailAccessToken    string    // TODO(nickeskov): remove this field
-	MailTokenExpiresIn time.Time // TODO(nickeskov): remove this field
-
-	TelegramUserId int64
-
-	CreatedAt time.Time
+	TelegramUserId   int64
+	CreatedAt        time.Time
 }
 
 // Gender: m - male, f - female

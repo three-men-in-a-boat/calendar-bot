@@ -27,14 +27,15 @@ func NewUserHandlers(eventUseCase usecase.UserUseCase, states types.StatesDictio
 }
 
 func (uh *UserHandlers) InitHandlers(server *echo.Echo) {
-	oauthMiddleware := middlewares.NewCheckOAuthTelegramMiddleware(&uh.userUseCase)
+	oauthMiddleware := middlewares.NewCheckOAuthTelegramMiddleware(&uh.userUseCase).Handle
 
 	userRouter := server.Group("/api/v1/oauth/telegram/user/" + middlewares.TelegramUserIDRouteKey)
 
 	userRouter.GET("/ref", uh.generateOAuthLinkWithState)
 	userRouter.GET("/is_auth", uh.chekAuthOfTelegramUser)
+	userRouter.GET("/info", uh.getMailruUserInfo, oauthMiddleware)
 
-	userRouter.GET("/info", uh.getMailruUserInfo, oauthMiddleware.Handle)
+	userRouter.DELETE("", uh.deleteLocalAuthenticatedUser, oauthMiddleware)
 
 	server.GET("/api/v1/oauth", uh.telegramOAuth)
 }
@@ -131,4 +132,18 @@ func (uh *UserHandlers) getMailruUserInfo(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusOK, userInfo)
+}
+
+func (uh *UserHandlers) deleteLocalAuthenticatedUser(ctx echo.Context) error {
+	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := uh.userUseCase.DeleteLocalAuthenticatedUserByTelegramUserID(telegramID); err != nil {
+		return errors.Wrapf(err, "failed to delete local authenticated user by telegramUserID=%d", telegramID)
+	}
+
+	const status = http.StatusOK
+	return ctx.String(status, http.StatusText(status))
 }
