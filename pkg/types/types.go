@@ -16,7 +16,7 @@ func NewStatesDictionary() StatesDictionary {
 }
 
 type Calendar struct {
-	ID    string `json:"uid,omitempty"`
+	UID   string `json:"uid,omitempty"`
 	Title string `json:"title,omitempty"`
 }
 
@@ -27,22 +27,42 @@ type Attendee struct {
 	Status string `json:"status,omitempty"`
 }
 
+type Location struct {
+	Description string   `json:"description,omitempty"`
+	Confrooms   []string `json:"confrooms,omitempty"`
+	Geo         Geo      `json:"geo,omitempty"`
+}
+
+type Geo struct {
+	Latitude  string `json:"latitude,omitempty"`
+	Longitude string `json:"longitude,omitempty"`
+}
+
 type Attendees []Attendee
 
 type Events []Event
 
 type Event struct {
+	Uid         string    `json:"uid,omitempty"`
 	Title       string    `json:"title,omitempty"`
-	From        string    `json:"from,omitempty"`
-	To          string    `json:"to,omitempty"`
+	From        time.Time `json:"from,omitempty"`
+	To          time.Time `json:"to,omitempty"`
 	FullDay     bool      `json:"fullDay,omitempty"`
 	Description string    `json:"description,omitempty"`
-	Location    string    `json:"location,omitempty"`
+	Location    Location  `json:"location,omitempty"`
 	Calendar    Calendar  `json:"calendar,omitempty"`
 	Attendees   Attendees `json:"attendees,omitempty"`
 	Call        string    `json:"call,omitempty"`
 	Organizer   Attendee  `json:"organizer,omitempty"`
 	Payload     string    `json:"payload,omitempty"`
+}
+
+type DataEvents struct {
+	Events Events `json:"events,omitempty"`
+}
+
+type EventsResponse struct {
+	Data DataEvents `json:"data,omitempty"`
 }
 
 type MailruAPIResponseErr struct {

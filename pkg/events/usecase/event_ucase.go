@@ -1,12 +1,15 @@
 package usecase
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/calendar-bot/pkg/events/repository"
+	"github.com/calendar-bot/pkg/types"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -22,16 +25,32 @@ func NewEventUseCase(eventStor repository.EventRepository) EventUseCase {
 
 func getStartDay(t time.Time) time.Time {
 	year, month, day := t.Date()
-	return time.Date(year, month, day, 0, 0, 0, 0, &time.Location{})
+	return time.Date(year, month, day, 0, 0, 0, 0, time.Now().Location())
 }
 func getEndDay(t time.Time) time.Time {
 	year, month, day := t.Date()
-	return time.Date(year, month, day, 23, 59, 59, 0, &time.Location{})
+	return time.Date(year, month, day, 23, 59, 59, 0, time.Now().Location())
 }
 
-func (uc *EventUseCase) GetEventsToday(accessToken string) (*string, error) {
-	startDay := getStartDay(time.Now()).Format(time.RFC3339)
-	endDay := getEndDay(time.Now()).Format(time.RFC3339)
+func sortEvents(events []types.Event) (types.Events, error) {
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].From.Unix() < events[j].From.Unix()
+	})
+	return events, nil
+}
+
+func closestEvent(events []types.Event) (*types.Event, error) {
+	for _, event := range events {
+		if event.From.Unix() > time.Now().Unix() {
+			return &event, nil
+		}
+	}
+	return nil, nil
+}
+
+func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsResponse, error) {
+	startDay := getStartDay(t).Format(time.RFC3339)
+	endDay := getEndDay(t).Format(time.RFC3339)
 
 	graphqlRequest := fmt.Sprintf(`
 	{
@@ -99,10 +118,44 @@ func (uc *EventUseCase) GetEventsToday(accessToken string) (*string, error) {
 		}
 	}()
 
-	events, err := ioutil.ReadAll(response.Body)
+	res, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}
-	res := string(events)
-	return &res, nil
+
+	eventsResponse := types.EventsResponse{}
+
+	err = json.Unmarshal(res, &eventsResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := sortEvents(eventsResponse.Data.Events)
+	if err != nil {
+		return nil, err
+	}
+	eventsResponse.Data.Events = events
+
+	return &eventsResponse, nil
+}
+
+func (uc *EventUseCase) GetEventsToday(accessToken string) (*types.EventsResponse, error) {
+	return getEventsBySpecificDay(time.Now(), accessToken)
+}
+
+func (uc *EventUseCase) GetClosesEvent(accessToken string) (*types.Event, error) {
+	eventsResponse, err := uc.GetEventsToday(accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	closestEvent, err := closestEvent(eventsResponse.Data.Events)
+	if err != nil {
+		return nil, err
+	}
+	return closestEvent, nil
+}
+
+func (uc *EventUseCase) GetEventsByDate(accessToken string, date time.Time) (*types.EventsResponse, error) {
+	return getEventsBySpecificDay(date, accessToken)
 }
