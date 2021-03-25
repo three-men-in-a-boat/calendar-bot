@@ -35,7 +35,7 @@ func (uh *UserHandlers) InitHandlers(server *echo.Echo) {
 	userRouter.GET("/is_auth", uh.chekAuthOfTelegramUser)
 	userRouter.GET("/info", uh.getMailruUserInfo, oauthMiddleware)
 
-	userRouter.DELETE("", uh.deleteLocalAuthenticatedUser, oauthMiddleware)
+	userRouter.DELETE("", uh.deleteLocalAuthenticatedUser)
 
 	server.GET("/api/v1/oauth", uh.telegramOAuth)
 }
@@ -135,12 +135,16 @@ func (uh *UserHandlers) getMailruUserInfo(ctx echo.Context) error {
 }
 
 func (uh *UserHandlers) deleteLocalAuthenticatedUser(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := middlewares.GetTelegramUserIDFromPathParams(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	if err := uh.userUseCase.DeleteLocalAuthenticatedUserByTelegramUserID(telegramID); err != nil {
+		if _, ok := err.(repository.UserEntityError); ok {
+			const status = http.StatusNoContent
+			return ctx.String(status, http.StatusText(status))
+		}
 		return errors.Wrapf(err, "failed to delete local authenticated user by telegramUserID=%d", telegramID)
 	}
 
