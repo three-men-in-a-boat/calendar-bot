@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 	"net/http"
+	"time"
 )
 
 type EventHandlers struct {
@@ -21,9 +22,11 @@ func NewEventHandlers(eventUseCase eUseCase.EventUseCase, userUseCase uUseCase.U
 func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
 	oauthMiddleware := middlewares.NewCheckOAuthTelegramMiddleware(&eh.userUseCase)
 
-	userRouter := server.Group("/api/v1/telegram/user/" + middlewares.TelegramUserIDRouteKey)
+	eventRouter := server.Group("/api/v1/telegram/user/" + middlewares.TelegramUserIDRouteKey)
 
-	userRouter.GET("/events/today", eh.getEventsToday, oauthMiddleware.Handle)
+	eventRouter.GET("/events/today", eh.getEventsToday, oauthMiddleware.Handle)
+	eventRouter.GET("/events/closest", eh.getClosesEvent, oauthMiddleware.Handle)
+	eventRouter.GET("/events/date/:date", eh.getEventsByDate, oauthMiddleware.Handle)
 }
 
 func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
@@ -39,12 +42,64 @@ func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
 
 	todaysEvent, err := eh.eventUseCase.GetEventsToday(accessToken)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get userinfo for telegramUserID=%d", telegramID)
+		return errors.Wrapf(err, "failed to get today's events for telegramUserID=%d", telegramID)
 	}
 	if todaysEvent == nil {
 		return errors.New("response from calendar api for events is empty")
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
-	return ctx.String(http.StatusOK, *todaysEvent)
+	return ctx.JSON(http.StatusOK, *todaysEvent)
+}
+
+func (eh *EventHandlers) getClosesEvent(ctx echo.Context) error {
+	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	closesEvent, err := eh.eventUseCase.GetClosesEvent(accessToken)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get the closest event for telegramUserID=%d", telegramID)
+	}
+	if closesEvent == nil {
+		return errors.New("response from calendar api for events is empty")
+	}
+	ctx.Response().Header().Set("Content-Type", "application/json")
+
+	return ctx.JSON(http.StatusOK, *closesEvent)
+}
+
+func (eh *EventHandlers) getEventsByDate(ctx echo.Context) error {
+	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	dateFromCtx := ctx.Param("date")
+	date, err := time.Parse(time.RFC3339, dateFromCtx)
+	if err != nil {
+		return err
+	}
+
+	eventsByDate, err := eh.eventUseCase.GetEventsByDate(accessToken, date)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get the closest event for telegramUserID=%d", telegramID)
+	}
+	if eventsByDate == nil {
+		return errors.New("response from calendar api for events is empty")
+	}
+	ctx.Response().Header().Set("Content-Type", "application/json")
+
+	return ctx.JSON(http.StatusOK, *eventsByDate)
 }
