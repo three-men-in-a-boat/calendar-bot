@@ -45,14 +45,14 @@ func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
 		return errors.Wrapf(err, "failed to get today's events for telegramUserID=%d", telegramID)
 	}
 	if todaysEvent == nil {
-		return errors.New("response from calendar api for events is empty")
+		return ctx.String(http.StatusNotFound, "no events")
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	return ctx.JSON(http.StatusOK, *todaysEvent)
 }
 
-func (eh *EventHandlers) getClosesEvent(ctx echo.Context) error {
+func (eh *EventHandlers) getClosestEvent(ctx echo.Context) error {
 	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
@@ -63,12 +63,12 @@ func (eh *EventHandlers) getClosesEvent(ctx echo.Context) error {
 		return errors.WithStack(err)
 	}
 
-	closesEvent, err := eh.eventUseCase.GetClosesEvent(accessToken)
+	closesEvent, err := eh.eventUseCase.GetClosestEvent(accessToken)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get the closest event for telegramUserID=%d", telegramID)
 	}
 	if closesEvent == nil {
-		return errors.New("response from calendar api for events is empty")
+		return ctx.String(http.StatusNotFound, "no events")
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
@@ -97,7 +97,7 @@ func (eh *EventHandlers) getEventsByDate(ctx echo.Context) error {
 		return errors.Wrapf(err, "failed to get the closest event for telegramUserID=%d", telegramID)
 	}
 	if eventsByDate == nil {
-		return errors.New("response from calendar api for events is empty")
+		return ctx.String(http.StatusNotFound, "no events")
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
