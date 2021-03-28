@@ -129,7 +129,9 @@ func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsRespo
 	if err != nil {
 		return nil, err
 	}
-
+	if len(eventsResponse.Data.Events) == 0 {
+		return nil, nil
+	}
 	events, err := sortEvents(eventsResponse.Data.Events)
 	if err != nil {
 		return nil, err
