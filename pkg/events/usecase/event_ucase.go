@@ -159,3 +159,85 @@ func (uc *EventUseCase) GetClosesEvent(accessToken string) (*types.Event, error)
 func (uc *EventUseCase) GetEventsByDate(accessToken string, date time.Time) (*types.EventsResponse, error) {
 	return getEventsBySpecificDay(date, accessToken)
 }
+
+func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string, eventID string) (*types.EventResponse, error) {
+	graphqlRequest := fmt.Sprintf(`
+	{
+		event(eventUID: "%s", calendarUID: "%s") {
+			uid,
+			title,
+			from,
+			to,
+			fullDay,
+			description,
+			location{
+				description,
+				confrooms,
+				geo {
+     				latitude,
+					longitude,
+				}
+ 			},
+			calendar {
+ 				uid,
+ 				title
+			},
+ 			attendees{
+				email,
+   			name,
+   			role,
+   			status
+ 			},
+ 			call,
+ 			organizer{
+   			email,
+   			name,
+   			role,
+   			status
+ 			},
+ 			payload
+  		}
+	}
+	`, eventID, calendarID)
+
+	request, err := http.NewRequest("GET", "https://calendar.mail.ru/graphql", nil)
+	if err != nil {
+		zap.S().Errorf("failed to send request %s", err)
+		return nil, err
+	}
+	q := request.URL.Query()
+	q.Add("query", graphqlRequest)
+	request.URL.RawQuery = q.Encode()
+
+	var bearerToken = "Bearer " + accessToken
+	request.Header.Add(
+		"Authorization",
+		bearerToken,
+	)
+
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, errors.Errorf("The HTTP request failed with error %v", err)
+	}
+	defer func() {
+		err = response.Body.Close()
+		if err != nil {
+			zap.S().Errorf("failed to close body of response of func getEvents, %v", err)
+		}
+	}()
+
+	res, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	eventResponse := types.EventResponse{}
+
+	err = json.Unmarshal(res, &eventResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &eventResponse, nil
+}
