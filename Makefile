@@ -47,4 +47,4 @@ build-debug:
 
 build-debug-linux-amd64:
 	@mkdir -p build/debug/linux-amd64
-	go build -o build/debug/linux-amd64/botbackend -gcflags="all=-N -l" ./cmd/main.go
+	@CGO_ENABLE=0 GOOS=linux GOARCH=amd64 go build -o build/debug/linux-amd64/botbackend -gcflags="all=-N -l" ./cmd/main.go
