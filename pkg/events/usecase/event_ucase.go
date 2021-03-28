@@ -143,7 +143,7 @@ func (uc *EventUseCase) GetEventsToday(accessToken string) (*types.EventsRespons
 	return getEventsBySpecificDay(time.Now(), accessToken)
 }
 
-func (uc *EventUseCase) GetClosesEvent(accessToken string) (*types.Event, error) {
+func (uc *EventUseCase) GetClosestEvent(accessToken string) (*types.Event, error) {
 	eventsResponse, err := uc.GetEventsToday(accessToken)
 	if err != nil {
 		return nil, err
