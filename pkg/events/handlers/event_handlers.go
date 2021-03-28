@@ -25,7 +25,7 @@ func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
 	eventRouter := server.Group("/api/v1/telegram/user/" + middlewares.TelegramUserIDRouteKey)
 
 	eventRouter.GET("/events/today", eh.getEventsToday, oauthMiddleware.Handle)
-	eventRouter.GET("/events/closest", eh.getClosesEvent, oauthMiddleware.Handle)
+	eventRouter.GET("/events/closest", eh.getClosestEvent, oauthMiddleware.Handle)
 	eventRouter.GET("/events/date/:date", eh.getEventsByDate, oauthMiddleware.Handle)
 }
 
