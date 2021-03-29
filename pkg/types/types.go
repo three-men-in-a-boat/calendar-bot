@@ -65,6 +65,14 @@ type EventsResponse struct {
 	Data DataEvents `json:"data,omitempty"`
 }
 
+type DataEvent struct {
+	Event Event `json:"event,omitempty"`
+}
+
+type EventResponse struct {
+	Data DataEvent `json:"data,omitempty"`
+}
+
 type MailruAPIResponseErr struct {
 	ErrorName        string `json:"error,omitempty"`
 	ErrorCode        int    `json:"error_code,omitempty"`
