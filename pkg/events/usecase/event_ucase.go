@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/calendar-bot/pkg/events/repository"
@@ -243,4 +244,51 @@ func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string,
 	}
 
 	return &eventResponse, nil
+}
+
+func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) (*types.HTTPResponse, error) {
+	mutationReq := fmt.Sprintf(`mutation{createEvent(event: {uid: \"%s\", title: \"%s\", from: \"%s\", to: \"%s\", description: \"%s\"}) {uid}}`, eventInput.Uid, eventInput.Title, eventInput.From, eventInput.To, eventInput.Description)
+	eventCreationReq := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
+
+	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(eventCreationReq)))
+	if err != nil {
+		zap.S().Errorf("failed to create a request %s", err)
+		return nil, err
+	}
+
+	var bearerToken = "Bearer " + accessToken
+	request.Header.Add(
+		"Authorization",
+		bearerToken,
+	)
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, errors.Errorf("The HTTP request failed with error %v", err)
+	}
+	defer func() {
+		err = response.Body.Close()
+		if err != nil {
+			zap.S().Errorf("failed to close body of response of func getEvents, %v", err)
+		}
+	}()
+
+	res, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	eventsResponse := types.EventsResponse{}
+
+	err = json.Unmarshal(res, &eventsResponse)
+	if err != nil {
+		return nil, err
+	}
+	responseHTTP := types.HTTPResponse{}
+	responseHTTP.StatusCode = response.StatusCode
+	responseHTTP.Response = string(res)
+
+	return &responseHTTP, nil
 }

@@ -135,3 +135,23 @@ func (m *MailruUserInfo) IsValid() bool {
 	}
 	return !m.MailruAPIResponseErr.IsError()
 }
+
+type EventInput struct {
+	Uid         string    `json:"uid,omitempty"`
+	Title       string    `json:"title,omitempty"`
+	From        string    `json:"from,omitempty"`
+	To          string    `json:"to,omitempty"`
+	FullDay     bool      `json:"fullDay,omitempty"`
+	Description string    `json:"description,omitempty"`
+	Location    Location  `json:"location,omitempty"`
+	Calendar    Calendar  `json:"calendar,omitempty"`
+	Attendees   Attendees `json:"attendees,omitempty"`
+	Call        string    `json:"call,omitempty"`
+	Chat        string    `json:"chat,omitempty"`
+	Payload     string    `json:"payload,omitempty"`
+}
+
+type HTTPResponse struct {
+	StatusCode int
+	Response   string
+}
