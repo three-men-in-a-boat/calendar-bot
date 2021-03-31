@@ -246,8 +246,25 @@ func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string,
 	return &eventResponse, nil
 }
 
+func getNewTime(t time.Time) time.Time {
+	year, month, day := t.Date()
+	return time.Date(year, month, day, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.Now().Location())
+}
+
 func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) (*types.HTTPResponse, error) {
-	mutationReq := fmt.Sprintf(`mutation{createEvent(event: {uid: \"%s\", title: \"%s\", from: \"%s\", to: \"%s\", description: \"%s\"}) {uid}}`, eventInput.Uid, eventInput.Title, eventInput.From, eventInput.To, eventInput.Description)
+	tmp, err := time.Parse(time.RFC3339, eventInput.From)
+	if err != nil {
+		return nil, errors.Errorf("failed to parse `from` time, %v", err)
+	}
+	from := getNewTime(tmp).Format(time.RFC3339)
+
+	tmp, err = time.Parse(time.RFC3339, eventInput.To)
+	if err != nil {
+		return nil, errors.Errorf("failed to parse `to` time, %v", err)
+	}
+	to := getNewTime(tmp).Format(time.RFC3339)
+
+	mutationReq := fmt.Sprintf(`mutation{createEvent(event: {uid: \"%s\", title: \"%s\", from: \"%s\", to: \"%s\", description: \"%s\"}) {uid}}`, eventInput.Uid, eventInput.Title, from, to, eventInput.Description)
 	eventCreationReq := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
 
 	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(eventCreationReq)))
