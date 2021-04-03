@@ -152,6 +152,9 @@ func (uc *EventUseCase) GetClosestEvent(accessToken string) (*types.Event, error
 	if err != nil {
 		return nil, err
 	}
+	if eventsResponse == nil {
+		return nil, nil
+	}
 
 	closestEvent, err := closestEvent(eventsResponse.Data.Events)
 	if err != nil {
