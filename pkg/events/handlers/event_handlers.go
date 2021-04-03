@@ -183,7 +183,12 @@ func (eh *EventHandlers) createEvent(ctx echo.Context) error {
 		return errors.Errorf("failed to read content from body")
 	}
 	err = json.Unmarshal(b, &eventInput)
+
+	kekek := string(b)
+	fmt.Println(kekek)
 	if err != nil {
+		kek := err.Error()
+		fmt.Println(kek)
 		return errors.Errorf("failed to unmarshal content from body")
 	}
 

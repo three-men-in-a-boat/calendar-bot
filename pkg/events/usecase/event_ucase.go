@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"github.com/calendar-bot/pkg/events/repository"
 	"github.com/calendar-bot/pkg/types"
+	"github.com/fatih/structs"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type EventUseCase struct {
@@ -254,26 +257,114 @@ func getNewTime(t time.Time) time.Time {
 	return time.Date(year, month, day, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.Now().Location())
 }
 
+func RemoveLastChar(str string) string {
+	for len(str) > 0 {
+		_, size := utf8.DecodeLastRuneInString(str)
+		return str[:len(str)-size]
+	}
+	return str
+}
+
+func MakeFirstLowerCase(s string) string {
+
+	if len(s) < 2 {
+		return strings.ToLower(s)
+	}
+
+	bts := []byte(s)
+
+	lc := bytes.ToLower([]byte{bts[0]})
+	rest := bts[1:]
+
+	return string(bytes.Join([][]byte{lc, rest}, nil))
+}
+
+func getJsonFromMap(m map[string]interface{}) string {
+	var response string
+	for key, element := range m {
+		key = MakeFirstLowerCase(key)
+		switch value := element.(type) {
+		case string:
+			response += fmt.Sprintf("%s: \\\"%s\\\",", key, value)
+		case *string:
+			if value == nil {
+				continue
+			}
+			response += fmt.Sprintf("%s: \\\"%s\\\",", key, *value)
+		case []string:
+			var array string
+			for i, v := range value {
+				array += fmt.Sprintf("\\\"%s\\\"", v)
+				if i != len(value)-1 {
+					array += ", "
+				}
+			}
+			response += fmt.Sprintf("%s: [%s],", key, array)
+		case *bool:
+			if value == nil {
+				continue
+			}
+			response += key + ": " + fmt.Sprintf("%t", *value) + ","
+		case bool:
+			response += key + ": " + fmt.Sprintf("%t", value) + ","
+		case *map[string]interface{}:
+			if value == nil {
+				continue
+			}
+			lol := getJsonFromMap(*value)
+			response += fmt.Sprintf("%s:{%s},", key, lol)
+		case map[string]interface{}:
+			lol := getJsonFromMap(value)
+			response += fmt.Sprintf("%s:{%s},", key, lol)
+		case *types.Attendees:
+			if value == nil {
+				continue
+			}
+			var array string
+
+			for i, v := range *value {
+				array += fmt.Sprintf("{email: \\\"%s\\\", role: %s}", v.Email, v.Role)
+				if i != len(*value) - 1 {
+					array += ", "
+				}
+			}
+			response += fmt.Sprintf("%s:[%s],", key, array)
+		default:
+			continue
+		}
+
+	}
+
+	return response
+}
+
 func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) (*types.HTTPResponse, error) {
-	tmp, err := time.Parse(time.RFC3339, eventInput.From)
+	tmp, err := time.Parse(time.RFC3339, *eventInput.From)
 	if err != nil {
 		return nil, errors.Errorf("failed to parse `from` time, %v", err)
 	}
 	from := getNewTime(tmp).Format(time.RFC3339)
+	eventInput.From = &from
 
-	tmp, err = time.Parse(time.RFC3339, eventInput.To)
+	tmp, err = time.Parse(time.RFC3339, *eventInput.To)
 	if err != nil {
 		return nil, errors.Errorf("failed to parse `to` time, %v", err)
 	}
 	to := getNewTime(tmp).Format(time.RFC3339)
+	eventInput.To = &to
 
-	mutationReq := fmt.Sprintf(`mutation{createEvent(event: {uid: \"%s\", title: \"%s\", from: \"%s\", to: \"%s\", description: \"%s\"}) {uid}}`, eventInput.Uid, eventInput.Title, from, to, eventInput.Description)
+	m := structs.Map(eventInput)
+
+	lol := getJsonFromMap(m)
+	lol = strings.ReplaceAll(lol, ",}", "}")
+	lol = RemoveLastChar(lol)
+
+	mutationReq := fmt.Sprintf(`mutation{createEvent(event: {%s}) {uid,calendar{uid}}}`, lol)
 	eventCreationReq := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
 
 	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(eventCreationReq)))
 	if err != nil {
-		zap.S().Errorf("failed to create a request %s", err)
-		return nil, err
+		return nil, errors.Errorf("failed to create a request: , %v", err)
 	}
 
 	var bearerToken = "Bearer " + accessToken
@@ -291,20 +382,20 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 	defer func() {
 		err = response.Body.Close()
 		if err != nil {
-			zap.S().Errorf("failed to close body of response of func getEvents, %v", err)
+			fmt.Printf("failed to close body of response of func getEvents, %v", err)
 		}
 	}()
 
 	res, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Errorf("failed to read body %v", err)
 	}
 
 	eventsResponse := types.EventsResponse{}
 
 	err = json.Unmarshal(res, &eventsResponse)
 	if err != nil {
-		return nil, err
+		return nil, errors.Errorf("failed to unmarshal json %v", err)
 	}
 	responseHTTP := types.HTTPResponse{}
 	responseHTTP.StatusCode = response.StatusCode
