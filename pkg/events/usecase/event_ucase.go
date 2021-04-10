@@ -355,11 +355,11 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 
 	m := structs.Map(eventInput)
 
-	lol := getJsonFromMap(m)
-	lol = strings.ReplaceAll(lol, ",}", "}")
-	lol = RemoveLastChar(lol)
+	queryEvent := getJsonFromMap(m)
+	queryEvent = strings.ReplaceAll(queryEvent, ",}", "}")
+	queryEvent = RemoveLastChar(queryEvent)
 
-	mutationReq := fmt.Sprintf(`mutation{createEvent(event: {%s}) {uid,calendar{uid}}}`, lol)
+	mutationReq := fmt.Sprintf(`mutation{createEvent(event: {%s}) {uid,calendar{uid}}}`, queryEvent)
 	eventCreationReq := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
 
 	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(eventCreationReq)))
