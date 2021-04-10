@@ -173,7 +173,7 @@ func (uc *EventUseCase) GetEventsByDate(accessToken string, date time.Time) (*ty
 func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string, eventID string) (*types.EventResponse, error) {
 	graphqlRequest := fmt.Sprintf(`
 	{
-		event(eventUID: "%s", calendarUID: "%s") {
+		event(eventUID: "%s", calendarUID: "%s", buildVirtual: true) {
 			uid,
 			title,
 			from,
