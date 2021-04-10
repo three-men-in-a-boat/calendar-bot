@@ -142,11 +142,9 @@ type Location struct {
 	Geo         *Geo     `json:"geo,omitempty"`
 }
 
-
-
 type Attendee struct {
-	Email  string `json:"email,omitempty"`
-	Role   string `json:"role,omitempty"`
+	Email string `json:"email,omitempty"`
+	Role  string `json:"role,omitempty"`
 }
 
 type Attendees []Attendee

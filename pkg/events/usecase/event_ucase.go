@@ -324,7 +324,7 @@ func getJsonFromMap(m map[string]interface{}) string {
 
 			for i, v := range *value {
 				array += fmt.Sprintf("{email: \\\"%s\\\", role: %s}", v.Email, v.Role)
-				if i != len(*value) - 1 {
+				if i != len(*value)-1 {
 					array += ", "
 				}
 			}
