@@ -33,8 +33,9 @@ func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
 	eventRouter.GET("/events/closest", eh.getClosestEvent, oauthMiddleware.Handle)
 	eventRouter.GET("/events/date/:date", eh.getEventsByDate, oauthMiddleware.Handle)
 
-	eventRouter.GET("/events/calendar/event", eh.getEventByEventID, oauthMiddleware.Handle)
+	eventRouter.PUT("/events/calendar/event", eh.getEventByEventID, oauthMiddleware.Handle)
 	eventRouter.POST("/events/event/create", eh.createEvent, oauthMiddleware.Handle)
+	eventRouter.PUT("/events/calendar/add/attendee", eh.addAttendee, oauthMiddleware.Handle)
 }
 
 func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
@@ -184,8 +185,6 @@ func (eh *EventHandlers) createEvent(ctx echo.Context) error {
 	}
 	err = json.Unmarshal(b, &eventInput)
 
-	kekek := string(b)
-	fmt.Println(kekek)
 	if err != nil {
 		kek := err.Error()
 		fmt.Println(kek)
@@ -201,4 +200,47 @@ func (eh *EventHandlers) createEvent(ctx echo.Context) error {
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 	return ctx.JSON(http.StatusOK, event.Response)
+}
+
+func (eh *EventHandlers) addAttendee(ctx echo.Context) error {
+	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	eventInput := types.AddAttendee{}
+
+	b, err := ioutil.ReadAll(ctx.Request().Body)
+	defer func() {
+		err := ctx.Request().Body.Close()
+		if err != nil {
+			zap.S().Errorf("failed to close body %s", err)
+		}
+	}()
+
+	if err != nil {
+		return errors.Errorf("failed to read content from body")
+	}
+	err = json.Unmarshal(b, &eventInput)
+
+	if err != nil {
+		kek := err.Error()
+		fmt.Println(kek)
+		return errors.Errorf("failed to unmarshal content from body")
+	}
+
+	attendeeResponse, err := eh.eventUseCase.AddAttendee(accessToken, eventInput)
+	if err != nil {
+		return errors.Wrapf(err, "failed to add attendee for event of telegramUserID=%d", telegramID)
+	}
+	if attendeeResponse == nil {
+		return errors.Wrapf(err, "failed to add attendee for event of telegramUserID=%d, response is nil", telegramID)
+	}
+	ctx.Response().Header().Set("Content-Type", "application/json")
+	return ctx.JSON(http.StatusOK, attendeeResponse.Response)
 }

@@ -359,10 +359,57 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 	queryEvent = strings.ReplaceAll(queryEvent, ",}", "}")
 	queryEvent = RemoveLastChar(queryEvent)
 
-	mutationReq := fmt.Sprintf(`mutation{createEvent(event: {%s}) {uid,calendar{uid}}}`, queryEvent)
+	mutationReq := fmt.Sprintf(`mutation{createEvent(event: {%s}) {uid,calendar{uid, title}}}`, queryEvent)
 	eventCreationReq := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
 
 	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(eventCreationReq)))
+	if err != nil {
+		return nil, errors.Errorf("failed to create a request: , %v", err)
+	}
+
+	var bearerToken = "Bearer " + accessToken
+	request.Header.Add(
+		"Authorization",
+		bearerToken,
+	)
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, errors.Errorf("The HTTP request failed with error %v", err)
+	}
+	defer func() {
+		err = response.Body.Close()
+		if err != nil {
+			fmt.Printf("failed to close body of response of func getEvents, %v", err)
+		}
+	}()
+
+	res, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, errors.Errorf("failed to read body %v", err)
+	}
+
+	eventsResponse := types.EventsResponse{}
+
+	err = json.Unmarshal(res, &eventsResponse)
+	if err != nil {
+		return nil, errors.Errorf("failed to unmarshal json %v", err)
+	}
+	responseHTTP := types.HTTPResponse{}
+	responseHTTP.StatusCode = response.StatusCode
+	responseHTTP.Response = string(res)
+
+	return &responseHTTP, nil
+}
+
+func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttendee) (*types.HTTPResponse, error) {
+
+	mutationReq := fmt.Sprintf(`mutation{appendAttendee(uri: {uid: \"%s", calendar: \"%s\"}, input: {attendee: {email: \"%s\", role: %s}}){email, role, name, status}}`, attendee.EventID, attendee.CalendarID, attendee.Email, attendee.Role)
+	addAtttendeeRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
+
+	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(addAtttendeeRequest)))
 	if err != nil {
 		return nil, errors.Errorf("failed to create a request: , %v", err)
 	}
