@@ -168,3 +168,10 @@ type HTTPResponse struct {
 	StatusCode int
 	Response   string
 }
+
+type AddAttendee struct {
+	EventID    string `json:"eventID,omitempty"`
+	CalendarID string `json:"calendarID,omitempty"`
+	Email      string `json:"email,omitempty"`
+	Role       string `json:"role,omitempty"`
+}
