@@ -229,9 +229,7 @@ func (eh *EventHandlers) addAttendee(ctx echo.Context) error {
 	err = json.Unmarshal(b, &eventInput)
 
 	if err != nil {
-		kek := err.Error()
-		fmt.Println(kek)
-		return errors.Errorf("failed to unmarshal content from body")
+		return errors.Errorf("failed to unmarshal content from body, %v", err)
 	}
 
 	attendeeResponse, err := eh.eventUseCase.AddAttendee(accessToken, eventInput)
@@ -244,4 +242,46 @@ func (eh *EventHandlers) addAttendee(ctx echo.Context) error {
 
 	ctx.Response().Header().Set("Content-Type", "application/json")
 	return ctx.JSON(http.StatusOK, string(attendeeResponse))
+}
+
+func (eh *EventHandlers) changeStatus(ctx echo.Context) error {
+	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	reactEvent := types.ChangeStatus{}
+
+	b, err := ioutil.ReadAll(ctx.Request().Body)
+	defer func() {
+		err := ctx.Request().Body.Close()
+		if err != nil {
+			zap.S().Errorf("failed to close body %s", err)
+		}
+	}()
+
+	if err != nil {
+		return errors.Errorf("failed to read content from body")
+	}
+	err = json.Unmarshal(b, &reactEvent)
+
+	if err != nil {
+		return errors.Errorf("failed to unmarshal content from body, %v", err)
+	}
+
+	response, err := eh.eventUseCase.ChangeStatus(accessToken, reactEvent)
+	if err != nil {
+		return errors.Wrapf(err, "failed to add attendee for event of telegramUserID=%d", telegramID)
+	}
+	if response == nil {
+		return errors.Wrapf(err, "failed to add attendee for event of telegramUserID=%d, response is nil", telegramID)
+	}
+
+	ctx.Response().Header().Set("Content-Type", "application/json")
+	return ctx.JSON(http.StatusOK, string(response))
 }

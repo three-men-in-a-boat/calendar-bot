@@ -429,3 +429,40 @@ func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttend
 
 	return res, nil
 }
+
+func (uc *EventUseCase) ChangeStatus(accessToken string, reactEvent types.ChangeStatus) ([]byte, error) {
+
+	mutationReq := fmt.Sprintf(`mutation{reactEvent(input: {uid: \"%s\", calendar: \"%s\", status: %s}){uid}}`, reactEvent.EventID, reactEvent.CalendarID, reactEvent.Status)
+	reactEventRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
+
+	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(reactEventRequest)))
+	if err != nil {
+		return nil, errors.Errorf("failed to create a request: , %v", err)
+	}
+
+	var bearerToken = "Bearer " + accessToken
+	request.Header.Add(
+		"Authorization",
+		bearerToken,
+	)
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, errors.Errorf("The HTTP request failed with error %v", err)
+	}
+	defer func() {
+		err = response.Body.Close()
+		if err != nil {
+			fmt.Printf("failed to close body of response of func getEvents, %v", err)
+		}
+	}()
+
+	res, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, errors.Errorf("failed to read body %v", err)
+	}
+
+	return res, nil
+}

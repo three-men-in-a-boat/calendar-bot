@@ -170,3 +170,9 @@ type AddAttendee struct {
 	Email      string `json:"email,omitempty"`
 	Role       string `json:"role,omitempty"`
 }
+
+type ChangeStatus struct {
+	EventID    string `json:"eventID,omitempty"`
+	CalendarID string `json:"calendarID,omitempty"`
+	Status     string `json:"status,omitempty"`
+}
