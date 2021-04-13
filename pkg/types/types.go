@@ -164,14 +164,15 @@ type EventInput struct {
 	Payload     *string    `json:"payload,omitempty"`
 }
 
-type HTTPResponse struct {
-	StatusCode int
-	Response   string
-}
-
 type AddAttendee struct {
 	EventID    string `json:"eventID,omitempty"`
 	CalendarID string `json:"calendarID,omitempty"`
 	Email      string `json:"email,omitempty"`
 	Role       string `json:"role,omitempty"`
+}
+
+type ChangeStatus struct {
+	EventID    string `json:"eventID,omitempty"`
+	CalendarID string `json:"calendarID,omitempty"`
+	Status     string `json:"status,omitempty"`
 }

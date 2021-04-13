@@ -338,7 +338,7 @@ func getJsonFromMap(m map[string]interface{}) string {
 	return response
 }
 
-func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) (*types.HTTPResponse, error) {
+func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) ([]byte, error) {
 	tmp, err := time.Parse(time.RFC3339, *eventInput.From)
 	if err != nil {
 		return nil, errors.Errorf("failed to parse `from` time, %v", err)
@@ -390,23 +390,12 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 	if err != nil {
 		return nil, errors.Errorf("failed to read body %v", err)
 	}
-
-	eventsResponse := types.EventsResponse{}
-
-	err = json.Unmarshal(res, &eventsResponse)
-	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal json %v", err)
-	}
-	responseHTTP := types.HTTPResponse{}
-	responseHTTP.StatusCode = response.StatusCode
-	responseHTTP.Response = string(res)
-
-	return &responseHTTP, nil
+	return res, nil
 }
 
-func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttendee) (*types.HTTPResponse, error) {
+func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttendee) ([]byte, error) {
 
-	mutationReq := fmt.Sprintf(`mutation{appendAttendee(uri: {uid: \"%s", calendar: \"%s\"}, input: {attendee: {email: \"%s\", role: %s}}){email, role, name, status}}`, attendee.EventID, attendee.CalendarID, attendee.Email, attendee.Role)
+	mutationReq := fmt.Sprintf(`mutation{appendAttendee(uri: {uid: \"%s\", calendar: \"%s\"}, input: {attendee: {email: \"%s\", role: %s}}){email, role, name, status}}`, attendee.EventID, attendee.CalendarID, attendee.Email, attendee.Role)
 	addAtttendeeRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
 
 	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(addAtttendeeRequest)))
@@ -438,15 +427,42 @@ func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttend
 		return nil, errors.Errorf("failed to read body %v", err)
 	}
 
-	eventsResponse := types.EventsResponse{}
+	return res, nil
+}
 
-	err = json.Unmarshal(res, &eventsResponse)
+func (uc *EventUseCase) ChangeStatus(accessToken string, reactEvent types.ChangeStatus) ([]byte, error) {
+
+	mutationReq := fmt.Sprintf(`mutation{reactEvent(input: {uid: \"%s\", calendar: \"%s\", status: %s}){uid}}`, reactEvent.EventID, reactEvent.CalendarID, reactEvent.Status)
+	reactEventRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
+
+	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(reactEventRequest)))
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal json %v", err)
+		return nil, errors.Errorf("failed to create a request: , %v", err)
 	}
-	responseHTTP := types.HTTPResponse{}
-	responseHTTP.StatusCode = response.StatusCode
-	responseHTTP.Response = string(res)
 
-	return &responseHTTP, nil
+	var bearerToken = "Bearer " + accessToken
+	request.Header.Add(
+		"Authorization",
+		bearerToken,
+	)
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, errors.Errorf("The HTTP request failed with error %v", err)
+	}
+	defer func() {
+		err = response.Body.Close()
+		if err != nil {
+			fmt.Printf("failed to close body of response of func getEvents, %v", err)
+		}
+	}()
+
+	res, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, errors.Errorf("failed to read body %v", err)
+	}
+
+	return res, nil
 }
