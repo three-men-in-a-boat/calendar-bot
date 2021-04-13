@@ -199,7 +199,7 @@ func (eh *EventHandlers) createEvent(ctx echo.Context) error {
 		return errors.Wrapf(err, "failed to get event after creation for telegramUserID=%d", telegramID)
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
-	return ctx.JSON(http.StatusOK, event.Response)
+	return ctx.JSON(http.StatusOK, string(event))
 }
 
 func (eh *EventHandlers) addAttendee(ctx echo.Context) error {
@@ -241,6 +241,7 @@ func (eh *EventHandlers) addAttendee(ctx echo.Context) error {
 	if attendeeResponse == nil {
 		return errors.Wrapf(err, "failed to add attendee for event of telegramUserID=%d, response is nil", telegramID)
 	}
+
 	ctx.Response().Header().Set("Content-Type", "application/json")
-	return ctx.JSON(http.StatusOK, attendeeResponse.Response)
+	return ctx.JSON(http.StatusOK, string(attendeeResponse))
 }

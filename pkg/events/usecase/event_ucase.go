@@ -338,7 +338,7 @@ func getJsonFromMap(m map[string]interface{}) string {
 	return response
 }
 
-func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) (*types.HTTPResponse, error) {
+func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) ([]byte, error) {
 	tmp, err := time.Parse(time.RFC3339, *eventInput.From)
 	if err != nil {
 		return nil, errors.Errorf("failed to parse `from` time, %v", err)
@@ -390,23 +390,12 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 	if err != nil {
 		return nil, errors.Errorf("failed to read body %v", err)
 	}
-
-	eventsResponse := types.EventsResponse{}
-
-	err = json.Unmarshal(res, &eventsResponse)
-	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal json %v", err)
-	}
-	responseHTTP := types.HTTPResponse{}
-	responseHTTP.StatusCode = response.StatusCode
-	responseHTTP.Response = string(res)
-
-	return &responseHTTP, nil
+	return res, nil
 }
 
-func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttendee) (*types.HTTPResponse, error) {
+func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttendee) ([]byte, error) {
 
-	mutationReq := fmt.Sprintf(`mutation{appendAttendee(uri: {uid: \"%s", calendar: \"%s\"}, input: {attendee: {email: \"%s\", role: %s}}){email, role, name, status}}`, attendee.EventID, attendee.CalendarID, attendee.Email, attendee.Role)
+	mutationReq := fmt.Sprintf(`mutation{appendAttendee(uri: {uid: \"%s\", calendar: \"%s\"}, input: {attendee: {email: \"%s\", role: %s}}){email, role, name, status}}`, attendee.EventID, attendee.CalendarID, attendee.Email, attendee.Role)
 	addAtttendeeRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
 
 	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(addAtttendeeRequest)))
@@ -438,15 +427,5 @@ func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttend
 		return nil, errors.Errorf("failed to read body %v", err)
 	}
 
-	eventsResponse := types.EventsResponse{}
-
-	err = json.Unmarshal(res, &eventsResponse)
-	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal json %v", err)
-	}
-	responseHTTP := types.HTTPResponse{}
-	responseHTTP.StatusCode = response.StatusCode
-	responseHTTP.Response = string(res)
-
-	return &responseHTTP, nil
+	return res, nil
 }
