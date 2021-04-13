@@ -36,6 +36,7 @@ func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
 	eventRouter.PUT("/events/calendar/event", eh.getEventByEventID, oauthMiddleware.Handle)
 	eventRouter.POST("/events/event/create", eh.createEvent, oauthMiddleware.Handle)
 	eventRouter.PUT("/events/calendar/add/attendee", eh.addAttendee, oauthMiddleware.Handle)
+	eventRouter.PUT("/events/calendar/change/attendee/status", eh.changeStatus, oauthMiddleware.Handle)
 }
 
 func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
