@@ -394,7 +394,6 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 }
 
 func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttendee) ([]byte, error) {
-
 	mutationReq := fmt.Sprintf(`mutation{appendAttendee(uri: {uid: \"%s\", calendar: \"%s\"}, input: {attendee: {email: \"%s\", role: %s}}){email, role, name, status}}`, attendee.EventID, attendee.CalendarID, attendee.Email, attendee.Role)
 	addAtttendeeRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
 
@@ -432,7 +431,7 @@ func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttend
 
 func (uc *EventUseCase) ChangeStatus(accessToken string, reactEvent types.ChangeStatus) ([]byte, error) {
 
-	mutationReq := fmt.Sprintf(`mutation{reactEvent(input: {uid: \"%s\", calendar: \"%s\", status: %s}){uid}}`, reactEvent.EventID, reactEvent.CalendarID, reactEvent.Status)
+	mutationReq := fmt.Sprintf(`mutation{reactEvent(input: {uid: \"%s\", calendar: \"%s\", status: %s}){uid,title, from, to, status}}`, reactEvent.EventID, reactEvent.CalendarID, reactEvent.Status)
 	reactEventRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
 
 	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(reactEventRequest)))
