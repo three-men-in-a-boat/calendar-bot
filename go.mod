@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/bxcodec/faker/v3 v3.6.0
+	github.com/fatih/structs v1.1.0
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/joho/godotenv v1.3.0
 	github.com/labstack/echo v3.3.10+incompatible

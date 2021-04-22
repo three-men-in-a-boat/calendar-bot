@@ -20,14 +20,14 @@ type Calendar struct {
 	Title string `json:"title,omitempty"`
 }
 
-type Attendee struct {
+type AttendeeEvent struct {
 	Email  string `json:"email,omitempty"`
 	Name   string `json:"name,omitempty"`
 	Role   string `json:"role,omitempty"`
 	Status string `json:"status,omitempty"`
 }
 
-type Location struct {
+type LocationEvent struct {
 	Description string   `json:"description,omitempty"`
 	Confrooms   []string `json:"confrooms,omitempty"`
 	Geo         Geo      `json:"geo,omitempty"`
@@ -38,23 +38,23 @@ type Geo struct {
 	Longitude string `json:"longitude,omitempty"`
 }
 
-type Attendees []Attendee
+type AttendeesEvent []AttendeeEvent
 
 type Events []Event
 
 type Event struct {
-	Uid         string    `json:"uid,omitempty"`
-	Title       string    `json:"title,omitempty"`
-	From        time.Time `json:"from,omitempty"`
-	To          time.Time `json:"to,omitempty"`
-	FullDay     bool      `json:"fullDay,omitempty"`
-	Description string    `json:"description,omitempty"`
-	Location    Location  `json:"location,omitempty"`
-	Calendar    Calendar  `json:"calendar,omitempty"`
-	Attendees   Attendees `json:"attendees,omitempty"`
-	Call        string    `json:"call,omitempty"`
-	Organizer   Attendee  `json:"organizer,omitempty"`
-	Payload     string    `json:"payload,omitempty"`
+	Uid         string         `json:"uid,omitempty"`
+	Title       string         `json:"title,omitempty"`
+	From        time.Time      `json:"from,omitempty"`
+	To          time.Time      `json:"to,omitempty"`
+	FullDay     bool           `json:"fullDay,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Location    LocationEvent  `json:"location,omitempty"`
+	Calendar    Calendar       `json:"calendar,omitempty"`
+	Attendees   AttendeesEvent `json:"attendees,omitempty"`
+	Call        string         `json:"call,omitempty"`
+	Organizer   AttendeeEvent  `json:"organizer,omitempty"`
+	Payload     string         `json:"payload,omitempty"`
 }
 
 type DataEvents struct {
@@ -134,4 +134,45 @@ func (m *MailruUserInfo) IsValid() bool {
 		return false
 	}
 	return !m.MailruAPIResponseErr.IsError()
+}
+
+type Location struct {
+	Description string   `json:"description,omitempty"`
+	Confrooms   []string `json:"confrooms,omitempty"`
+	Geo         *Geo     `json:"geo,omitempty"`
+}
+
+type Attendee struct {
+	Email string `json:"email,omitempty"`
+	Role  string `json:"role,omitempty"`
+}
+
+type Attendees []Attendee
+
+type EventInput struct {
+	Uid         *string    `json:"uid,omitempty"`
+	Title       *string    `json:"title,omitempty"`
+	From        *string    `json:"from,omitempty"`
+	To          *string    `json:"to,omitempty"`
+	FullDay     *bool      `json:"fullDay,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	Location    *Location  `json:"location,omitempty"`
+	Calendar    *string    `json:"calendar,omitempty"`
+	Attendees   *Attendees `json:"attendees,omitempty"`
+	Call        *string    `json:"call,omitempty"`
+	Chat        *string    `json:"chat,omitempty"`
+	Payload     *string    `json:"payload,omitempty"`
+}
+
+type AddAttendee struct {
+	EventID    string `json:"eventID,omitempty"`
+	CalendarID string `json:"calendarID,omitempty"`
+	Email      string `json:"email,omitempty"`
+	Role       string `json:"role,omitempty"`
+}
+
+type ChangeStatus struct {
+	EventID    string `json:"eventID,omitempty"`
+	CalendarID string `json:"calendarID,omitempty"`
+	Status     string `json:"status,omitempty"`
 }
