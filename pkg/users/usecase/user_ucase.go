@@ -65,6 +65,26 @@ func (uuc *UserUseCase) GenOauthLinkForTelegramID(telegramID int64) (string, err
 
 }
 
+func (uuc *UserUseCase) GetOrRefreshOAuthAccessTokenByTelegramUserID(telegramID int64) (string, error) {
+	oAuthToken, err := uuc.GetOAuthAccessTokenByTelegramUserID(telegramID)
+	switch {
+	case err == repository.OAuthAccessTokenDoesNotExist:
+		oAuthToken, err = uuc.RefreshOAuthTokenByTelegramUserID(telegramID)
+		if err != nil {
+			switch concreteErr := err.(type) {
+			case repository.OAuthError, repository.UserEntityError:
+				return "", concreteErr
+			default:
+				return "", errors.WithStack(concreteErr)
+			}
+		}
+	case err != nil:
+		return "", errors.WithStack(err)
+	}
+
+	return oAuthToken, nil
+}
+
 func (uuc *UserUseCase) GetTelegramIDByState(state string) (int64, error) {
 	return uuc.userRepository.GetTelegramUserIDByState(state)
 }
