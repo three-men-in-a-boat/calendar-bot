@@ -23,7 +23,7 @@ import (
 
 type RequestHandlers struct {
 	userHandlers  uHandlers.UserHandlers
-	baseHandlers teleHandlers.BaseHandlers
+	telegramBaseHandlers teleHandlers.BaseHandlers
 }
 
 func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) RequestHandlers {
@@ -36,11 +36,11 @@ func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) Reque
 	eventStorage := eRepo.NewEventStorage(db)
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
 
-	baseHandlers := teleHandlers.NewBaseHandlers(eventUseCase, userUseCase)
+	teleBaseHandlers := teleHandlers.NewBaseHandlers(eventUseCase, userUseCase)
 
 	return RequestHandlers{
 		userHandlers:  userHandlers,
-		baseHandlers: baseHandlers,
+		telegramBaseHandlers: teleBaseHandlers,
 	}
 }
 
@@ -105,7 +105,7 @@ func main() {
 	server.Use(middlewares.LogErrorMiddleware)
 
 	allHandler.userHandlers.InitHandlers(server)
-	allHandler.baseHandlers.InitHandlers(bot)
+	allHandler.telegramBaseHandlers.InitHandlers(bot)
 
 	go func() { server.Logger.Fatal(server.Start(appConf.Address)) }()
 
