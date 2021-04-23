@@ -18,6 +18,7 @@ import (
 	"github.com/labstack/echo"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
+	tb "gopkg.in/tucnak/telebot.v2"
 )
 
 type RequestHandlers struct {
@@ -63,6 +64,23 @@ func main() {
 	if err != nil {
 		zap.S().Fatalf("cannot load APP config: %v", err)
 	}
+
+	webhook := &tb.Webhook{
+		Listen:   appConf.BotAddress,
+		Endpoint: &tb.WebhookEndpoint{PublicURL: appConf.BotWebhookUrl},
+	}
+
+	botSettings := tb.Settings{
+		Token:  appConf.BotToken,
+		Poller: webhook,
+	}
+
+	if appConf.Environment == "dev" {
+		botSettings.Verbose = true
+	}
+
+	bot, err := tb.NewBot(botSettings)
+
 	server := echo.New()
 
 	db, err := config.ConnectToDB(&appConf.DB)
@@ -88,5 +106,10 @@ func main() {
 	allHandler.eventHandlers.InitHandlers(server)
 	allHandler.userHandlers.InitHandlers(server)
 
-	server.Logger.Fatal(server.Start(appConf.Address))
+	go func() { server.Logger.Fatal(server.Start(appConf.Address)) }()
+
+	bot.Handle("/test", func(m *tb.Message) {
+		bot.Send(m.Sender, m.Text)
+	})
+	bot.Start()
 }

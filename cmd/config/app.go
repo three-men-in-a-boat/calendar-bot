@@ -11,6 +11,12 @@ const (
 )
 
 const (
+	EnvBotAddress = "BOT_ADDRESS"
+	EnvBotToken = "BOT_TOKEN"
+	EnvBotWebhookUrl = "BOT_WEBHOOK_URL"
+)
+
+const (
 	AppEnvironmentDev  string = "dev"
 	AppEnvironmentProd string = "prod"
 )
@@ -18,6 +24,9 @@ const (
 type App struct {
 	Address     string `validate:"optional,dialstring"`
 	Environment string `validate:"optional,in(dev|prod)"`
+	BotAddress string `validate:"optional"`
+	BotToken string
+	BotWebhookUrl string
 	DB          DB
 	Redis       Redis
 	OAuth       OAuth
@@ -28,8 +37,16 @@ func LoadAppConfig() (App, error) {
 	address := os.Getenv(EnvAppAddress)
 	environment := os.Getenv(EnvAppEnvironment)
 
+	botAddress := os.Getenv(EnvBotAddress)
+	botToken := os.Getenv(EnvBotToken)
+	botWebhookUrl := os.Getenv(EnvBotWebhookUrl)
+
 	if address == "" {
 		address = ":8080"
+	}
+
+	if botAddress == "" {
+		address = ":2000"
 	}
 
 	switch environment {
@@ -53,6 +70,9 @@ func LoadAppConfig() (App, error) {
 
 	return App{
 		Address:     address,
+		BotAddress: botAddress,
+		BotToken: botToken,
+		BotWebhookUrl: botWebhookUrl,
 		Environment: environment,
 		DB:          db,
 		Redis:       redis,
@@ -84,6 +104,10 @@ func (app *App) ToEnv() map[string]string {
 
 	ret[EnvAppAddress] = app.Address
 	ret[EnvAppEnvironment] = app.Environment
+
+	ret[EnvBotAddress] = app.BotAddress
+	ret[EnvBotToken] = app.BotToken
+	ret[EnvBotWebhookUrl] = app.BotWebhookUrl
 
 	return ret
 }
