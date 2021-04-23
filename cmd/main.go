@@ -5,7 +5,7 @@ import (
 	_ "database/sql"
 	"github.com/asaskevich/govalidator"
 	"github.com/calendar-bot/cmd/config"
-	eHandlers "github.com/calendar-bot/pkg/events/handlers"
+	teleHandlers "github.com/calendar-bot/pkg/bots/telegram/handlers"
 	eRepo "github.com/calendar-bot/pkg/events/repository"
 	eUsecase "github.com/calendar-bot/pkg/events/usecase"
 	"github.com/calendar-bot/pkg/middlewares"
@@ -22,8 +22,8 @@ import (
 )
 
 type RequestHandlers struct {
-	eventHandlers eHandlers.EventHandlers
 	userHandlers  uHandlers.UserHandlers
+	baseHandlers teleHandlers.BaseHandlers
 }
 
 func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) RequestHandlers {
@@ -35,11 +35,12 @@ func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) Reque
 
 	eventStorage := eRepo.NewEventStorage(db)
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
-	eventHandlers := eHandlers.NewEventHandlers(eventUseCase, userUseCase)
+
+	baseHandlers := teleHandlers.NewBaseHandlers(eventUseCase, userUseCase)
 
 	return RequestHandlers{
-		eventHandlers: eventHandlers,
 		userHandlers:  userHandlers,
+		baseHandlers: baseHandlers,
 	}
 }
 
@@ -103,13 +104,10 @@ func main() {
 
 	server.Use(middlewares.LogErrorMiddleware)
 
-	allHandler.eventHandlers.InitHandlers(server)
 	allHandler.userHandlers.InitHandlers(server)
+	allHandler.baseHandlers.InitHandlers(bot)
 
 	go func() { server.Logger.Fatal(server.Start(appConf.Address)) }()
 
-	bot.Handle("/test", func(m *tb.Message) {
-		bot.Send(m.Sender, m.Text)
-	})
 	bot.Start()
 }
