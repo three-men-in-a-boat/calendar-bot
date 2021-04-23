@@ -76,7 +76,7 @@ func main() {
 		Poller: webhook,
 	}
 
-	if appConf.Environment == "dev" {
+	if appConf.Environment == config.AppEnvironmentDev {
 		botSettings.Verbose = true
 	}
 
