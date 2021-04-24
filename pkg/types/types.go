@@ -198,5 +198,5 @@ type FreeBusyUser struct {
 }
 
 type FreeBusyResponse struct {
-	Data []FreeBusyUser `json:"data,omitempty"`
+	Data FreeBusyUser `json:"data,omitempty"`
 }
