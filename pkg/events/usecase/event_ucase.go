@@ -252,6 +252,58 @@ func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string,
 	return &eventResponse, nil
 }
 
+func (uc *EventUseCase) GetUsersBusyIntervals(accessToken string, freeBusy types.FreeBusy) (*types.FreeBusyResponse, error) {
+	var users string
+	for i, user := range freeBusy.Users {
+		users += "\"" + user + "\""
+		if i != len(freeBusy.Users)-1 {
+			users += ","
+		}
+	}
+	graphqlRequest := fmt.Sprintf(`{freebusy(from: "%s", to: "%s", forUsers: [%s]) {user, freebusy{from, to}}}`, freeBusy.From, freeBusy.To, users)
+
+	request, err := http.NewRequest("GET", "https://calendar.mail.ru/graphql", nil)
+	if err != nil {
+		zap.S().Errorf("failed to send request %s", err)
+		return nil, err
+	}
+	q := request.URL.Query()
+	q.Add("query", graphqlRequest)
+	request.URL.RawQuery = q.Encode()
+
+	var bearerToken = "Bearer " + accessToken
+	request.Header.Add(
+		"Authorization",
+		bearerToken,
+	)
+
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, errors.Errorf("The HTTP request failed with error %v", err)
+	}
+	defer func() {
+		err = response.Body.Close()
+		if err != nil {
+			zap.S().Errorf("failed to close body of response of func getEvents, %v", err)
+		}
+	}()
+
+	res, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	freeBusyResponse := types.FreeBusyResponse{}
+
+	err = json.Unmarshal(res, &freeBusyResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &freeBusyResponse, nil
+}
+
 func getNewTime(t time.Time) time.Time {
 	year, month, day := t.Date()
 	return time.Date(year, month, day, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.Now().Location())
