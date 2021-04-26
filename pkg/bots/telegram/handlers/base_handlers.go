@@ -34,18 +34,21 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 		link, err := bh.userUseCase.GenOauthLinkForTelegramID(int64(m.Sender.ID))
 		if err != nil {
 			bh.bot.Send(m.Sender, text.Error(err.Error()))
+			return
 		}
 
 		bh.bot.Send(m.Sender, baseText.StartNoRegText(), baseInlineKeyboards.Start(link))
 	} else {
-		token, err := bh.userUseCase.GetOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
+		token, err := bh.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 		if err != nil {
 			bh.bot.Send(m.Sender, text.Error(err.Error()))
+			return
 		}
 
 		info, err := bh.userUseCase.GetMailruUserInfo(token)
 		if err != nil {
 			bh.bot.Send(m.Sender, text.Error(err.Error()))
+			return
 		}
 
 		bh.bot.Send(m.Sender, baseText.StartRegText(info))
