@@ -1,4 +1,4 @@
-package text
+package messages
 
 import "fmt"
 
@@ -7,6 +7,6 @@ const (
 	errorTextProd = "Извини, что-то пошло не так - меня обязательно скоро починят :)"
 )
 
-func Error(err string) string  {
+func MessageUnexpectedError(err string) string  {
 	return fmt.Sprintf(errorTextDev, err)
 }

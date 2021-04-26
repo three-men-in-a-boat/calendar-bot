@@ -1,4 +1,4 @@
-package baseText
+package baseMessages
 
 import (
 	"fmt"

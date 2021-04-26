@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"github.com/calendar-bot/pkg/bots/telegram/inline_keyboards/baseInlineKeyboards"
-	"github.com/calendar-bot/pkg/bots/telegram/text"
-	"github.com/calendar-bot/pkg/bots/telegram/text/baseText"
+	"github.com/calendar-bot/pkg/bots/telegram/messages"
+	"github.com/calendar-bot/pkg/bots/telegram/messages/baseMessages"
 	eUseCase "github.com/calendar-bot/pkg/events/usecase"
 	uUseCase "github.com/calendar-bot/pkg/users/usecase"
 	tb "gopkg.in/tucnak/telebot.v2"
@@ -27,30 +27,30 @@ func (bh *BaseHandlers) InitHandlers(bot *tb.Bot) {
 func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 	isAuth, err := bh.userUseCase.IsUserAuthenticatedByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
-		bh.bot.Send(m.Sender, text.Error(err.Error()))
+		bh.bot.Send(m.Sender, messages.MessageUnexpectedError(err.Error()))
 	}
 
 	if !isAuth {
 		link, err := bh.userUseCase.GenOauthLinkForTelegramID(int64(m.Sender.ID))
 		if err != nil {
-			bh.bot.Send(m.Sender, text.Error(err.Error()))
+			bh.bot.Send(m.Sender, messages.MessageUnexpectedError(err.Error()))
 			return
 		}
 
-		bh.bot.Send(m.Sender, baseText.StartNoRegText(), baseInlineKeyboards.Start(link))
+		bh.bot.Send(m.Sender, baseMessages.StartNoRegText(), baseInlineKeyboards.Start(link))
 	} else {
 		token, err := bh.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 		if err != nil {
-			bh.bot.Send(m.Sender, text.Error(err.Error()))
+			bh.bot.Send(m.Sender, messages.MessageUnexpectedError(err.Error()))
 			return
 		}
 
 		info, err := bh.userUseCase.GetMailruUserInfo(token)
 		if err != nil {
-			bh.bot.Send(m.Sender, text.Error(err.Error()))
+			bh.bot.Send(m.Sender, messages.MessageUnexpectedError(err.Error()))
 			return
 		}
 
-		bh.bot.Send(m.Sender, baseText.StartRegText(info))
+		bh.bot.Send(m.Sender, baseMessages.StartRegText(info))
 	}
 }

@@ -1,7 +1,7 @@
 package baseInlineKeyboards
 
 import (
-	"github.com/calendar-bot/pkg/bots/telegram/text/baseText"
+	"github.com/calendar-bot/pkg/bots/telegram/messages/baseMessages"
 	tb "gopkg.in/tucnak/telebot.v2"
 )
 
@@ -9,7 +9,7 @@ import (
 func Start(url string) (keyboard *tb.ReplyMarkup) {
 	keyboard = &tb.ReplyMarkup{}
 	keyboard.Inline(
-		keyboard.Row(keyboard.URL(baseText.StartRegButtonText(), url)),
+		keyboard.Row(keyboard.URL(baseMessages.StartRegButtonText(), url)),
 	)
 
 	return keyboard
