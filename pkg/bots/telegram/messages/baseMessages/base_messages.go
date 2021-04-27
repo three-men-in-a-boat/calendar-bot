@@ -13,6 +13,16 @@ const (
 		"воспользуйтесь командой /help"
 )
 
+const (
+	helpInfoText = "Это бот для работы с календарем mail.ru. Сейчас доступны следующие команды"
+)
+
+const (
+	aboutInfoText = "Данный бот - это бот ассистент для калнедаря mail.ru. Для просмотра возможностей бота " +
+		"воспользуйтесь командой /help."
+	aboutAuthorsText = "Проект разработан командой Технопарка \"Трое в лодке не считая дебага\""
+)
+
 func StartNoRegText() string {
 	return startNoRegText
 }
@@ -23,4 +33,12 @@ func StartRegButtonText() string {
 
 func StartRegText(info types.MailruUserInfo) string {
 	return fmt.Sprintf(startRegText, info.Name)
+}
+
+func HelpInfoText() string {
+	return helpInfoText
+}
+
+func AboutText() string {
+	return aboutInfoText + "\n\n" + "<b>" + aboutAuthorsText + "</b>"
 }

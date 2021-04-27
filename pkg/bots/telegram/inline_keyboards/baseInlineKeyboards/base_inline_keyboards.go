@@ -6,11 +6,10 @@ import (
 )
 
 
-func Start(url string) (keyboard *tb.ReplyMarkup) {
-	keyboard = &tb.ReplyMarkup{}
-	keyboard.Inline(
-		keyboard.Row(keyboard.URL(baseMessages.StartRegButtonText(), url)),
-	)
+func StartInlineKeyboard(url string) [][]tb.InlineButton {
+	inlineKeyboard := [][]tb.InlineButton{{
+		{Text: baseMessages.StartRegButtonText(), URL: url},
+	}}
 
-	return keyboard
+	return inlineKeyboard
 }
