@@ -4,9 +4,9 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram/inline_keyboards/baseInlineKeyboards"
 	"github.com/calendar-bot/pkg/bots/telegram/keyboards/baseKeyboards"
 	"github.com/calendar-bot/pkg/bots/telegram/messages/baseMessages"
+	"github.com/calendar-bot/pkg/customerrors"
 	eUseCase "github.com/calendar-bot/pkg/events/usecase"
 	uUseCase "github.com/calendar-bot/pkg/users/usecase"
-	"github.com/pkg/errors"
 	tb "gopkg.in/tucnak/telebot.v2"
 )
 
@@ -29,8 +29,8 @@ func (bh *BaseHandlers) InitHandlers(bot *tb.Bot) {
 
 func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 	isAuth, err := bh.userUseCase.IsUserAuthenticatedByTelegramUserID(int64(m.Sender.ID))
-	if err == nil {
-		err = errors.New("Test error")
+	if err != nil {
+		customerrors.HandlerError(err)
 		bh.handler.SendError(m.Sender, err)
 		return
 	}
@@ -38,11 +38,12 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 	if !isAuth {
 		link, err := bh.userUseCase.GenOauthLinkForTelegramID(int64(m.Sender.ID))
 		if err != nil {
+			customerrors.HandlerError(err)
 			bh.handler.SendError(m.Sender, err)
 			return
 		}
 
-		bh.handler.bot.Send(m.Sender, baseMessages.StartNoRegText(),
+		_, err = bh.handler.bot.Send(m.Sender, baseMessages.StartNoRegText(),
 			&tb.SendOptions{
 				ParseMode: tb.ModeHTML,
 				ReplyMarkup: &tb.ReplyMarkup{
@@ -50,21 +51,26 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 					InlineKeyboard:      baseInlineKeyboards.StartInlineKeyboard(link),
 				},
 			})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
 
 	} else {
 		token, err := bh.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 		if err != nil {
+			customerrors.HandlerError(err)
 			bh.handler.SendError(m.Sender, err)
 			return
 		}
 
 		info, err := bh.userUseCase.GetMailruUserInfo(token)
 		if err != nil {
+			customerrors.HandlerError(err)
 			bh.handler.SendError(m.Sender, err)
 			return
 		}
 
-		bh.handler.bot.Send(m.Sender,
+		_ ,err = bh.handler.bot.Send(m.Sender,
 			baseMessages.StartRegText(info),
 			&tb.SendOptions{
 				ParseMode: tb.ModeHTML,
@@ -73,11 +79,14 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 				},
 			},
 		)
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
 	}
 }
 
 func (bh *BaseHandlers) HandleHelp(m *tb.Message) {
-	bh.handler.bot.Send(m.Sender, baseMessages.HelpInfoText(),
+	_, err := bh.handler.bot.Send(m.Sender, baseMessages.HelpInfoText(),
 		&tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
@@ -86,13 +95,21 @@ func (bh *BaseHandlers) HandleHelp(m *tb.Message) {
 				ReplyKeyboard:       baseKeyboards.HelpCommandKeyboard(),
 			},
 		})
+
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
 }
 
 func (bh *BaseHandlers) HandleAbout(m *tb.Message) {
-	bh.handler.bot.Send(m.Sender, baseMessages.AboutText(), &tb.SendOptions{
+	_, err := bh.handler.bot.Send(m.Sender, baseMessages.AboutText(), &tb.SendOptions{
 		ParseMode: tb.ModeHTML,
 		ReplyMarkup: &tb.ReplyMarkup{
 			ReplyKeyboardRemove: true,
 		},
 	})
+
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
 }
