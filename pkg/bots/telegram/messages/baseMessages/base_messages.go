@@ -19,8 +19,8 @@ const (
 
 const (
 	aboutInfoText = "Данный бот - это бот ассистент для калнедаря mail.ru. Для просмотра возможностей бота " +
-		"воспользуйтесь командой /help."
-	aboutAuthorsText = "Проект разработан командой Технопарка \"Трое в лодке не считая дебага\""
+		"воспользуйтесь командой /help. \n\n" +
+		"<b>Проект разработан командой Технопарка \"Трое в лодке не считая дебага\"</b>"
 )
 
 func StartNoRegText() string {
@@ -40,5 +40,5 @@ func HelpInfoText() string {
 }
 
 func AboutText() string {
-	return aboutInfoText + "\n\n" + "<b>" + aboutAuthorsText + "</b>"
+	return aboutInfoText
 }

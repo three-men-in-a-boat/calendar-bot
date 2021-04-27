@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/calendar-bot/pkg/bots/telegram/messages/calendarMessages"
 	"github.com/calendar-bot/pkg/customerrors"
 	eUseCase "github.com/calendar-bot/pkg/events/usecase"
 	uUseCase "github.com/calendar-bot/pkg/users/usecase"
@@ -23,13 +24,29 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 }
 
 func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
-	_, err := ch.handler.bot.Send(m.Sender, "today", &tb.SendOptions{
-		ParseMode: tb.ModeHTML,
-		ReplyMarkup: &tb.ReplyMarkup{
-			ReplyKeyboardRemove: true,
-		},
-	})
+	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
 		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Sender, err)
+		return
+	}
+
+	events, err := ch.eventUseCase.GetEventsToday(token)
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Sender, err)
+		return
+	}
+
+	for _, event := range events.Data.Events {
+		_, err = ch.handler.bot.Send(m.Sender, calendarMessages.SingleEventShortText(event), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
+			},
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
 	}
 }
