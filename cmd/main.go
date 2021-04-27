@@ -24,6 +24,7 @@ import (
 type RequestHandlers struct {
 	userHandlers  uHandlers.UserHandlers
 	telegramBaseHandlers teleHandlers.BaseHandlers
+	telegramCalendarHandlers teleHandlers.CalendarHandlers
 }
 
 func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) RequestHandlers {
@@ -37,10 +38,12 @@ func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) Reque
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
 
 	teleBaseHandlers := teleHandlers.NewBaseHandlers(eventUseCase, userUseCase)
+	teleCalendarHandler := teleHandlers.NewCalendarHandlers(eventUseCase, userUseCase)
 
 	return RequestHandlers{
 		userHandlers:  userHandlers,
 		telegramBaseHandlers: teleBaseHandlers,
+		telegramCalendarHandlers: teleCalendarHandler,
 	}
 }
 
@@ -106,6 +109,7 @@ func main() {
 
 	allHandler.userHandlers.InitHandlers(server)
 	allHandler.telegramBaseHandlers.InitHandlers(bot)
+	allHandler.telegramCalendarHandlers.InitHandlers(bot)
 
 	go func() { server.Logger.Fatal(server.Start(appConf.Address)) }()
 
