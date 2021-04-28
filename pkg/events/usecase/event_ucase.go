@@ -241,7 +241,6 @@ func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string,
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(string(res))
 	eventResponse := types.EventResponse{}
 
 	err = json.Unmarshal(res, &eventResponse)
