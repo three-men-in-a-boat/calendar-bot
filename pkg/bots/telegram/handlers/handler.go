@@ -25,3 +25,17 @@ func (h *Handler) SendError(sender tb.Recipient, outerErr error) {
 		customerrors.HandlerError(err)
 	}
 }
+
+func (h *Handler) SendAuthError(sender tb.Recipient, outerErr error) {
+	_, err := h.bot.Send(sender, messages.MessageAuthError(outerErr.Error()),
+		&tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
+			},
+		})
+
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+}

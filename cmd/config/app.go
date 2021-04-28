@@ -11,8 +11,8 @@ const (
 )
 
 const (
-	EnvBotAddress = "BOT_ADDRESS"
-	EnvBotToken = "BOT_TOKEN"
+	EnvBotAddress    = "BOT_ADDRESS"
+	EnvBotToken      = "BOT_TOKEN"
 	EnvBotWebhookUrl = "BOT_WEBHOOK_URL"
 )
 
@@ -22,15 +22,16 @@ const (
 )
 
 type App struct {
-	Address     string `validate:"optional,dialstring"`
-	Environment string `validate:"optional,in(dev|prod)"`
-	BotAddress string `validate:"optional"`
-	BotToken string
+	Address       string `validate:"optional,dialstring"`
+	Environment   string `validate:"optional,in(dev|prod)"`
+	BotAddress    string `validate:"optional"`
+	BotToken      string
 	BotWebhookUrl string
-	DB          DB
-	Redis       Redis
-	OAuth       OAuth
-	Log         Log
+	DB            DB
+	Redis         Redis
+	BotRedis      Redis
+	OAuth         OAuth
+	Log           Log
 }
 
 func LoadAppConfig() (App, error) {
@@ -66,18 +67,23 @@ func LoadAppConfig() (App, error) {
 		return App{}, errors.WithMessage(err, "failed to load Redis config")
 	}
 
+	botRedis, err := LoadBotRedisConfig()
+	if err != nil {
+		return App{}, errors.WithMessage(err, "failed to load bot redis config")
+	}
 	// TODO(nickeskov): validate struct
 
 	return App{
-		Address:     address,
-		BotAddress: botAddress,
-		BotToken: botToken,
+		Address:       address,
+		BotAddress:    botAddress,
+		BotToken:      botToken,
 		BotWebhookUrl: botWebhookUrl,
-		Environment: environment,
-		DB:          db,
-		Redis:       redis,
-		OAuth:       LoadOAuthConfig(),
-		Log:         LoadLogConfig(),
+		Environment:   environment,
+		DB:            db,
+		Redis:         redis,
+		BotRedis:      botRedis,
+		OAuth:         LoadOAuthConfig(),
+		Log:           LoadLogConfig(),
 	}, nil
 }
 

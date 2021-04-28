@@ -27,7 +27,7 @@ type RequestHandlers struct {
 	telegramCalendarHandlers teleHandlers.CalendarHandlers
 }
 
-func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) RequestHandlers {
+func newRequestHandler(db *sql.DB, client *redis.Client, botClient *redis.Client, conf *config.App) RequestHandlers {
 
 	states := types.NewStatesDictionary()
 	userStorage := uRepo.NewUserRepository(db, client)
@@ -38,7 +38,7 @@ func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) Reque
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
 
 	teleBaseHandlers := teleHandlers.NewBaseHandlers(eventUseCase, userUseCase)
-	teleCalendarHandler := teleHandlers.NewCalendarHandlers(eventUseCase, userUseCase)
+	teleCalendarHandler := teleHandlers.NewCalendarHandlers(eventUseCase, userUseCase, botClient)
 
 	return RequestHandlers{
 		userHandlers:  userHandlers,
@@ -103,7 +103,12 @@ func main() {
 		zap.S().Fatalf("failed to connect to redis, %v", err)
 	}
 
-	allHandler := newRequestHandler(db, redisClient, &appConf)
+	botRedisClient, err := config.ConnectToRedis(&appConf.BotRedis)
+	if err != nil {
+		zap.S().Fatalf("failed to connect to bot redis, %v", err)
+	}
+
+	allHandler := newRequestHandler(db, redisClient, botRedisClient, &appConf)
 
 	server.Use(middlewares.LogErrorMiddleware)
 

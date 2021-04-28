@@ -12,6 +12,7 @@ const (
 	EnvRedisAddress  = "REDIS_ADDRESS"
 	EnvRedisPassword = "REDIS_PASSWORD"
 	EnvRedisDB       = "REDIS_DB"
+	EnvBotRedisDB    = "REDIS_BOT_DB"
 )
 
 type Redis struct {
@@ -34,6 +35,26 @@ func LoadRedisConfig() (Redis, error) {
 	}
 
 	// TODO(nickeskov): validate struct
+
+	return Redis{
+		Address:  address,
+		Password: password,
+		DB:       db,
+	}, nil
+}
+
+func LoadBotRedisConfig() (Redis, error) {
+	address := os.Getenv(EnvRedisAddress)
+	password := os.Getenv(EnvRedisPassword)
+
+	db := 0
+	if dbStr := os.Getenv(EnvBotRedisDB); dbStr != "" {
+		num, err := strconv.Atoi(dbStr)
+		if err != nil {
+			return Redis{}, errors.WithMessagef(err, "failed to parse %s environment variable as int", EnvRedisDB)
+		}
+		db = num
+	}
 
 	return Redis{
 		Address:  address,
