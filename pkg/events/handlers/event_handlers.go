@@ -31,6 +31,7 @@ func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
 
 	eventRouter.GET("/events/today", eh.getEventsToday, oauthMiddleware.Handle)
 	eventRouter.GET("/events/closest", eh.getClosestEvent, oauthMiddleware.Handle)
+	eventRouter.GET("/events/users/busy", eh.getUsersBusyIntervals, oauthMiddleware.Handle)
 	eventRouter.GET("/events/date/:date", eh.getEventsByDate, oauthMiddleware.Handle)
 
 	eventRouter.PUT("/events/calendar/event", eh.getEventByEventID, oauthMiddleware.Handle)
@@ -117,6 +118,47 @@ func (eh *EventHandlers) getEventsByDate(ctx echo.Context) error {
 type EventCalendarIDs struct {
 	CalendarID string `json:"calendar_id,omitempty"`
 	EventID    string `json:"event_id,omitempty"`
+}
+
+func (eh *EventHandlers) getUsersBusyIntervals(ctx echo.Context) error {
+	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	freeBusyUsers := types.FreeBusy{}
+
+	b, err := ioutil.ReadAll(ctx.Request().Body)
+	defer func() {
+		err := ctx.Request().Body.Close()
+		if err != nil {
+			zap.S().Errorf("failed to close body %s", err)
+		}
+	}()
+
+	if err != nil {
+		return errors.Errorf("failed to read content from body")
+	}
+	err = json.Unmarshal(b, &freeBusyUsers)
+	if err != nil {
+		return errors.Errorf("failed to unmarshal content from body")
+	}
+
+	freeBusyResponse, err := eh.eventUseCase.GetUsersBusyIntervals(accessToken, freeBusyUsers)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get event by event_id and calendar_id for telegramUserID=%d", telegramID)
+	}
+	if freeBusyResponse == nil {
+		return ctx.String(http.StatusInternalServerError, fmt.Sprintf("failed to get busy intervals for user with telegram id %d", telegramID))
+	}
+	ctx.Response().Header().Set("Content-Type", "application/json")
+
+	return ctx.JSON(http.StatusOK, *freeBusyResponse)
 }
 
 func (eh *EventHandlers) getEventByEventID(ctx echo.Context) error {
