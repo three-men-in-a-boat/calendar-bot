@@ -58,7 +58,7 @@ func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsRespo
 
 	graphqlRequest := fmt.Sprintf(`
 	{
-		events(from: "%s", to: "%s") {
+		events(from: "%s", to: "%s", buildVirtual: true) {
 			uid,
 			title,
 			from,
@@ -173,7 +173,7 @@ func (uc *EventUseCase) GetEventsByDate(accessToken string, date time.Time) (*ty
 func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string, eventID string) (*types.EventResponse, error) {
 	graphqlRequest := fmt.Sprintf(`
 	{
-		event(eventUID: "%s", calendarUID: "%s", buildVirtual: true) {
+		event(eventUID: "%s", calendarUID: "%s") {
 			uid,
 			title,
 			from,
@@ -241,7 +241,7 @@ func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string,
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println(string(res))
 	eventResponse := types.EventResponse{}
 
 	err = json.Unmarshal(res, &eventResponse)
