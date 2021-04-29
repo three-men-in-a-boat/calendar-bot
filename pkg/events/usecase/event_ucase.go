@@ -58,7 +58,7 @@ func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsRespo
 
 	graphqlRequest := fmt.Sprintf(`
 	{
-		events(from: "%s", to: "%s") {
+		events(from: "%s", to: "%s", buildVirtual: true) {
 			uid,
 			title,
 			from,
@@ -173,7 +173,7 @@ func (uc *EventUseCase) GetEventsByDate(accessToken string, date time.Time) (*ty
 func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string, eventID string) (*types.EventResponse, error) {
 	graphqlRequest := fmt.Sprintf(`
 	{
-		event(eventUID: "%s", calendarUID: "%s", buildVirtual: true) {
+		event(eventUID: "%s", calendarUID: "%s") {
 			uid,
 			title,
 			from,
@@ -241,7 +241,6 @@ func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string,
 	if err != nil {
 		return nil, err
 	}
-
 	eventResponse := types.EventResponse{}
 
 	err = json.Unmarshal(res, &eventResponse)
@@ -250,6 +249,58 @@ func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string,
 	}
 
 	return &eventResponse, nil
+}
+
+func (uc *EventUseCase) GetUsersBusyIntervals(accessToken string, freeBusy types.FreeBusy) (*types.FreeBusyResponse, error) {
+	var users string
+	for i, user := range freeBusy.Users {
+		users += "\"" + user + "\""
+		if i != len(freeBusy.Users)-1 {
+			users += ","
+		}
+	}
+	graphqlRequest := fmt.Sprintf(`{freebusy(from: "%s", to: "%s", forUsers: [%s]) {user, freebusy{from, to}}}`, freeBusy.From, freeBusy.To, users)
+
+	request, err := http.NewRequest("GET", "https://calendar.mail.ru/graphql", nil)
+	if err != nil {
+		zap.S().Errorf("failed to send request %s", err)
+		return nil, err
+	}
+	q := request.URL.Query()
+	q.Add("query", graphqlRequest)
+	request.URL.RawQuery = q.Encode()
+
+	var bearerToken = "Bearer " + accessToken
+	request.Header.Add(
+		"Authorization",
+		bearerToken,
+	)
+
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, errors.Errorf("The HTTP request failed with error %v", err)
+	}
+	defer func() {
+		err = response.Body.Close()
+		if err != nil {
+			zap.S().Errorf("failed to close body of response of func getEvents, %v", err)
+		}
+	}()
+
+	res, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	freeBusyResponse := types.FreeBusyResponse{}
+
+	err = json.Unmarshal(res, &freeBusyResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &freeBusyResponse, nil
 }
 
 func getNewTime(t time.Time) time.Time {

@@ -176,3 +176,27 @@ type ChangeStatus struct {
 	CalendarID string `json:"calendarID,omitempty"`
 	Status     string `json:"status,omitempty"`
 }
+
+type FreeBusy struct {
+	Users []string `json:"users,omitempty"`
+	From  string   `json:"from,omitempty"`
+	To    string   `json:"to,omitempty"`
+}
+
+type FromTo struct {
+	From string `json:"from,omitempty"`
+	To   string `json:"to,omitempty"`
+}
+
+type FreeBusyIntervals struct {
+	User     string   `json:"user,omitempty"`
+	FreeBusy []FromTo `json:"freebusy,omitempty"`
+}
+
+type FreeBusyUser struct {
+	FreeBusy []FreeBusyIntervals `json:"freebusy,omitempty"`
+}
+
+type FreeBusyResponse struct {
+	Data FreeBusyUser `json:"data,omitempty"`
+}
