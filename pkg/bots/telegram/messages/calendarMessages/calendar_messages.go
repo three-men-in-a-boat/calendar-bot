@@ -24,6 +24,8 @@ const (
 	eventDescriptionHeader         = "<u><i>Описание:</i></u>\n\n"
 	eventConfroomsHeader           = "<u><i>Переговорные комнаты:</i></u>\n\n"
 
+	eventNoClosestEventFound = "У вас больше нет событий сегодня"
+
 	eventShowNotFoundError = "К сожалению мы не смогли найти информацию о событии.\n Возможно, это старое сообщение." +
 		"\nЗапросите событие с помощью бота заново."
 	eventCallbackResponseText = "Событие: %s"
@@ -170,4 +172,7 @@ func CallLinkButton() string {
 
 func CallbackResponseHeader(event *types.Event) string {
 	return fmt.Sprintf(eventCallbackResponseText, event.Title)
+}
+func NoClosestEvents() string {
+	return eventNoClosestEventFound
 }

@@ -28,6 +28,7 @@ func NewCalendarHandlers(eventUC eUseCase.EventUseCase, userUC uUseCase.UserUseC
 func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	ch.handler.bot = bot
 	bot.Handle("/today", ch.HandleToday)
+	bot.Handle("/next", ch.HandleNext)
 	bot.Handle("\f"+telegram.ShowFullEvent, ch.HandleShowMore)
 	bot.Handle("\f"+telegram.ShowShortEvent, ch.HandleShowLess)
 }
@@ -58,6 +59,49 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
 				InlineKeyboard:      keyboard,
+			},
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+	}
+}
+
+func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
+	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Sender, err)
+		return
+	}
+
+	event, err := ch.eventUseCase.GetClosestEvent(token)
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Sender, err)
+		return
+	}
+
+	if event != nil {
+		inlineKeyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(event, ch.redisDB)
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		_, err = ch.handler.bot.Send(m.Sender, calendarMessages.SingleEventShortText(event), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
+				InlineKeyboard:      inlineKeyboard,
+			},
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+	} else {
+		_, err = ch.handler.bot.Send(m.Sender, calendarMessages.NoClosestEvents(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
 			},
 		})
 		if err != nil {
@@ -139,7 +183,7 @@ func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 	}
 }
 
-func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback)  {
+func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 	event := ch.getEventByIdForCallback(c)
 	if event == nil {
 		return
