@@ -5,6 +5,7 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/goodsign/monday"
+	"time"
 )
 
 const (
@@ -24,6 +25,16 @@ const (
 	eventDescriptionHeader         = "<u><i>Описание:</i></u>\n\n"
 	eventConfroomsHeader           = "<u><i>Переговорные комнаты:</i></u>\n\n"
 
+	eventTodayTitle = "<b>Ваши события на сегодня</b>"
+	eventDateTitle = "<b>Ваши события за %s</b>"
+	eventNextTitle = "<b>Ваше следуюшее событие</b>"
+
+	eventGetDateHeader  = "<b>Получение событий за определенную дату: </b>\n\n"
+	eventGetDateMessage = "Для выбора даты воспользуйтесь кнопками или введите дату в формате " +
+		"<pre>&lt;число&gt; &lt;название месяца&gt;</pre> (например: <pre>22 марта</pre>)"
+
+	eventNoTodayEventsFound = "У вас нет событий сегодня"
+	eventNoDateEventsFound = "У вас нет событий за выбранную дату"
 	eventNoClosestEventFound = "У вас больше нет событий сегодня"
 
 	eventShowNotFoundError = "К сожалению мы не смогли найти информацию о событии.\n Возможно, это старое сообщение." +
@@ -175,4 +186,28 @@ func CallbackResponseHeader(event *types.Event) string {
 }
 func NoClosestEvents() string {
 	return eventNoClosestEventFound
+}
+
+func GetInitDateMessage() string {
+	return eventGetDateHeader + eventGetDateMessage
+}
+
+func GetTodayTitle() string {
+	return eventTodayTitle
+}
+
+func GetDateTitle(date time.Time) string {
+	return fmt.Sprintf(eventDateTitle,  monday.Format(date, formatDate, locale))
+}
+
+func GetNextTitle() string {
+	return eventNextTitle
+}
+
+func GetTodayNotFound() string {
+	return eventNoTodayEventsFound
+}
+
+func GetDateNotFound() string {
+	return eventNoDateEventsFound
 }

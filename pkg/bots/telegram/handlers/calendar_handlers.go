@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/calendar-bot/pkg/bots/telegram"
 	"github.com/calendar-bot/pkg/bots/telegram/inline_keyboards/calendarInlineKeyboards"
+	"github.com/calendar-bot/pkg/bots/telegram/keyboards/calendarKeyboards"
 	"github.com/calendar-bot/pkg/bots/telegram/messages/calendarMessages"
 	"github.com/calendar-bot/pkg/customerrors"
 	eUseCase "github.com/calendar-bot/pkg/events/usecase"
@@ -29,6 +30,7 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	ch.handler.bot = bot
 	bot.Handle("/today", ch.HandleToday)
 	bot.Handle("/next", ch.HandleNext)
+	bot.Handle("/date", ch.HandleDate)
 	bot.Handle("\f"+telegram.ShowFullEvent, ch.HandleShowMore)
 	bot.Handle("\f"+telegram.ShowShortEvent, ch.HandleShowLess)
 }
@@ -48,25 +50,46 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 		return
 	}
 
-	for _, event := range events.Data.Events {
-		keyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(&event, ch.redisDB)
-		if err != nil {
-			zap.S().Errorf("Can't set calendarId=%v for eventId=%v. Err: %v",
-				event.Calendar.UID, event.Uid, err)
-		}
-		_, err = ch.handler.bot.Send(m.Sender, calendarMessages.SingleEventShortText(&event), &tb.SendOptions{
+	if len(events.Data.Events) > 0 {
+		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetTodayTitle(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
-				InlineKeyboard:      keyboard,
+			},
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		for _, event := range events.Data.Events {
+			keyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(&event, ch.redisDB)
+			if err != nil {
+				zap.S().Errorf("Can't set calendarId=%v for eventId=%v. Err: %v",
+					event.Calendar.UID, event.Uid, err)
+			}
+			_, err = ch.handler.bot.Send(m.Sender, calendarMessages.SingleEventShortText(&event), &tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+				ReplyMarkup: &tb.ReplyMarkup{
+					InlineKeyboard: keyboard,
+				},
+			})
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+		}
+	} else {
+		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetTodayNotFound(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
 			},
 		})
 		if err != nil {
 			customerrors.HandlerError(err)
 		}
 	}
-}
 
+}
 func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
@@ -83,6 +106,16 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 	}
 
 	if event != nil {
+		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetNextTitle(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
+			},
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
 		inlineKeyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(event, ch.redisDB)
 		if err != nil {
 			customerrors.HandlerError(err)
@@ -90,8 +123,7 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 		_, err = ch.handler.bot.Send(m.Sender, calendarMessages.SingleEventShortText(event), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
-				ReplyKeyboardRemove: true,
-				InlineKeyboard:      inlineKeyboard,
+				InlineKeyboard: inlineKeyboard,
 			},
 		})
 		if err != nil {
@@ -109,7 +141,18 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 		}
 	}
 }
-
+func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
+	_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetInitDateMessage(), &tb.SendOptions{
+		ParseMode: tb.ModeHTML,
+		ReplyMarkup: &tb.ReplyMarkup{
+			ReplyKeyboard:   calendarKeyboards.GetDateFastCommand(),
+			OneTimeKeyboard: true,
+		},
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+}
 func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event {
 	calUid, err := ch.redisDB.Get(context.TODO(), c.Data).Result()
 	if err != nil {
@@ -155,7 +198,6 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event
 
 	return &resp.Data.Event
 }
-
 func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 
 	event := ch.getEventByIdForCallback(c)
@@ -182,7 +224,6 @@ func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 		customerrors.HandlerError(err)
 	}
 }
-
 func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 	event := ch.getEventByIdForCallback(c)
 	if event == nil {

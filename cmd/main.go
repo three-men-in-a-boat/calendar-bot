@@ -80,7 +80,7 @@ func main() {
 	}
 
 	if appConf.Environment == config.AppEnvironmentDev {
-		botSettings.Verbose = true
+		botSettings.Verbose = false
 	}
 
 	bot, err := tb.NewBot(botSettings)
