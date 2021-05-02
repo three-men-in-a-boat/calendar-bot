@@ -150,5 +150,5 @@ func (us *UserRepository) DeleteUserByTelegramUserID(telegramID int64) error {
 }
 
 func createOAuthRedisKeyForTelegram(telegramID int64) string {
-	return TelegramOAuthPrefix + fmt.Sprintf("%d", telegramID)
+	return fmt.Sprintf("%s%d", TelegramOAuthPrefix, telegramID)
 }
