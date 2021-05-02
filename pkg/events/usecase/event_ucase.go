@@ -36,7 +36,6 @@ func getEndDay(t time.Time) time.Time {
 	return time.Date(year, month, day, 23, 59, 59, 0, time.Now().Location())
 }
 
-
 func closestEvent(events []types.Event) *types.Event {
 	if events == nil {
 		return nil
