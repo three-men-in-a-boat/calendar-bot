@@ -36,13 +36,6 @@ func getEndDay(t time.Time) time.Time {
 	return time.Date(year, month, day, 23, 59, 59, 0, time.Now().Location())
 }
 
-func sortEvents(events []types.Event) (types.Events, error) {
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].From.Unix() < events[j].From.Unix()
-	})
-	return events, nil
-}
-
 func closestEvent(events []types.Event) (*types.Event, error) {
 	for _, event := range events {
 		if event.From.Unix() > time.Now().Unix() {
