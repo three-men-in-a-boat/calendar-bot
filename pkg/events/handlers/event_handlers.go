@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	eUseCase "github.com/calendar-bot/pkg/events/usecase"
 	"github.com/calendar-bot/pkg/middlewares"
@@ -9,8 +8,6 @@ import (
 	uUseCase "github.com/calendar-bot/pkg/users/usecase"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-	"io/ioutil"
 	"net/http"
 	"time"
 )
@@ -27,17 +24,17 @@ func NewEventHandlers(eventUseCase eUseCase.EventUseCase, userUseCase uUseCase.U
 func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
 	oauthMiddleware := middlewares.NewCheckOAuthTelegramMiddleware(&eh.userUseCase)
 
-	eventRouter := server.Group("/api/v1/telegram/user/" + middlewares.TelegramUserIDRouteKey)
+	eventRouter := server.Group("/api/v1/telegram/user/"+middlewares.TelegramUserIDRouteKey+"/events", oauthMiddleware.Handle)
 
-	eventRouter.GET("/events/today", eh.getEventsToday, oauthMiddleware.Handle)
-	eventRouter.GET("/events/closest", eh.getClosestEvent, oauthMiddleware.Handle)
-	eventRouter.GET("/events/users/busy", eh.getUsersBusyIntervals, oauthMiddleware.Handle)
-	eventRouter.GET("/events/date/:date", eh.getEventsByDate, oauthMiddleware.Handle)
+	eventRouter.GET("/today", eh.getEventsToday)
+	eventRouter.GET("/closest", eh.getClosestEvent)
+	eventRouter.GET("/users/busy", eh.getUsersBusyIntervals)
+	eventRouter.GET("/date/:date", eh.getEventsByDate)
 
-	eventRouter.PUT("/events/calendar/event", eh.getEventByEventID, oauthMiddleware.Handle)
-	eventRouter.POST("/events/event/create", eh.createEvent, oauthMiddleware.Handle)
-	eventRouter.PUT("/events/calendar/add/attendee", eh.addAttendee, oauthMiddleware.Handle)
-	eventRouter.PUT("/events/calendar/change/attendee/status", eh.changeStatus, oauthMiddleware.Handle)
+	eventRouter.PUT("/calendar/event", eh.getEventByEventID)
+	eventRouter.POST("/event/create", eh.createEvent)
+	eventRouter.PUT("/calendar/add/attendee", eh.addAttendee)
+	eventRouter.PUT("/calendar/change/attendee/status", eh.changeStatus)
 }
 
 func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
@@ -51,16 +48,16 @@ func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
 		return errors.WithStack(err)
 	}
 
-	todaysEvent, err := eh.eventUseCase.GetEventsToday(accessToken)
+	todayEvent, err := eh.eventUseCase.GetEventsToday(accessToken)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get today's events for telegramUserID=%d", telegramID)
 	}
-	if todaysEvent == nil {
+	if todayEvent == nil {
 		return ctx.String(http.StatusNotFound, "no events")
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
-	return ctx.JSON(http.StatusOK, *todaysEvent)
+	return ctx.JSON(http.StatusOK, *todayEvent)
 }
 
 func (eh *EventHandlers) getClosestEvent(ctx echo.Context) error {
@@ -133,20 +130,8 @@ func (eh *EventHandlers) getUsersBusyIntervals(ctx echo.Context) error {
 
 	freeBusyUsers := types.FreeBusy{}
 
-	b, err := ioutil.ReadAll(ctx.Request().Body)
-	defer func() {
-		err := ctx.Request().Body.Close()
-		if err != nil {
-			zap.S().Errorf("failed to close body %s", err)
-		}
-	}()
-
-	if err != nil {
-		return errors.Errorf("failed to read content from body")
-	}
-	err = json.Unmarshal(b, &freeBusyUsers)
-	if err != nil {
-		return errors.Errorf("failed to unmarshal content from body")
+	if err := ctx.Bind(freeBusyUsers); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
 
 	freeBusyResponse, err := eh.eventUseCase.GetUsersBusyIntervals(accessToken, freeBusyUsers)
@@ -174,20 +159,8 @@ func (eh *EventHandlers) getEventByEventID(ctx echo.Context) error {
 
 	eventCalendarIDs := EventCalendarIDs{}
 
-	b, err := ioutil.ReadAll(ctx.Request().Body)
-	defer func() {
-		err := ctx.Request().Body.Close()
-		if err != nil {
-			zap.S().Errorf("failed to close body %s", err)
-		}
-	}()
-
-	if err != nil {
-		return errors.Errorf("failed to read content from body")
-	}
-	err = json.Unmarshal(b, &eventCalendarIDs)
-	if err != nil {
-		return errors.Errorf("failed to unmarshal content from body")
+	if err := ctx.Bind(eventCalendarIDs); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
 
 	event, err := eh.eventUseCase.GetEventByEventID(accessToken, eventCalendarIDs.CalendarID, eventCalendarIDs.EventID)
@@ -215,23 +188,8 @@ func (eh *EventHandlers) createEvent(ctx echo.Context) error {
 
 	eventInput := types.EventInput{}
 
-	b, err := ioutil.ReadAll(ctx.Request().Body)
-	defer func() {
-		err := ctx.Request().Body.Close()
-		if err != nil {
-			zap.S().Errorf("failed to close body %s", err)
-		}
-	}()
-
-	if err != nil {
-		return errors.Errorf("failed to read content from body")
-	}
-	err = json.Unmarshal(b, &eventInput)
-
-	if err != nil {
-		kek := err.Error()
-		fmt.Println(kek)
-		return errors.Errorf("failed to unmarshal content from body")
+	if err := ctx.Bind(eventInput); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
 
 	event, err := eh.eventUseCase.CreateEvent(accessToken, eventInput)
@@ -258,21 +216,8 @@ func (eh *EventHandlers) addAttendee(ctx echo.Context) error {
 
 	eventInput := types.AddAttendee{}
 
-	b, err := ioutil.ReadAll(ctx.Request().Body)
-	defer func() {
-		err := ctx.Request().Body.Close()
-		if err != nil {
-			zap.S().Errorf("failed to close body %s", err)
-		}
-	}()
-
-	if err != nil {
-		return errors.Errorf("failed to read content from body")
-	}
-	err = json.Unmarshal(b, &eventInput)
-
-	if err != nil {
-		return errors.Errorf("failed to unmarshal content from body, %v", err)
+	if err := ctx.Bind(eventInput); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
 
 	attendeeResponse, err := eh.eventUseCase.AddAttendee(accessToken, eventInput)
@@ -300,23 +245,9 @@ func (eh *EventHandlers) changeStatus(ctx echo.Context) error {
 
 	reactEvent := types.ChangeStatus{}
 
-	b, err := ioutil.ReadAll(ctx.Request().Body)
-	defer func() {
-		err := ctx.Request().Body.Close()
-		if err != nil {
-			zap.S().Errorf("failed to close body %s", err)
-		}
-	}()
-
-	if err != nil {
-		return errors.Errorf("failed to read content from body")
+	if err := ctx.Bind(reactEvent); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
-	err = json.Unmarshal(b, &reactEvent)
-
-	if err != nil {
-		return errors.Errorf("failed to unmarshal content from body, %v", err)
-	}
-
 	response, err := eh.eventUseCase.ChangeStatus(accessToken, reactEvent)
 	if err != nil {
 		return errors.Wrapf(err, "failed to add attendee for event of telegramUserID=%d", telegramID)
