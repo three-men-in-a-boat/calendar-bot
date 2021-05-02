@@ -8,6 +8,7 @@ import (
 const (
 	EnvAppEnvironment = "APP_ENVIRONMENT"
 	EnvAppAddress     = "APP_ADDRESS"
+	EnvParseAddress   = "PARSER_BACKEND_URL"
 )
 
 const (
@@ -28,6 +29,7 @@ type App struct {
 	BotToken      string
 	BotWebhookUrl string
 	DB            DB
+	ParseAddress  string
 	Redis         Redis
 	BotRedis      Redis
 	OAuth         OAuth
@@ -37,6 +39,7 @@ type App struct {
 func LoadAppConfig() (App, error) {
 	address := os.Getenv(EnvAppAddress)
 	environment := os.Getenv(EnvAppEnvironment)
+	parseAddress := os.Getenv(EnvParseAddress)
 
 	botAddress := os.Getenv(EnvBotAddress)
 	botToken := os.Getenv(EnvBotToken)
@@ -80,6 +83,7 @@ func LoadAppConfig() (App, error) {
 		BotWebhookUrl: botWebhookUrl,
 		Environment:   environment,
 		DB:            db,
+		ParseAddress:  parseAddress,
 		Redis:         redis,
 		BotRedis:      botRedis,
 		OAuth:         LoadOAuthConfig(),
@@ -110,6 +114,7 @@ func (app *App) ToEnv() map[string]string {
 
 	ret[EnvAppAddress] = app.Address
 	ret[EnvAppEnvironment] = app.Environment
+	ret[EnvParseAddress] = app.ParseAddress
 
 	ret[EnvBotAddress] = app.BotAddress
 	ret[EnvBotToken] = app.BotToken

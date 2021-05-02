@@ -37,9 +37,15 @@ const (
 	eventNoDateEventsFound = "У вас нет событий за выбранную дату"
 	eventNoClosestEventFound = "У вас больше нет событий сегодня"
 
-	eventShowNotFoundError = "К сожалению мы не смогли найти информацию о событии.\n Возможно, это старое сообщение." +
+	eventDateNotParsed = "Мы не смогли распознать дату, попробуйте еще раз"
+	eventSessionNotFound = "Мы не смогли необходимую информацию для обработки запроса.\nВоспользуйтесь нужной вам " +
+		"командой заново"
+	eventShowNotFoundError = "К сожалению мы не смогли найти информацию о событии.\nВозможно, это старое сообщение." +
 		"\nЗапросите событие с помощью бота заново."
 	eventCallbackResponseText = "Событие: %s"
+
+	eventCancelSearchDate = "Отмена поиска событий за опреденную дату"
+	eventCanceledSearchDate = "Поиск события отменен"
 )
 
 const (
@@ -208,6 +214,22 @@ func GetTodayNotFound() string {
 	return eventNoTodayEventsFound
 }
 
-func GetDateNotFound() string {
+func GetDateEventsNotFound() string {
 	return eventNoDateEventsFound
+}
+
+func GetDateNotParsed() string {
+	return eventDateNotParsed
+}
+
+func RedisSessionNotFound() string {
+	return eventSessionNotFound
+}
+
+func GetCancelDateReplyButton() string {
+	return eventCancelSearchDate
+}
+
+func GetCancelDate() string {
+	return eventCanceledSearchDate
 }

@@ -16,8 +16,9 @@ type BaseHandlers struct {
 	userUseCase  uUseCase.UserUseCase
 }
 
-func NewBaseHandlers(eventUC eUseCase.EventUseCase, userUC uUseCase.UserUseCase) BaseHandlers {
-	return BaseHandlers{eventUseCase: eventUC, userUseCase: userUC, handler: Handler{bot: nil}}
+func NewBaseHandlers(eventUC eUseCase.EventUseCase, userUC uUseCase.UserUseCase, parseAddress string) BaseHandlers {
+	return BaseHandlers{eventUseCase: eventUC, userUseCase: userUC,
+		handler: Handler{bot: nil, parseAddress: parseAddress}}
 }
 
 func (bh *BaseHandlers) InitHandlers(bot *tb.Bot) {

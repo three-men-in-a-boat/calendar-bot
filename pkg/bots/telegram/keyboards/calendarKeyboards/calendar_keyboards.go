@@ -1,6 +1,9 @@
 package calendarKeyboards
 
-import tb "gopkg.in/tucnak/telebot.v2"
+import (
+	"github.com/calendar-bot/pkg/bots/telegram/messages/calendarMessages"
+	tb "gopkg.in/tucnak/telebot.v2"
+)
 
 func GetDateFastCommand() [][]tb.ReplyButton {
 	return [][]tb.ReplyButton{
@@ -11,21 +14,25 @@ func GetDateFastCommand() [][]tb.ReplyButton {
 			{
 				Text: "Завтра",
 			},
-		},
-		{
 			{
 				Text: "Через неделю",
 			},
+		},
+		{
+
 			{
 				Text: "Через две недели",
 			},
-		},
-		{
 			{
 				Text: "В субботу",
 			},
 			{
 				Text: "В воскресенье",
+			},
+		},
+		{
+			{
+				Text: calendarMessages.GetCancelDateReplyButton(),
 			},
 		},
 	}

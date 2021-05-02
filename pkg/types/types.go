@@ -200,3 +200,16 @@ type FreeBusyUser struct {
 type FreeBusyResponse struct {
 	Data FreeBusyUser `json:"data,omitempty"`
 }
+
+type BotRedisSession struct {
+	IsDate bool `json:"is_date"`
+}
+
+type ParseDateReq struct {
+	Timezone string `json:"timezone,omitempty"`
+	Text string `json:"text"`
+}
+
+type ParseDateResp struct {
+	Date time.Time `json:"date,omitempty"`
+}

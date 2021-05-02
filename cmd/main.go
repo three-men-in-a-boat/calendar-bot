@@ -37,8 +37,8 @@ func newRequestHandler(db *sql.DB, client *redis.Client, botClient *redis.Client
 	eventStorage := eRepo.NewEventStorage(db)
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
 
-	teleBaseHandlers := teleHandlers.NewBaseHandlers(eventUseCase, userUseCase)
-	teleCalendarHandler := teleHandlers.NewCalendarHandlers(eventUseCase, userUseCase, botClient)
+	teleBaseHandlers := teleHandlers.NewBaseHandlers(eventUseCase, userUseCase, conf.ParseAddress)
+	teleCalendarHandler := teleHandlers.NewCalendarHandlers(eventUseCase, userUseCase, botClient, conf.ParseAddress)
 
 	return RequestHandlers{
 		userHandlers:  userHandlers,
@@ -80,7 +80,7 @@ func main() {
 	}
 
 	if appConf.Environment == config.AppEnvironmentDev {
-		botSettings.Verbose = false
+		botSettings.Verbose = true
 	}
 
 	bot, err := tb.NewBot(botSettings)

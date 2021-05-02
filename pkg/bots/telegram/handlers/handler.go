@@ -9,12 +9,12 @@ import (
 
 type Handler struct {
 	bot *tb.Bot
+	parseAddress string
 }
 
 func (h *Handler) SendError(sender tb.Recipient, outerErr error) {
 	_, err := h.bot.Send(sender, messages.MessageUnexpectedError(outerErr.Error()),
 		&tb.SendOptions{
-			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
 				InlineKeyboard: inline_keyboards.ReportBugKeyboard(),
