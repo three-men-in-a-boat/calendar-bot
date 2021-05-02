@@ -40,6 +40,7 @@ func closestEvent(events []types.Event) *types.Event {
 	if events == nil {
 		return nil
 	}
+
 	min := events[0]
 
 	for _, event := range events {
@@ -47,8 +48,10 @@ func closestEvent(events []types.Event) *types.Event {
 			min = event
 		}
 	}
-
-	return &min
+	if min.To.Unix() > time.Now().Unix() {
+		return &min
+	}
+	return nil
 }
 
 func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsResponse, error) {
