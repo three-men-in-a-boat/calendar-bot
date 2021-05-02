@@ -36,20 +36,22 @@ func getEndDay(t time.Time) time.Time {
 	return time.Date(year, month, day, 23, 59, 59, 0, time.Now().Location())
 }
 
-func sortEvents(events []types.Event) (types.Events, error) {
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].From.Unix() < events[j].From.Unix()
-	})
-	return events, nil
-}
+func closestEvent(events []types.Event) *types.Event {
+	if events == nil {
+		return nil
+	}
 
-func closestEvent(events []types.Event) (*types.Event, error) {
+	min := events[0]
+
 	for _, event := range events {
-		if event.From.Unix() > time.Now().Unix() {
-			return &event, nil
+		if event.To.Unix() > time.Now().Unix() && event.From.Unix() < min.From.Unix() {
+			min = event
 		}
 	}
-	return nil, nil
+	if min.To.Unix() > time.Now().Unix() {
+		return &min
+	}
+	return nil
 }
 
 func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsResponse, error) {
@@ -137,11 +139,10 @@ func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsRespo
 		return nil, nil
 	}
 
-	events, err := sortEvents(eventsResponse.Data.Events)
-	if err != nil {
-		return nil, err
-	}
-	eventsResponse.Data.Events = events
+	// sort slice in order by time
+	sort.Slice(eventsResponse.Data.Events, func(i, j int) bool {
+		return eventsResponse.Data.Events[i].From.Unix() < eventsResponse.Data.Events[j].From.Unix()
+	})
 
 	return &eventsResponse, nil
 }
@@ -159,10 +160,8 @@ func (uc *EventUseCase) GetClosestEvent(accessToken string) (*types.Event, error
 		return nil, nil
 	}
 
-	closestEvent, err := closestEvent(eventsResponse.Data.Events)
-	if err != nil {
-		return nil, err
-	}
+	closestEvent := closestEvent(eventsResponse.Data.Events)
+
 	return closestEvent, nil
 }
 
