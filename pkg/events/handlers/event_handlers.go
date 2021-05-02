@@ -53,7 +53,7 @@ func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
 		return errors.Wrapf(err, "failed to get today's events for telegramUserID=%d", telegramID)
 	}
 	if todayEvent == nil {
-		return ctx.String(http.StatusNotFound, "no events")
+		return ctx.String(http.StatusNotFound, "There are no events for today")
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
@@ -76,7 +76,7 @@ func (eh *EventHandlers) getClosestEvent(ctx echo.Context) error {
 		return errors.Wrapf(err, "failed to get the closest event for telegramUserID=%d", telegramID)
 	}
 	if closesEvent == nil {
-		return ctx.String(http.StatusNotFound, "no events")
+		return ctx.String(http.StatusNotFound, "There are no events for today")
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
@@ -105,7 +105,7 @@ func (eh *EventHandlers) getEventsByDate(ctx echo.Context) error {
 		return errors.Wrapf(err, "failed to get the closest event for telegramUserID=%d", telegramID)
 	}
 	if eventsByDate == nil {
-		return ctx.String(http.StatusNotFound, "no events")
+		return ctx.String(http.StatusNotFound, "There are no events for today")
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
