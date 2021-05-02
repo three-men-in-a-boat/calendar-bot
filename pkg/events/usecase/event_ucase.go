@@ -36,13 +36,20 @@ func getEndDay(t time.Time) time.Time {
 	return time.Date(year, month, day, 23, 59, 59, 0, time.Now().Location())
 }
 
-func closestEvent(events []types.Event) (*types.Event, error) {
+
+func closestEvent(events []types.Event) *types.Event {
+	if events == nil {
+		return nil
+	}
+	min := events[0]
+
 	for _, event := range events {
-		if event.From.Unix() > time.Now().Unix() {
-			return &event, nil
+		if event.To.Unix() > time.Now().Unix() && event.From.Unix() < min.From.Unix() {
+			min = event
 		}
 	}
-	return nil, nil
+
+	return &min
 }
 
 func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsResponse, error) {
@@ -151,10 +158,8 @@ func (uc *EventUseCase) GetClosestEvent(accessToken string) (*types.Event, error
 		return nil, nil
 	}
 
-	closestEvent, err := closestEvent(eventsResponse.Data.Events)
-	if err != nil {
-		return nil, err
-	}
+	closestEvent := closestEvent(eventsResponse.Data.Events)
+
 	return closestEvent, nil
 }
 
