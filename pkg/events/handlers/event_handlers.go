@@ -27,17 +27,17 @@ func NewEventHandlers(eventUseCase eUseCase.EventUseCase, userUseCase uUseCase.U
 func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
 	oauthMiddleware := middlewares.NewCheckOAuthTelegramMiddleware(&eh.userUseCase)
 
-	eventRouter := server.Group("/api/v1/telegram/user/" + middlewares.TelegramUserIDRouteKey)
+	eventRouter := server.Group("/api/v1/telegram/user/"+middlewares.TelegramUserIDRouteKey+"/events", oauthMiddleware.Handle)
 
-	eventRouter.GET("/events/today", eh.getEventsToday, oauthMiddleware.Handle)
-	eventRouter.GET("/events/closest", eh.getClosestEvent, oauthMiddleware.Handle)
-	eventRouter.GET("/events/users/busy", eh.getUsersBusyIntervals, oauthMiddleware.Handle)
-	eventRouter.GET("/events/date/:date", eh.getEventsByDate, oauthMiddleware.Handle)
+	eventRouter.GET("/today", eh.getEventsToday)
+	eventRouter.GET("/closest", eh.getClosestEvent)
+	eventRouter.GET("/users/busy", eh.getUsersBusyIntervals)
+	eventRouter.GET("/date/:date", eh.getEventsByDate)
 
-	eventRouter.PUT("/events/calendar/event", eh.getEventByEventID, oauthMiddleware.Handle)
-	eventRouter.POST("/events/event/create", eh.createEvent, oauthMiddleware.Handle)
-	eventRouter.PUT("/events/calendar/add/attendee", eh.addAttendee, oauthMiddleware.Handle)
-	eventRouter.PUT("/events/calendar/change/attendee/status", eh.changeStatus, oauthMiddleware.Handle)
+	eventRouter.PUT("/calendar/event", eh.getEventByEventID)
+	eventRouter.POST("/event/create", eh.createEvent)
+	eventRouter.PUT("/calendar/add/attendee", eh.addAttendee)
+	eventRouter.PUT("/calendar/change/attendee/status", eh.changeStatus)
 }
 
 func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
@@ -51,16 +51,16 @@ func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
 		return errors.WithStack(err)
 	}
 
-	todaysEvent, err := eh.eventUseCase.GetEventsToday(accessToken)
+	todayEvent, err := eh.eventUseCase.GetEventsToday(accessToken)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get today's events for telegramUserID=%d", telegramID)
 	}
-	if todaysEvent == nil {
+	if todayEvent == nil {
 		return ctx.String(http.StatusNotFound, "no events")
 	}
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
-	return ctx.JSON(http.StatusOK, *todaysEvent)
+	return ctx.JSON(http.StatusOK, *todayEvent)
 }
 
 func (eh *EventHandlers) getClosestEvent(ctx echo.Context) error {
