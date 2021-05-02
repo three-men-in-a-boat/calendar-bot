@@ -130,7 +130,7 @@ func (eh *EventHandlers) getUsersBusyIntervals(ctx echo.Context) error {
 
 	freeBusyUsers := types.FreeBusy{}
 
-	if err := ctx.Bind(freeBusyUsers); err != nil {
+	if err := ctx.Bind(&freeBusyUsers); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
 
@@ -159,7 +159,7 @@ func (eh *EventHandlers) getEventByEventID(ctx echo.Context) error {
 
 	eventCalendarIDs := EventCalendarIDs{}
 
-	if err := ctx.Bind(eventCalendarIDs); err != nil {
+	if err := ctx.Bind(&eventCalendarIDs); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
 
@@ -188,7 +188,7 @@ func (eh *EventHandlers) createEvent(ctx echo.Context) error {
 
 	eventInput := types.EventInput{}
 
-	if err := ctx.Bind(eventInput); err != nil {
+	if err := ctx.Bind(&eventInput); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
 
@@ -216,7 +216,7 @@ func (eh *EventHandlers) addAttendee(ctx echo.Context) error {
 
 	eventInput := types.AddAttendee{}
 
-	if err := ctx.Bind(eventInput); err != nil {
+	if err := ctx.Bind(&eventInput); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
 
@@ -245,7 +245,7 @@ func (eh *EventHandlers) changeStatus(ctx echo.Context) error {
 
 	reactEvent := types.ChangeStatus{}
 
-	if err := ctx.Bind(reactEvent); err != nil {
+	if err := ctx.Bind(&reactEvent); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal content from body")
 	}
 	response, err := eh.eventUseCase.ChangeStatus(accessToken, reactEvent)
