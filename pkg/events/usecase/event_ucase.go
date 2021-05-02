@@ -137,11 +137,10 @@ func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsRespo
 		return nil, nil
 	}
 
-	events, err := sortEvents(eventsResponse.Data.Events)
-	if err != nil {
-		return nil, err
-	}
-	eventsResponse.Data.Events = events
+	// sort slice in order by time
+	sort.Slice(eventsResponse.Data.Events, func(i, j int) bool {
+		return eventsResponse.Data.Events[i].From.Unix() < eventsResponse.Data.Events[j].From.Unix()
+	})
 
 	return &eventsResponse, nil
 }
