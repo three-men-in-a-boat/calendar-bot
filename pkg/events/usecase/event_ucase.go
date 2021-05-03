@@ -258,7 +258,12 @@ func (uc *EventUseCase) GetUsersBusyIntervals(accessToken string, freeBusy types
 			users += ","
 		}
 	}
-	graphqlRequest := fmt.Sprintf(`{freebusy(from: "%s", to: "%s", forUsers: [%s]) {user, freebusy{from, to}}}`, freeBusy.From, freeBusy.To, users)
+	graphqlRequest := fmt.Sprintf(
+		`{freebusy(from: "%s", to: "%s", forUsers: [%s]) {user, freebusy{from, to}}}`,
+		freeBusy.From.Format(time.RFC3339),
+		freeBusy.To.Format(time.RFC3339),
+		users,
+	)
 
 	request, err := http.NewRequest("GET", "https://calendar.mail.ru/graphql", nil)
 	if err != nil {
