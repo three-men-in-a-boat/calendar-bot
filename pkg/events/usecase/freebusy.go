@@ -105,37 +105,25 @@ func FilterTimeSpans(spans spaniel.Spans,
 
 	if mainSpan != nil {
 		filters = append(filters, func(span spaniel.Span) bool {
-			if NotInInterval(span, mainSpan) {
-				return false
-			}
-			return true
+			return !NotInInterval(span, mainSpan)
 		})
 	}
 
 	if dayPartSpan != nil {
 		filters = append(filters, func(span spaniel.Span) bool {
-			if NotInDayPart(span, dayPartSpan) {
-				return false
-			}
-			return true
+			return !NotInDayPart(span, dayPartSpan)
 		})
 	}
 
 	if minDuration != nil {
 		filters = append(filters, func(span spaniel.Span) bool {
-			if !GreaterOrEqualThanDuration(span, *minDuration) {
-				return false
-			}
-			return true
+			return GreaterOrEqualThanDuration(span, *minDuration)
 		})
 	}
 
 	if maxDuration != nil {
 		filters = append(filters, func(span spaniel.Span) bool {
-			if !LessOrEqualThanDuration(span, *maxDuration) {
-				return false
-			}
-			return true
+			return LessOrEqualThanDuration(span, *maxDuration)
 		})
 	}
 
