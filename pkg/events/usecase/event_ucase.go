@@ -8,6 +8,7 @@ import (
 	"github.com/calendar-bot/pkg/types"
 	"github.com/fatih/structs"
 	"github.com/pkg/errors"
+	"github.com/senseyeio/spaniel"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
@@ -305,6 +306,33 @@ func (uc *EventUseCase) GetUsersBusyIntervals(accessToken string, freeBusy types
 	}
 
 	return &freeBusyResponse, nil
+}
+
+func (uc *EventUseCase) GetUsersFreeIntervals(accessToken string, freeBusy types.FreeBusy,
+	conf FreeBusyConfig) (spaniel.Spans, error) {
+
+	response, err := uc.GetUsersBusyIntervals(accessToken, freeBusy)
+	if err != nil {
+		return nil, errors.Wrap(err, "GetUsersFreeIntervals")
+	}
+
+	mainSpan := spaniel.New(freeBusy.From, freeBusy.To)
+	busyFlatTimeSpan := MergeBusyIntervals(response.Data)
+
+	busyFlatFiltered := FilterTimeSpans(busyFlatTimeSpan, mainSpan, nil, nil, nil)
+	complements := CreateComplementForEachSpan(busyFlatFiltered, mainSpan)
+
+	freeTimeSpansIterative := FlatComplementOfSpanComplementsIterative(complements)
+
+	filteredFreeTimeSpans := FilterTimeSpans(
+		freeTimeSpansIterative,
+		nil,
+		conf.DayPartSpan,
+		conf.MinFreeIntervalDuration,
+		conf.MaxFreeIntervalDuration,
+	)
+
+	return filteredFreeTimeSpans, nil
 }
 
 func getNewTime(t time.Time) time.Time {
