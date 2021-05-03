@@ -57,19 +57,19 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
 		customerrors.HandlerError(err)
-		ch.handler.SendError(m.Sender, err)
+		ch.handler.SendError(m.Chat, err)
 		return
 	}
 
 	events, err := ch.eventUseCase.GetEventsToday(token)
 	if err != nil {
 		customerrors.HandlerError(err)
-		ch.handler.SendError(m.Sender, err)
+		ch.handler.SendError(m.Chat, err)
 		return
 	}
 
 	if events != nil {
-		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetTodayTitle(), &tb.SendOptions{
+		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetTodayTitle(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -79,9 +79,9 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 			customerrors.HandlerError(err)
 		}
 
-		ch.sendShortEvents(&events.Data.Events, m.Sender, m.Chat)
+		ch.sendShortEvents(&events.Data.Events, m.Chat, m.Chat)
 	} else {
-		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetTodayNotFound(), &tb.SendOptions{
+		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetTodayNotFound(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -103,19 +103,19 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
 		customerrors.HandlerError(err)
-		ch.handler.SendError(m.Sender, err)
+		ch.handler.SendError(m.Chat, err)
 		return
 	}
 
 	event, err := ch.eventUseCase.GetClosestEvent(token)
 	if err != nil {
 		customerrors.HandlerError(err)
-		ch.handler.SendError(m.Sender, err)
+		ch.handler.SendError(m.Chat, err)
 		return
 	}
 
 	if event != nil {
-		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetNextTitle(), &tb.SendOptions{
+		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetNextTitle(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -125,11 +125,14 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 			customerrors.HandlerError(err)
 		}
 
-		inlineKeyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(event, ch.redisDB)
-		if err != nil {
-			customerrors.HandlerError(err)
+		var inlineKeyboard [][]tb.InlineButton = nil
+		if m.Chat.Type == tb.ChatPrivate {
+			inlineKeyboard, err = calendarInlineKeyboards.EventShowMoreInlineKeyboard(event, ch.redisDB)
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
 		}
-		_, err = ch.handler.bot.Send(m.Sender, calendarMessages.SingleEventShortText(event), &tb.SendOptions{
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.SingleEventShortText(event), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				InlineKeyboard: inlineKeyboard,
@@ -139,7 +142,7 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 			customerrors.HandlerError(err)
 		}
 	} else {
-		_, err = ch.handler.bot.Send(m.Sender, calendarMessages.NoClosestEvents(), &tb.SendOptions{
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.NoClosestEvents(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -167,7 +170,7 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 	if err != nil {
 		return
 	}
-	_, err = ch.handler.bot.Send(m.Sender, calendarMessages.GetInitDateMessage(), &tb.SendOptions{
+	_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetInitDateMessage(), &tb.SendOptions{
 		ParseMode: tb.ModeHTML,
 		ReplyMarkup: &tb.ReplyMarkup{
 			ReplyKeyboard: calendarKeyboards.GetDateFastCommand(),
@@ -194,7 +197,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 				return
 			}
 
-			_, err = ch.handler.bot.Send(m.Sender, calendarMessages.GetCancelDate(), &tb.SendOptions{
+			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCancelDate(), &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
 				ReplyMarkup: &tb.ReplyMarkup{
 					ReplyKeyboardRemove: true,
@@ -212,7 +215,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 		b, err := json.Marshal(reqData)
 		if err != nil {
 			customerrors.HandlerError(err)
-			ch.handler.SendError(m.Sender, err)
+			ch.handler.SendError(m.Chat, err)
 			return
 		}
 
@@ -220,7 +223,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 		req, err := http.NewRequest(http.MethodPut, ch.handler.parseAddress+"/parse/date", bytes.NewBuffer(b))
 		if err != nil {
 			customerrors.HandlerError(err)
-			ch.handler.SendError(m.Sender, err)
+			ch.handler.SendError(m.Chat, err)
 			return
 		}
 		req.Header.Add("Content-Type", "application/json")
@@ -228,7 +231,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 
 		if err != nil {
 			customerrors.HandlerError(err)
-			ch.handler.SendError(m.Sender, err)
+			ch.handler.SendError(m.Chat, err)
 			return
 		}
 
@@ -245,7 +248,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 		err = json.Unmarshal(body, parseDate)
 		if err != nil {
 			customerrors.HandlerError(err)
-			ch.handler.SendError(m.Sender, err)
+			ch.handler.SendError(m.Chat, err)
 			return
 		}
 
@@ -259,17 +262,17 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 			token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 			if err != nil {
 				customerrors.HandlerError(err)
-				ch.handler.SendError(m.Sender, err)
+				ch.handler.SendError(m.Chat, err)
 				return
 			}
 			events, err := ch.eventUseCase.GetEventsByDate(token, parseDate.Date)
 			if err != nil {
 				customerrors.HandlerError(err)
-				ch.handler.SendError(m.Sender, err)
+				ch.handler.SendError(m.Chat, err)
 				return
 			}
 			if events != nil {
-				_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetDateTitle(parseDate.Date), &tb.SendOptions{
+				_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateTitle(parseDate.Date), &tb.SendOptions{
 					ParseMode: tb.ModeHTML,
 					ReplyMarkup: &tb.ReplyMarkup{
 						ReplyKeyboardRemove: true,
@@ -280,7 +283,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 				}
 				ch.sendShortEvents(&events.Data.Events, m.Sender, m.Chat)
 			} else {
-				_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetDateEventsNotFound(), &tb.SendOptions{
+				_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateEventsNotFound(), &tb.SendOptions{
 					ParseMode: tb.ModeHTML,
 					ReplyMarkup: &tb.ReplyMarkup{
 						ReplyKeyboardRemove: true,
@@ -293,7 +296,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 			}
 
 		} else {
-			_, err = ch.handler.bot.Send(m.Sender, calendarMessages.GetDateNotParsed(), &tb.SendOptions{
+			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetDateNotParsed(), &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
 			})
 			if err != nil {
@@ -302,14 +305,16 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 		}
 
 	} else {
-		_, err = ch.handler.bot.Send(m.Sender, calendarMessages.RedisSessionNotFound(), &tb.SendOptions{
-			ParseMode: tb.ModeHTML,
-			ReplyMarkup: &tb.ReplyMarkup{
-				ReplyKeyboardRemove: true,
-			},
-		})
-		if err != nil {
-			customerrors.HandlerError(err)
+		if m.Chat.Type == tb.ChatPrivate {
+			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.RedisSessionNotFound(), &tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+				ReplyMarkup: &tb.ReplyMarkup{
+					ReplyKeyboardRemove: true,
+				},
+			})
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
 		}
 	}
 }
@@ -412,7 +417,6 @@ func (ch *CalendarHandlers) HandleAlertYes(c *tb.Callback) {
 		break
 	}
 
-
 }
 func (ch *CalendarHandlers) HandleAlertNo(c *tb.Callback) {
 	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
@@ -488,15 +492,19 @@ func (ch *CalendarHandlers) setSession(session *types.BotRedisSession, user *tb.
 }
 func (ch *CalendarHandlers) sendShortEvents(events *types.Events, user tb.Recipient, chat *tb.Chat) {
 	for _, event := range *events {
-		keyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(&event, ch.redisDB)
-		if err != nil {
-			zap.S().Errorf("Can't set calendarId=%v for eventId=%v. Err: %v",
-				event.Calendar.UID, event.Uid, err)
+		var err error = nil
+		var keyboard [][]tb.InlineButton = nil
+		if chat.Type == tb.ChatPrivate {
+			keyboard, err = calendarInlineKeyboards.EventShowMoreInlineKeyboard(&event, ch.redisDB)
+			if err != nil {
+				zap.S().Errorf("Can't set calendarId=%v for eventId=%v. Err: %v",
+					event.Calendar.UID, event.Uid, err)
+			}
 		}
 		if chat.Type != tb.ChatPrivate {
 			keyboard = nil
 		}
-		_, err = ch.handler.bot.Send(user, calendarMessages.SingleEventShortText(&event), &tb.SendOptions{
+		_, err = ch.handler.bot.Send(chat, calendarMessages.SingleEventShortText(&event), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				InlineKeyboard: keyboard,
@@ -526,7 +534,7 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event
 
 	if err != nil {
 		customerrors.HandlerError(err)
-		ch.handler.SendAuthError(c.Sender, err)
+		ch.handler.SendAuthError(c.Message.Chat, err)
 
 		err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
 			CallbackID: c.ID,
@@ -539,7 +547,7 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event
 	resp, err := ch.eventUseCase.GetEventByEventID(token, calUid, c.Data)
 	if err != nil {
 		customerrors.HandlerError(err)
-		ch.handler.SendError(c.Sender, err)
+		ch.handler.SendError(c.Message.Chat, err)
 
 		err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
 			CallbackID: c.ID,
@@ -579,7 +587,7 @@ func (ch *CalendarHandlers) GroupMiddleware(m *tb.Message) bool {
 		return false
 	}
 	if m.Chat.Type != tb.ChatPrivate {
-		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetGroupAlertMessage(m.Text), &tb.SendOptions{
+		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetGroupAlertMessage(m.Text), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyTo:   m,
 			ReplyMarkup: &tb.ReplyMarkup{

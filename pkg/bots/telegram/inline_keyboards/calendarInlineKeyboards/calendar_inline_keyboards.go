@@ -7,6 +7,7 @@ import (
 	"github.com/calendar-bot/pkg/types"
 	"github.com/go-redis/redis/v8"
 	tb "gopkg.in/tucnak/telebot.v2"
+	"strings"
 )
 
 func EventShowMoreInlineKeyboard(event *types.Event, db *redis.Client) ([][]tb.InlineButton, error) {
@@ -40,11 +41,21 @@ func EventShowLessInlineKeyboard(event *types.Event) [][]tb.InlineButton {
 }
 
 func GroupAlertsButtons(data string) [][]tb.InlineButton {
+	inp := ""
+	if strings.Contains(data, telegram.Today) {
+		inp = telegram.Today
+	}
+	if strings.Contains(data, telegram.Next) {
+		inp = telegram.Next
+	}
+	if strings.Contains(data, telegram.Date) {
+		inp = telegram.Date
+	}
 	return [][]tb.InlineButton {{
 		{
 			Text: "Да",
 			Unique: telegram.AlertCallbackYes,
-			Data: data,
+			Data: inp,
 		},
 		{
 			Text: "Нет",

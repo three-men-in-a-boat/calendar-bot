@@ -5,6 +5,7 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/goodsign/monday"
+	"strings"
 	"time"
 )
 
@@ -251,13 +252,17 @@ func GetMessageAlertBase() string {
 
 func GetGroupAlertMessage (data string) string {
 	str := middlewaresGroupAlertBase
-	switch data {
-	case telegram.Today:
+	if strings.Contains(data, telegram.Today) {
 		return str + middlewaresGroupAlertToday
-	case telegram.Next:
+	}
+
+	if strings.Contains(data, telegram.Next) {
 		return str + middlewaresGroupAlertNext
-	case telegram.Date:
+	}
+
+	if strings.Contains(data, telegram.Date) {
 		return str + middlewaresGroupAlertDate
 	}
+
 	return ""
 }
