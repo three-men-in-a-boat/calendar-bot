@@ -46,6 +46,9 @@ const (
 
 	eventCancelSearchDate = "Отмена поиска событий за опреденную дату"
 	eventCanceledSearchDate = "Поиск события отменен"
+
+	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
+		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
 )
 
 const (
@@ -232,4 +235,8 @@ func GetCancelDateReplyButton() string {
 
 func GetCancelDate() string {
 	return eventCanceledSearchDate
+}
+
+func GetUserNotAuth() string {
+	return middlewaresUserNotAuthenticated
 }

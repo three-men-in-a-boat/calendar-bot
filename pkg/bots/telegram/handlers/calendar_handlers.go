@@ -45,6 +45,9 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 }
 
 func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
+	if !ch.AuthMiddleware(m.Sender) {
+		return
+	}
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
 		customerrors.HandlerError(err)
@@ -85,6 +88,9 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 
 }
 func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
+	if !ch.AuthMiddleware(m.Sender) {
+		return
+	}
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
 		customerrors.HandlerError(err)
@@ -136,6 +142,9 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 	}
 }
 func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
+	if !ch.AuthMiddleware(m.Sender) {
+		return
+	}
 	currSession, err := ch.getSession(m.Sender)
 	if err != nil {
 		return
@@ -157,6 +166,9 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 	}
 }
 func (ch *CalendarHandlers) HandleText(m *tb.Message) {
+	if !ch.AuthMiddleware(m.Sender) {
+		return
+	}
 	session, err := ch.getSession(m.Sender)
 	if err != nil {
 		return
@@ -289,6 +301,65 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 		}
 	}
 }
+func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
+	if !ch.AuthMiddleware(c.Sender) {
+		return
+	}
+	event := ch.getEventByIdForCallback(c)
+	if event == nil {
+		return
+	}
+
+	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+		CallbackID: c.ID,
+		Text:       calendarMessages.CallbackResponseHeader(event),
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventFullText(event),
+		&tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				InlineKeyboard: calendarInlineKeyboards.EventShowLessInlineKeyboard(event),
+			},
+		})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+}
+func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
+	if !ch.AuthMiddleware(c.Sender) {
+		return
+	}
+	event := ch.getEventByIdForCallback(c)
+	if event == nil {
+		return
+	}
+
+	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+		CallbackID: c.ID,
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	inlineKeyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(event, ch.redisDB)
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+	_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventShortText(event),
+		&tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				InlineKeyboard: inlineKeyboard,
+			},
+		})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+}
 
 func (ch *CalendarHandlers) getSession(user *tb.User) (*types.BotRedisSession, error) {
 	resp, err := ch.redisDB.Get(context.TODO(), strconv.Itoa(user.ID)).Result()
@@ -412,57 +483,27 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event
 
 	return &resp.Data.Event
 }
-func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 
-	event := ch.getEventByIdForCallback(c)
-	if event == nil {
-		return
-	}
 
-	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
-		CallbackID: c.ID,
-		Text:       calendarMessages.CallbackResponseHeader(event),
-	})
+func (ch *CalendarHandlers) AuthMiddleware(u *tb.User) bool {
+	isAuth, err := ch.userUseCase.IsUserAuthenticatedByTelegramUserID(int64(u.ID))
 	if err != nil {
 		customerrors.HandlerError(err)
+		return false
 	}
 
-	_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventFullText(event),
-		&tb.SendOptions{
+	if !isAuth {
+		_, err = ch.handler.bot.Send(u, calendarMessages.GetUserNotAuth(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
-				InlineKeyboard: calendarInlineKeyboards.EventShowLessInlineKeyboard(event),
+				ReplyKeyboardRemove: true,
 			},
 		})
-	if err != nil {
-		customerrors.HandlerError(err)
-	}
-}
-func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
-	event := ch.getEventByIdForCallback(c)
-	if event == nil {
-		return
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
 	}
 
-	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
-		CallbackID: c.ID,
-	})
-	if err != nil {
-		customerrors.HandlerError(err)
-	}
-
-	inlineKeyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(event, ch.redisDB)
-	if err != nil {
-		customerrors.HandlerError(err)
-	}
-	_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventShortText(event),
-		&tb.SendOptions{
-			ParseMode: tb.ModeHTML,
-			ReplyMarkup: &tb.ReplyMarkup{
-				InlineKeyboard: inlineKeyboard,
-			},
-		})
-	if err != nil {
-		customerrors.HandlerError(err)
-	}
+	return isAuth
 }
+
