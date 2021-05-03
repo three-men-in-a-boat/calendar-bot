@@ -178,9 +178,9 @@ type ChangeStatus struct {
 }
 
 type FreeBusy struct {
-	Users []string `json:"users,omitempty"`
-	From  time.Time   `json:"from,omitempty"`
-	To    time.Time   `json:"to,omitempty"`
+	Users []string  `json:"users,omitempty"`
+	From  time.Time `json:"from,omitempty"`
+	To    time.Time `json:"to,omitempty"`
 }
 
 type FromTo struct {
