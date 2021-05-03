@@ -38,3 +38,17 @@ func EventShowLessInlineKeyboard(event *types.Event) [][]tb.InlineButton {
 
 	return inlineKeyboard
 }
+
+func GroupAlertsButtons(data string) [][]tb.InlineButton {
+	return [][]tb.InlineButton {{
+		{
+			Text: "Да",
+			Unique: telegram.AlertCallbackYes,
+			Data: data,
+		},
+		{
+			Text: "Нет",
+			Unique: telegram.AlertCallbackNo,
+		},
+	}}
+}

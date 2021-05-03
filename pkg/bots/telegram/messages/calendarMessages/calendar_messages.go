@@ -49,6 +49,10 @@ const (
 
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
 		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
+	middlewaresGroupAlertBase = "Вы уверены, что хотите показать "
+	middlewaresGroupAlertToday = "<b>ВСЕМ</b> свои события на сегодня?"
+	middlewaresGroupAlertNext = "<b>ВСЕМ</b> своё следующее событие на сегодня?"
+	middlewaresGroupAlertDate = "<b>ВСЕМ</b> свои события за определенную дату?"
 )
 
 const (
@@ -239,4 +243,21 @@ func GetCancelDate() string {
 
 func GetUserNotAuth() string {
 	return middlewaresUserNotAuthenticated
+}
+
+func GetMessageAlertBase() string {
+	return middlewaresGroupAlertBase
+}
+
+func GetGroupAlertMessage (data string) string {
+	str := middlewaresGroupAlertBase
+	switch data {
+	case telegram.Today:
+		return str + middlewaresGroupAlertToday
+	case telegram.Next:
+		return str + middlewaresGroupAlertNext
+	case telegram.Date:
+		return str + middlewaresGroupAlertDate
+	}
+	return ""
 }

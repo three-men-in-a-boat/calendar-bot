@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type CalendarHandlers struct {
@@ -41,11 +42,16 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	bot.Handle("/date", ch.HandleDate)
 	bot.Handle("\f"+telegram.ShowFullEvent, ch.HandleShowMore)
 	bot.Handle("\f"+telegram.ShowShortEvent, ch.HandleShowLess)
+	bot.Handle("\f"+telegram.AlertCallbackYes, ch.HandleAlertYes)
+	bot.Handle("\f"+telegram.AlertCallbackNo, ch.HandleAlertNo)
 	bot.Handle(tb.OnText, ch.HandleText)
 }
 
 func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 	if !ch.AuthMiddleware(m.Sender) {
+		return
+	}
+	if ch.GroupMiddleware(m) {
 		return
 	}
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
@@ -89,6 +95,9 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 }
 func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 	if !ch.AuthMiddleware(m.Sender) {
+		return
+	}
+	if ch.GroupMiddleware(m) {
 		return
 	}
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
@@ -143,6 +152,9 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 }
 func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 	if !ch.AuthMiddleware(m.Sender) {
+		return
+	}
+	if ch.GroupMiddleware(m) {
 		return
 	}
 	currSession, err := ch.getSession(m.Sender)
@@ -303,6 +315,12 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 }
 func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 	if !ch.AuthMiddleware(c.Sender) {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
 		return
 	}
 	event := ch.getEventByIdForCallback(c)
@@ -331,6 +349,12 @@ func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 }
 func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 	if !ch.AuthMiddleware(c.Sender) {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
 		return
 	}
 	event := ch.getEventByIdForCallback(c)
@@ -356,6 +380,48 @@ func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 				InlineKeyboard: inlineKeyboard,
 			},
 		})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+}
+func (ch *CalendarHandlers) HandleAlertYes(c *tb.Callback) {
+	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+		CallbackID: c.ID,
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	c.Message.Sender = c.Message.ReplyTo.Sender
+	c.Message.ReplyTo = nil
+
+	err = ch.handler.bot.Delete(c.Message)
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	switch c.Data {
+	case telegram.Today:
+		ch.HandleToday(c.Message)
+		break
+	case telegram.Next:
+		ch.HandleNext(c.Message)
+		break
+	case telegram.Date:
+		ch.HandleDate(c.Message)
+		break
+	}
+
+
+}
+func (ch *CalendarHandlers) HandleAlertNo(c *tb.Callback) {
+	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+		CallbackID: c.ID,
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+	err = ch.handler.bot.Delete(c.Message)
 	if err != nil {
 		customerrors.HandlerError(err)
 	}
@@ -487,7 +553,6 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event
 	return &resp.Data.Event
 }
 
-
 func (ch *CalendarHandlers) AuthMiddleware(u *tb.User) bool {
 	isAuth, err := ch.userUseCase.IsUserAuthenticatedByTelegramUserID(int64(u.ID))
 	if err != nil {
@@ -509,6 +574,23 @@ func (ch *CalendarHandlers) AuthMiddleware(u *tb.User) bool {
 
 	return isAuth
 }
-func (ch *CalendarHandlers) GroupMiddleware(c *tb.Chat) bool {
-	return true
+func (ch *CalendarHandlers) GroupMiddleware(m *tb.Message) bool {
+	if strings.Contains(m.Text, calendarMessages.GetMessageAlertBase()) {
+		return false
+	}
+	if m.Chat.Type == tb.ChatPrivate {
+		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetGroupAlertMessage(m.Text), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyTo:   m,
+			ReplyMarkup: &tb.ReplyMarkup{
+				InlineKeyboard: calendarInlineKeyboards.GroupAlertsButtons(m.Text),
+			},
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return true
+	}
+
+	return false
 }
