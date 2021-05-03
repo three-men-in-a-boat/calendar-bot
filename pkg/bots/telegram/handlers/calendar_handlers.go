@@ -578,7 +578,7 @@ func (ch *CalendarHandlers) GroupMiddleware(m *tb.Message) bool {
 	if strings.Contains(m.Text, calendarMessages.GetMessageAlertBase()) {
 		return false
 	}
-	if m.Chat.Type == tb.ChatPrivate {
+	if m.Chat.Type != tb.ChatPrivate {
 		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetGroupAlertMessage(m.Text), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyTo:   m,
