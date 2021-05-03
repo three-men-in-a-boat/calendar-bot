@@ -48,7 +48,7 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 }
 
 func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
-	if !ch.AuthMiddleware(m.Sender) {
+	if !ch.AuthMiddleware(m.Sender, m.Chat) {
 		return
 	}
 	if ch.GroupMiddleware(m) {
@@ -94,7 +94,7 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 
 }
 func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
-	if !ch.AuthMiddleware(m.Sender) {
+	if !ch.AuthMiddleware(m.Sender, m.Chat) {
 		return
 	}
 	if ch.GroupMiddleware(m) {
@@ -154,7 +154,7 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 	}
 }
 func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
-	if !ch.AuthMiddleware(m.Sender) {
+	if !ch.AuthMiddleware(m.Sender, m.Chat) {
 		return
 	}
 	if ch.GroupMiddleware(m) {
@@ -181,9 +181,6 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 	}
 }
 func (ch *CalendarHandlers) HandleText(m *tb.Message) {
-	if !ch.AuthMiddleware(m.Sender) {
-		return
-	}
 	session, err := ch.getSession(m.Sender)
 	if err != nil {
 		return
@@ -319,7 +316,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 	}
 }
 func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
-	if !ch.AuthMiddleware(c.Sender) {
+	if !ch.AuthMiddleware(c.Sender, c.Message.Chat) {
 		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
 			CallbackID: c.ID,
 		})
@@ -353,7 +350,7 @@ func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 	}
 }
 func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
-	if !ch.AuthMiddleware(c.Sender) {
+	if !ch.AuthMiddleware(c.Sender, c.Message.Chat) {
 		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
 			CallbackID: c.ID,
 		})
@@ -561,7 +558,7 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event
 	return &resp.Data.Event
 }
 
-func (ch *CalendarHandlers) AuthMiddleware(u *tb.User) bool {
+func (ch *CalendarHandlers) AuthMiddleware(u *tb.User, c *tb.Chat) bool {
 	isAuth, err := ch.userUseCase.IsUserAuthenticatedByTelegramUserID(int64(u.ID))
 	if err != nil {
 		customerrors.HandlerError(err)
@@ -569,7 +566,7 @@ func (ch *CalendarHandlers) AuthMiddleware(u *tb.User) bool {
 	}
 
 	if !isAuth {
-		_, err = ch.handler.bot.Send(u, calendarMessages.GetUserNotAuth(), &tb.SendOptions{
+		_, err = ch.handler.bot.Send(c, calendarMessages.GetUserNotAuth(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
