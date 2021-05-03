@@ -73,7 +73,7 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 			customerrors.HandlerError(err)
 		}
 
-		ch.sendShortEvents(&events.Data.Events, m.Sender)
+		ch.sendShortEvents(&events.Data.Events, m.Sender, m.Chat)
 	} else {
 		_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetTodayNotFound(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
@@ -266,7 +266,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 				if err != nil {
 					customerrors.HandlerError(err)
 				}
-				ch.sendShortEvents(&events.Data.Events, m.Sender)
+				ch.sendShortEvents(&events.Data.Events, m.Sender, m.Chat)
 			} else {
 				_, err := ch.handler.bot.Send(m.Sender, calendarMessages.GetDateEventsNotFound(), &tb.SendOptions{
 					ParseMode: tb.ModeHTML,
@@ -420,12 +420,15 @@ func (ch *CalendarHandlers) setSession(session *types.BotRedisSession, user *tb.
 
 	return nil
 }
-func (ch *CalendarHandlers) sendShortEvents(events *types.Events, user tb.Recipient) {
+func (ch *CalendarHandlers) sendShortEvents(events *types.Events, user tb.Recipient, chat *tb.Chat) {
 	for _, event := range *events {
 		keyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(&event, ch.redisDB)
 		if err != nil {
 			zap.S().Errorf("Can't set calendarId=%v for eventId=%v. Err: %v",
 				event.Calendar.UID, event.Uid, err)
+		}
+		if chat.Type != tb.ChatPrivate {
+			keyboard = nil
 		}
 		_, err = ch.handler.bot.Send(user, calendarMessages.SingleEventShortText(&event), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
@@ -506,4 +509,6 @@ func (ch *CalendarHandlers) AuthMiddleware(u *tb.User) bool {
 
 	return isAuth
 }
-
+func (ch *CalendarHandlers) GroupMiddleware(c *tb.Chat) bool {
+	return true
+}
