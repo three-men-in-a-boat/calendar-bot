@@ -17,6 +17,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
@@ -87,6 +88,8 @@ func main() {
 
 	allHandler.eventHandlers.InitHandlers(server)
 	allHandler.userHandlers.InitHandlers(server)
+
+	server.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	server.Logger.Fatal(server.Start(appConf.Address))
 }
