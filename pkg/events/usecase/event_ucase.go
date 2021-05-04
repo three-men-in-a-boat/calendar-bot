@@ -321,7 +321,7 @@ func (uc *EventUseCase) GetUsersFreeIntervals(accessToken string, freeBusy types
 
 	busyFlatTruncated := MapSpansWithFunc(busyFlatTimeSpan, TruncateSpanBy(freeBusyBorders))
 
-	freeTimeSpans := CalculateFreeTimeSpansIterative(busyFlatTruncated, freeBusyBorders)
+	freeTimeSpans := CalculateFreeTimeSpans(busyFlatTruncated, freeBusyBorders)
 
 	if conf.SplitFreeIntervalsBy != nil {
 		splitBy := *conf.SplitFreeIntervalsBy

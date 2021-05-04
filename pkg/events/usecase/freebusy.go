@@ -159,15 +159,6 @@ func TruncateSpanBy(borders spaniel.Span) SpanMapFunc {
 	}
 }
 
-func MergeSpanMappers(mappers ...SpanMapFunc) SpanMapFunc {
-	return func(span spaniel.Span) spaniel.Span {
-		for _, mapper := range mappers {
-			span = mapper(span)
-		}
-		return span
-	}
-}
-
 func MapSpansWithFunc(spans spaniel.Spans, mapper SpanMapFunc) spaniel.Spans {
 	mapped := make(spaniel.Spans, 0, len(spans))
 	for _, span := range spans {
@@ -180,22 +171,7 @@ func MapSpansWithFunc(spans spaniel.Spans, mapper SpanMapFunc) spaniel.Spans {
 
 // ------------complements--------
 
-func FlatComplementOfSpanComplementsRecursive(complements []spaniel.Spans) spaniel.Spans {
-	switch len(complements) {
-	case 0:
-		return spaniel.Spans{}
-	case 1:
-		return complements[0]
-	case 2:
-		return complements[0].IntersectionBetween(complements[1])
-	default:
-		left := FlatComplementOfSpanComplementsRecursive(complements[:len(complements)/2])
-		right := FlatComplementOfSpanComplementsRecursive(complements[len(complements)/2:])
-		return left.IntersectionBetween(right)
-	}
-}
-
-func FlatComplementOfSpanComplementsIterative(complements []spaniel.Spans) spaniel.Spans {
+func FlatComplementOfSpanComplements(complements []spaniel.Spans) spaniel.Spans {
 	flatComplementOfSpanSet := spaniel.Spans{}
 	if len(complements) > 0 {
 		firstSpanComplement := complements[0]
@@ -244,22 +220,13 @@ func MergeBusyIntervals(freeBusyUser types.FreeBusyUser, stretchBy *time.Duratio
 	return busyTimeSpans.Union()
 }
 
-func CalculateFreeTimeSpansIterative(busy spaniel.Spans, complementBorders spaniel.Span) spaniel.Spans {
+func CalculateFreeTimeSpans(busy spaniel.Spans, complementBorders spaniel.Span) spaniel.Spans {
 	if len(busy) == 0 {
 		return spaniel.Spans{complementBorders}
 	}
 	complements := CreateComplementForEachSpan(busy, complementBorders)
-	freeTimeSpansIterative := FlatComplementOfSpanComplementsIterative(complements)
-	return freeTimeSpansIterative
-}
-
-func CalculateFreeTimeSpansRecursive(busy spaniel.Spans, complementBorders spaniel.Span) spaniel.Spans {
-	if len(busy) == 0 {
-		return spaniel.Spans{complementBorders}
-	}
-	complements := CreateComplementForEachSpan(busy, complementBorders)
-	freeTimeSpansRecursive := FlatComplementOfSpanComplementsRecursive(complements)
-	return freeTimeSpansRecursive
+	freeTimeSpans := FlatComplementOfSpanComplements(complements)
+	return freeTimeSpans
 }
 
 // ------------helpers------------

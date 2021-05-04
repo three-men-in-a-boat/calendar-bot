@@ -11,7 +11,7 @@ import (
 
 func TestFreeBusySingle(t *testing.T) {
 	var uc EventUseCase
-	now := time.Now().AddDate(0, 0, 1)
+	now := time.Now().AddDate(0, 0, 0)
 
 	year, month, day := now.Date()
 	loc := now.Location()
@@ -22,24 +22,23 @@ func TestFreeBusySingle(t *testing.T) {
 	mainSpan := spaniel.New(hoursBefore, hoursAfter)
 
 	freeBusy := types.FreeBusy{
-		Users: []string{"mr.eskov1@mail.ru"}, // "alersh@internet.ru"},
+		Users: []string{"mr.eskov1@mail.ru", "alersh@internet.ru"},
 		From:  mainSpan.Start(),
 		To:    mainSpan.End(),
 	}
 
-	response, err := uc.GetUsersBusyIntervals("ad5fcc85356a7b26a4b16fd8321edae161138b2337363830", freeBusy)
+	response, err := uc.GetUsersBusyIntervals("5b86108c1a0c76e99ea1b1cf7d41acab61138b2337363830", freeBusy)
 	assert.NoError(t, err)
 
 	stretchBy := 15 * time.Minute
+	fmt.Printf("busyFlatTimeSpanUnstretched: %+v\n", MergeBusyIntervals(response.Data, nil))
 	busyFlatTimeSpan := MergeBusyIntervals(response.Data, &stretchBy)
 	fmt.Printf("busyFlatTimeSpan: %+v\n", busyFlatTimeSpan)
 
 	busyFlatTruncated := MapSpansWithFunc(busyFlatTimeSpan, TruncateSpanBy(mainSpan))
 	fmt.Printf("busyFlatTruncated: %+v\n", busyFlatTruncated)
 
-	freeTimeSpansIterative := CalculateFreeTimeSpansIterative(busyFlatTruncated, mainSpan)
-	freeTimeSpansRecursive := CalculateFreeTimeSpansRecursive(busyFlatTimeSpan, mainSpan)
-	assert.Equal(t, freeTimeSpansIterative, freeTimeSpansRecursive)
+	freeTimeSpansIterative := CalculateFreeTimeSpans(busyFlatTruncated, mainSpan)
 
 	fmt.Printf("freeTimeSpansIterative: %+v\n", freeTimeSpansIterative)
 
@@ -52,8 +51,8 @@ func TestFreeBusySingle(t *testing.T) {
 	fmt.Printf("freeTimeSplit: %+v\n", freeTimeSplit)
 
 	dayPart := DayPart{
-		Start:    time.Date(year, month, day, 17, 0, 0, 0, loc),
-		Duration: 1 * time.Hour,
+		Start:    time.Date(year, month, day, 21, 0, 0, 0, loc),
+		Duration: 2 * time.Hour,
 	}
 	//maxDuration := 60 * time.Minute
 	//minDuration := 30 * time.Minute
@@ -75,7 +74,7 @@ func TestGetUsersFreeIntervals(t *testing.T) {
 	mainSpan := spaniel.New(hoursBefore, hoursAfter)
 
 	freeBusy := types.FreeBusy{
-		Users: []string{"mr.eskov1@mail.ru"}, // "alersh@internet.ru"},
+		Users: []string{"mr.eskov1@mail.ru", "alersh@internet.ru"},
 		From:  mainSpan.Start(),
 		To:    mainSpan.End(),
 	}
@@ -86,11 +85,11 @@ func TestGetUsersFreeIntervals(t *testing.T) {
 	//minDuration := 30 * time.Minute
 
 	freeIntervals, err := uc.GetUsersFreeIntervals(
-		"ad5fcc85356a7b26a4b16fd8321edae161138b2337363830",
+		"5b86108c1a0c76e99ea1b1cf7d41acab61138b2337363830",
 		freeBusy,
 		FreeBusyConfig{
 			DayPart: &DayPart{
-				Start:    time.Date(year, month, day, 18, 0, 0, 0, loc),
+				Start:    time.Date(year, month, day, 21, 0, 0, 0, loc),
 				Duration: 2 * time.Hour,
 			},
 			StretchBusyIntervalsBy: &stretchBusyIntervalsBy,
