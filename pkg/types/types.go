@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/senseyeio/spaniel"
 	"time"
 )
 
@@ -199,4 +200,20 @@ type FreeBusyUser struct {
 
 type FreeBusyResponse struct {
 	Data FreeBusyUser `json:"data,omitempty"`
+}
+
+func (ft FromTo) Start() time.Time {
+	return ft.From
+}
+
+func (ft FromTo) StartType() spaniel.EndPointType {
+	return spaniel.Closed
+}
+
+func (ft FromTo) End() time.Time {
+	return ft.To
+}
+
+func (ft FromTo) EndType() spaniel.EndPointType {
+	return spaniel.Open
 }

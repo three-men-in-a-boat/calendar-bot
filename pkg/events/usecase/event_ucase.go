@@ -316,18 +316,28 @@ func (uc *EventUseCase) GetUsersFreeIntervals(accessToken string, freeBusy types
 		return nil, errors.Wrap(err, "GetUsersFreeIntervals")
 	}
 
-	mainSpan := spaniel.New(freeBusy.From, freeBusy.To)
-	busyFlatTimeSpan := MergeBusyIntervals(response.Data)
+	freeBusyBorders := spaniel.New(freeBusy.From, freeBusy.To)
+	busyFlatTimeSpan := MergeBusyIntervals(response.Data, conf.StretchBusyIntervalsBy)
 
-	busyFlatFiltered := FilterTimeSpans(busyFlatTimeSpan, mainSpan, nil, nil, nil)
-	complements := CreateComplementForEachSpan(busyFlatFiltered, mainSpan)
+	busyFlatTruncated := MapSpansWithFunc(busyFlatTimeSpan, TruncateSpanBy(freeBusyBorders))
 
-	freeTimeSpansIterative := FlatComplementOfSpanComplementsIterative(complements)
+	freeTimeSpans := CalculateFreeTimeSpans(busyFlatTruncated, freeBusyBorders)
 
-	filteredFreeTimeSpans := FilterTimeSpans(
-		freeTimeSpansIterative,
+	if conf.SplitFreeIntervalsBy != nil {
+		splitBy := *conf.SplitFreeIntervalsBy
+		freeTimeSplit := make(spaniel.Spans, 0, len(freeTimeSpans))
+		for _, span := range freeTimeSpans {
+			// neskov: denotes remainder
+			spanSplit, _ := SplitSpanBy(span, splitBy)
+			freeTimeSplit = append(freeTimeSplit, spanSplit...)
+		}
+		freeTimeSpans = freeTimeSplit
+	}
+
+	filteredFreeTimeSpans := FilterSpans(
+		freeTimeSpans,
 		nil,
-		conf.DayPartSpan,
+		conf.DayPart,
 		conf.MinFreeIntervalDuration,
 		conf.MaxFreeIntervalDuration,
 	)
