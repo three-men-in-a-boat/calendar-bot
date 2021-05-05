@@ -518,6 +518,22 @@ func (ch *CalendarHandlers) handleCreateText(m *tb.Message, session *types.BotRe
 			return
 		}
 
+		if parsedDate.Date.IsZero() {
+			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateNotParsed())
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+			return
+		}
+
+		session.Event.From = parsedDate.Date
+		break
+	case telegram.StepCreateTo:
+		parsedDate := ch.ParseDate(m)
+		if parsedDate == nil {
+			return
+		}
+
 		session.Event.From = parsedDate.Date
 		break
 	}
