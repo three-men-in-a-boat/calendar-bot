@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/calendar-bot/pkg/bots/telegram/utils"
 	"time"
 )
 
@@ -201,8 +202,13 @@ type FreeBusyResponse struct {
 	Data FreeBusyUser `json:"data,omitempty"`
 }
 
+
 type BotRedisSession struct {
+	Step int
 	IsDate bool `json:"is_date"`
+	IsCreate bool `json:"is_create"`
+	Event Event
+	InfoMsg utils.CustomEditable
 }
 
 type ParseDateReq struct {

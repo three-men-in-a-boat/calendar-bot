@@ -27,33 +27,45 @@ const (
 	eventConfroomsHeader           = "<u><i>Переговорные комнаты:</i></u>\n\n"
 
 	eventTodayTitle = "<b>Ваши события на сегодня</b>"
-	eventDateTitle = "<b>Ваши события за %s</b>"
-	eventNextTitle = "<b>Ваше следуюшее событие</b>"
+	eventDateTitle  = "<b>Ваши события за %s</b>"
+	eventNextTitle  = "<b>Ваше следуюшее событие</b>"
 
 	eventGetDateHeader  = "<b>Получение событий за определенную дату: </b>\n\n"
 	eventGetDateMessage = "Для выбора даты воспользуйтесь кнопками или введите дату в формате " +
 		"<pre>&lt;число&gt; &lt;название месяца&gt;</pre> (например: <pre>22 марта</pre>)"
 
-	eventNoTodayEventsFound = "У вас нет событий сегодня"
-	eventNoDateEventsFound = "У вас нет событий за выбранную дату"
+	eventNoTodayEventsFound  = "У вас нет событий сегодня"
+	eventNoDateEventsFound   = "У вас нет событий за выбранную дату"
 	eventNoClosestEventFound = "У вас больше нет событий сегодня"
 
-	eventDateNotParsed = "Мы не смогли распознать дату, попробуйте еще раз"
+	eventDateNotParsed   = "Мы не смогли распознать дату, попробуйте еще раз"
 	eventSessionNotFound = "Мы не смогли найти необходимую информацию для обработки запроса.\nВоспользуйтесь нужной вам " +
 		"командой заново"
 	eventShowNotFoundError = "К сожалению мы не смогли найти информацию о событии.\nВозможно, это старое сообщение." +
 		"\nЗапросите событие с помощью бота заново."
 	eventCallbackResponseText = "Событие: %s"
 
-	eventCancelSearchDate = "Отмена поиска событий за опреденную дату"
+	eventCancelSearchDate   = "Отмена поиска событий за опреденную дату"
 	eventCanceledSearchDate = "Поиск события отменен"
+
+	createEventHeader    = "<b>Что получается:</b>\n\n"
+	createEventTitle     = "<b>Название:</b> %s\n"
+	createEventAllDay    = "весь день"
+	createEventDateStart = "⏰ <b>Начало:</b> %s %s\n"
+	createEventDateEnd   = "⏰ <b>Конец:</b> %s %s\n"
+
+	createEventInitText = "<b>Введите время начала события</b>\n\nДля выбора даты и времени начала события" +
+		" воспользуйтесь кнопками или введите дату в формате <pre>&lt;число&gt; &lt;название месяца&gt; " +
+		"&lt;ЧЧ:ММ&gt;</pre> (например: <pre>22 марта 15:00</pre>)"
+	createEventCancelText   = "Отмена создания события"
+	createEventCanceledText = "Создание события отменено"
 
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
 		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
-	middlewaresGroupAlertBase = "Вы уверены, что хотите показать "
+	middlewaresGroupAlertBase  = "Вы уверены, что хотите показать "
 	middlewaresGroupAlertToday = "<b>ВСЕМ</b> свои события на сегодня?"
-	middlewaresGroupAlertNext = "<b>ВСЕМ</b> своё следующее событие на сегодня?"
-	middlewaresGroupAlertDate = "<b>ВСЕМ</b> свои события за определенную дату?"
+	middlewaresGroupAlertNext  = "<b>ВСЕМ</b> своё следующее событие на сегодня?"
+	middlewaresGroupAlertDate  = "<b>ВСЕМ</b> свои события за определенную дату?"
 )
 
 const (
@@ -211,7 +223,7 @@ func GetTodayTitle() string {
 }
 
 func GetDateTitle(date time.Time) string {
-	return fmt.Sprintf(eventDateTitle,  monday.Format(date, formatDate, locale))
+	return fmt.Sprintf(eventDateTitle, monday.Format(date, formatDate, locale))
 }
 
 func GetNextTitle() string {
@@ -250,7 +262,7 @@ func GetMessageAlertBase() string {
 	return middlewaresGroupAlertBase
 }
 
-func GetGroupAlertMessage (data string) string {
+func GetGroupAlertMessage(data string) string {
 	str := middlewaresGroupAlertBase
 	if strings.Contains(data, telegram.Today) {
 		return str + middlewaresGroupAlertToday
@@ -265,4 +277,44 @@ func GetGroupAlertMessage (data string) string {
 	}
 
 	return ""
+}
+
+func GetCreateInitText() string {
+	return createEventInitText
+}
+
+func GetCreateCancelText() string {
+	return createEventCancelText
+}
+
+func GetCreateCanceledText() string {
+	return createEventCanceledText
+}
+
+func GetCreateEventText(e *types.Event) string {
+	str := ""
+	str += createEventHeader
+
+	if e.Title == "" {
+		str += fmt.Sprintf(createEventTitle, eventNoTitleText)
+	} else {
+		str += fmt.Sprintf(createEventTitle, eventNoTitleText)
+	}
+
+	if !e.From.IsZero() {
+		if !e.FullDay {
+			str += fmt.Sprintf(createEventDateStart, monday.Format(e.From, formatDate, locale),
+				monday.Format(e.From, formatTime, locale))
+		} else {
+			str += fmt.Sprintf(createEventDateStart, monday.Format(e.From, formatDate, locale),
+				createEventAllDay)
+		}
+	}
+
+	if !e.To.IsZero() && !e.FullDay {
+		str += fmt.Sprintf(createEventDateEnd, monday.Format(e.From, formatDate, locale),
+			monday.Format(e.From, formatTime, locale))
+	}
+
+	return str
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram/inline_keyboards/calendarInlineKeyboards"
 	"github.com/calendar-bot/pkg/bots/telegram/keyboards/calendarKeyboards"
 	"github.com/calendar-bot/pkg/bots/telegram/messages/calendarMessages"
+	"github.com/calendar-bot/pkg/bots/telegram/utils"
 	"github.com/calendar-bot/pkg/customerrors"
 	eUseCase "github.com/calendar-bot/pkg/events/usecase"
 	"github.com/calendar-bot/pkg/types"
@@ -40,6 +41,8 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	bot.Handle("/today", ch.HandleToday)
 	bot.Handle("/next", ch.HandleNext)
 	bot.Handle("/date", ch.HandleDate)
+	bot.Handle("/create", ch.HandleCreate)
+
 	bot.Handle("\f"+telegram.ShowFullEvent, ch.HandleShowMore)
 	bot.Handle("\f"+telegram.ShowShortEvent, ch.HandleShowLess)
 	bot.Handle("\f"+telegram.AlertCallbackYes, ch.HandleAlertYes)
@@ -166,6 +169,7 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 	}
 
 	currSession.IsDate = true
+	currSession.IsCreate = false
 	err = ch.setSession(currSession, m.Sender)
 	if err != nil {
 		return
@@ -180,6 +184,36 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 		customerrors.HandlerError(err)
 	}
 }
+func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
+	if !ch.AuthMiddleware(m.Sender, m.Chat) {
+		return
+	}
+	session, err := ch.getSession(m.Sender)
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return
+	}
+	session.IsDate = false
+	session.IsCreate = true
+	session.Step = telegram.StepCreateFrom
+	err = ch.setSession(session, m.Sender)
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return
+	}
+	_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateInitText(), &tb.SendOptions{
+		ParseMode: tb.ModeHTML,
+		ReplyMarkup: &tb.ReplyMarkup{
+			ReplyKeyboard: calendarKeyboards.GetCreateFastCommand(),
+		},
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+}
 func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 	session, err := ch.getSession(m.Sender)
 	if err != nil {
@@ -187,120 +221,9 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 	}
 
 	if session.IsDate {
-		if calendarMessages.GetCancelDateReplyButton() == m.Text {
-			session.IsDate = false
-			err := ch.setSession(session, m.Sender)
-			if err != nil {
-				return
-			}
-
-			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCancelDate(), &tb.SendOptions{
-				ParseMode: tb.ModeHTML,
-				ReplyMarkup: &tb.ReplyMarkup{
-					ReplyKeyboardRemove: true,
-				},
-			})
-
-			if err != nil {
-				customerrors.HandlerError(err)
-			}
-
-			return
-		}
-
-		reqData := &types.ParseDateReq{Timezone: "Europe/Moscow", Text: m.Text}
-		b, err := json.Marshal(reqData)
-		if err != nil {
-			customerrors.HandlerError(err)
-			ch.handler.SendError(m.Chat, err)
-			return
-		}
-
-		client := &http.Client{}
-		req, err := http.NewRequest(http.MethodPut, ch.handler.parseAddress+"/parse/date", bytes.NewBuffer(b))
-		if err != nil {
-			customerrors.HandlerError(err)
-			ch.handler.SendError(m.Chat, err)
-			return
-		}
-		req.Header.Add("Content-Type", "application/json")
-		resp, err := client.Do(req)
-
-		if err != nil {
-			customerrors.HandlerError(err)
-			ch.handler.SendError(m.Chat, err)
-			return
-		}
-
-		defer func(Body io.ReadCloser) {
-			err := Body.Close()
-			if err != nil {
-				customerrors.HandlerError(err)
-			}
-		}(resp.Body)
-
-		body, err := ioutil.ReadAll(resp.Body)
-
-		parseDate := &types.ParseDateResp{}
-		err = json.Unmarshal(body, parseDate)
-		if err != nil {
-			customerrors.HandlerError(err)
-			ch.handler.SendError(m.Chat, err)
-			return
-		}
-
-		if !parseDate.Date.IsZero() {
-			session.IsDate = false
-			err := ch.setSession(session, m.Sender)
-			if err != nil {
-				return
-			}
-
-			token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
-			if err != nil {
-				customerrors.HandlerError(err)
-				ch.handler.SendError(m.Chat, err)
-				return
-			}
-			events, err := ch.eventUseCase.GetEventsByDate(token, parseDate.Date)
-			if err != nil {
-				customerrors.HandlerError(err)
-				ch.handler.SendError(m.Chat, err)
-				return
-			}
-			if events != nil {
-				_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateTitle(parseDate.Date), &tb.SendOptions{
-					ParseMode: tb.ModeHTML,
-					ReplyMarkup: &tb.ReplyMarkup{
-						ReplyKeyboardRemove: true,
-					},
-				})
-				if err != nil {
-					customerrors.HandlerError(err)
-				}
-				ch.sendShortEvents(&events.Data.Events, m.Sender, m.Chat)
-			} else {
-				_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateEventsNotFound(), &tb.SendOptions{
-					ParseMode: tb.ModeHTML,
-					ReplyMarkup: &tb.ReplyMarkup{
-						ReplyKeyboardRemove: true,
-					},
-				})
-
-				if err != nil {
-					customerrors.HandlerError(err)
-				}
-			}
-
-		} else {
-			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetDateNotParsed(), &tb.SendOptions{
-				ParseMode: tb.ModeHTML,
-			})
-			if err != nil {
-				customerrors.HandlerError(err)
-			}
-		}
-
+		ch.handleDateText(m, session)
+	} else if session.IsCreate {
+		ch.handleCreateText(m, session)
 	} else {
 		if m.Chat.Type == tb.ChatPrivate {
 			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.RedisSessionNotFound(), &tb.SendOptions{
@@ -315,6 +238,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 		}
 	}
 }
+
 func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 	if !ch.AuthMiddleware(c.Sender, c.Message.Chat) {
 		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
@@ -498,9 +422,6 @@ func (ch *CalendarHandlers) sendShortEvents(events *types.Events, user tb.Recipi
 					event.Calendar.UID, event.Uid, err)
 			}
 		}
-		if chat.Type != tb.ChatPrivate {
-			keyboard = nil
-		}
 		_, err = ch.handler.bot.Send(chat, calendarMessages.SingleEventShortText(&event), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
@@ -556,6 +477,198 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event
 	}
 
 	return &resp.Data.Event
+}
+func (ch *CalendarHandlers) handleCreateText(m *tb.Message, session *types.BotRedisSession) {
+	if calendarMessages.GetCreateCancelText() == m.Text {
+		session.IsCreate = false
+		session.Step = telegram.StepCreateInit
+
+		if session.InfoMsg.ChatID != 0 {
+			err := ch.handler.bot.Delete(&session.InfoMsg)
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+		}
+
+		session.InfoMsg = utils.InitCustomEditable("", 0)
+
+		err := ch.setSession(session, m.Sender)
+		if err != nil {
+			return
+		}
+
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateCanceledText(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		return
+	}
+
+	switch session.Step {
+	case telegram.StepCreateFrom:
+		parsedDate := ch.ParseDate(m)
+		if parsedDate == nil {
+			return
+		}
+
+		session.Event.From = parsedDate.Date
+		break
+	}
+
+	if session.InfoMsg.ChatID != 0 {
+		err := ch.handler.bot.Delete(&session.InfoMsg)
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+	}
+
+	newMsg, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventText(&session.Event), &tb.SendOptions{
+		ParseMode: tb.ModeHTML,
+		ReplyMarkup: &tb.ReplyMarkup{
+		},
+	})
+
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	session.InfoMsg = utils.InitCustomEditable(newMsg.MessageSig())
+
+	err = ch.setSession(session, m.Sender)
+	if err != nil {
+		return
+	}
+
+}
+func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedisSession) {
+	if calendarMessages.GetCancelDateReplyButton() == m.Text {
+		session.IsDate = false
+		err := ch.setSession(session, m.Sender)
+		if err != nil {
+			return
+		}
+
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCancelDate(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		return
+	}
+
+	parseDate := ch.ParseDate(m)
+	if parseDate == nil {
+		return
+	}
+
+	if !parseDate.Date.IsZero() {
+		session.IsDate = false
+		err := ch.setSession(session, m.Sender)
+		if err != nil {
+			return
+		}
+
+		token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
+		if err != nil {
+			customerrors.HandlerError(err)
+			ch.handler.SendError(m.Chat, err)
+			return
+		}
+		events, err := ch.eventUseCase.GetEventsByDate(token, parseDate.Date)
+		if err != nil {
+			customerrors.HandlerError(err)
+			ch.handler.SendError(m.Chat, err)
+			return
+		}
+		if events != nil {
+			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateTitle(parseDate.Date), &tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+				ReplyMarkup: &tb.ReplyMarkup{
+					ReplyKeyboardRemove: true,
+				},
+			})
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+			ch.sendShortEvents(&events.Data.Events, m.Sender, m.Chat)
+		} else {
+			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateEventsNotFound(), &tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+				ReplyMarkup: &tb.ReplyMarkup{
+					ReplyKeyboardRemove: true,
+				},
+			})
+
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+		}
+
+	} else {
+		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateNotParsed(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+	}
+}
+func (ch *CalendarHandlers) ParseDate(m *tb.Message) *types.ParseDateResp {
+	reqData := &types.ParseDateReq{Timezone: "Europe/Moscow", Text: m.Text}
+	b, err := json.Marshal(reqData)
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return nil
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPut, ch.handler.parseAddress+"/parse/date", bytes.NewBuffer(b))
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return nil
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := client.Do(req)
+
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return nil
+	}
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+	}(resp.Body)
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	parseDate := &types.ParseDateResp{}
+	err = json.Unmarshal(body, parseDate)
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return nil
+	}
+
+	return parseDate
 }
 
 func (ch *CalendarHandlers) AuthMiddleware(u *tb.User, c *tb.Chat) bool {
