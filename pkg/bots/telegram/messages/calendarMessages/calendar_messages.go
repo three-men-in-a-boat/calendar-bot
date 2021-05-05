@@ -5,6 +5,7 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/goodsign/monday"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -14,6 +15,7 @@ const (
 	eventNoTitleText               = "Без названия"
 	eventTimeText                  = "⏰ %s, <u>%s</u> - %s<u>%s</u>\n"
 	eventTimeFullDay               = "⏰ %s %s, <u>Весь день</u>\n"
+	eventDateStart                 = "⏰ <b>Начало:</b> %s %s\n"
 	eventPlaceText                 = "📍 %s\n"
 	eventOrganizerText             = "Создатель - <b>%s</b> (%s)\n"
 	eventSplitLine                 = "---------------\n"
@@ -48,17 +50,29 @@ const (
 	eventCancelSearchDate   = "Отмена поиска событий за опреденную дату"
 	eventCanceledSearchDate = "Поиск события отменен"
 
-	createEventHeader    = "<b>Что получается:</b>\n\n"
-	createEventTitle     = "<b>Название:</b> %s\n"
-	createEventAllDay    = "весь день"
-	createEventDateStart = "⏰ <b>Начало:</b> %s %s\n"
-	createEventDateEnd   = "⏰ <b>Конец:</b> %s %s\n"
+	createEventHeader  = "<u><b>Что получается:</b></u>\n\n"
+	createdEventHeader = "<u><b>Событие создано:</b></u>\n\n"
 
 	createEventInitText = "<b>Введите время начала события</b>\n\nДля выбора даты и времени начала события" +
 		" воспользуйтесь кнопками или введите дату в формате <pre>&lt;число&gt; &lt;название месяца&gt; " +
 		"&lt;ЧЧ:ММ&gt;</pre> (например: <pre>22 марта 15:00</pre>)"
-	createEventCancelText   = "Отмена создания события"
+	createEventToText = "<b>Введите время окончания события</b>\n\nДля продолжительности события" +
+		" воспользуйтесь кнопками или введите дату оконочания в формате <pre>&lt;число&gt; &lt;название месяца&gt; " +
+		"&lt;ЧЧ:ММ&gt;</pre> (например: <pre>22 марта 15:00</pre>)"
+	createEventTitleText = "<b>Введите название события</b>"
+
+	createEventCreateText   = "Создать событие"
+	createEventCreatedText  = "Событие успешно создано"
+	createEventCancelText   = "Отмена"
 	createEventCanceledText = "Создание события отменено"
+
+	createEventHalfHour    = "30 минут"
+	createEventHour        = "1 час"
+	createEventHourAndHalf = "1 час 30 минут"
+	createEventTwoHours    = "2 часа"
+	createEventFourHours   = "4 часа"
+	createEventSixHours    = "6 часов"
+	createEventFullDay     = "Весь день"
 
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
 		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
@@ -66,6 +80,8 @@ const (
 	middlewaresGroupAlertToday = "<b>ВСЕМ</b> свои события на сегодня?"
 	middlewaresGroupAlertNext  = "<b>ВСЕМ</b> своё следующее событие на сегодня?"
 	middlewaresGroupAlertDate  = "<b>ВСЕМ</b> свои события за определенную дату?"
+
+	userNotAllow = "Вы не можете взаимодействовать с данной кнопкой"
 )
 
 const (
@@ -131,14 +147,21 @@ func SingleEventFullText(event *types.Event) string {
 		title = eventNoTitleText
 	}
 	fullEventText += fmt.Sprintf(eventNameText, title)
-	if !event.FullDay {
-		fullEventText += fmt.Sprintf(eventTimeText, parseDate(event)...)
+
+	if event.To.IsZero() && !event.From.IsZero() {
+		fullEventText += fmt.Sprintf(eventDateStart, monday.Format(event.From, formatDate, locale),
+			monday.Format(event.From, formatTime, locale))
 	} else {
-		fullEventText += fmt.Sprintf(eventTimeFullDay, parseDateFullDay(event)...)
+		if !event.FullDay {
+			fullEventText += fmt.Sprintf(eventTimeText, parseDate(event)...)
+		} else {
+			fullEventText += fmt.Sprintf(eventTimeFullDay, parseDateFullDay(event)...)
+		}
 	}
 	if event.Location.Description != "" {
 		fullEventText += fmt.Sprintf(eventPlaceText, event.Location.Description)
 	}
+
 	organizer := event.Organizer.Name
 	if organizer != "" {
 		organizer += " "
@@ -159,7 +182,7 @@ func SingleEventFullText(event *types.Event) string {
 	}
 
 	if len(event.Attendees) > 1 {
-		fullEventText += eventSplitLine
+		fullEventText += eventSplitLine + strconv.Itoa(len(event.Attendees))
 		fullEventText += eventAttendeesHeaderText
 		for _, attendee := range event.Attendees {
 			if attendee.Email == event.Organizer.Email {
@@ -167,10 +190,10 @@ func SingleEventFullText(event *types.Event) string {
 			}
 			fullEventText += fmt.Sprintf(eventAttendeeText, attendee.Name, attendee.Email)
 			switch attendee.Status {
-			case "ACCEPTED":
+			case telegram.StatusAccepted:
 				fullEventText += eventAttendeeStatusAccepted
 				break
-			case "DECLINED":
+			case telegram.StatusDeclined:
 				fullEventText += eventAttendeeStatusDeclined
 				break
 			default:
@@ -186,8 +209,11 @@ func SingleEventFullText(event *types.Event) string {
 		fullEventText += event.Description + "\n"
 	}
 
-	fullEventText += eventSplitLine
-	fullEventText += fmt.Sprintf(eventCalendarText, event.Calendar.Title)
+	if event.Calendar.Title != "" {
+		fullEventText += eventSplitLine
+		fullEventText += fmt.Sprintf(eventCalendarText, event.Calendar.Title)
+	}
+
 	return fullEventText
 }
 
@@ -291,30 +317,53 @@ func GetCreateCanceledText() string {
 	return createEventCanceledText
 }
 
-func GetCreateEventText(e *types.Event) string {
-	str := ""
-	str += createEventHeader
+func GetCreateEventHeader() string {
+	return createEventHeader
+}
 
-	if e.Title == "" {
-		str += fmt.Sprintf(createEventTitle, eventNoTitleText)
-	} else {
-		str += fmt.Sprintf(createEventTitle, eventNoTitleText)
-	}
+func GetCreateEventCreateText() string {
+	return createEventCreateText
+}
 
-	if !e.From.IsZero() {
-		if !e.FullDay {
-			str += fmt.Sprintf(createEventDateStart, monday.Format(e.From, formatDate, locale),
-				monday.Format(e.From, formatTime, locale))
-		} else {
-			str += fmt.Sprintf(createEventDateStart, monday.Format(e.From, formatDate, locale),
-				createEventAllDay)
-		}
-	}
+func GetCreateEventHalfHour() string {
+	return createEventHalfHour
+}
+func GetCreateEventHour() string {
+	return createEventHour
+}
+func GetCreateEventHourAndHalf() string {
+	return createEventHourAndHalf
+}
+func GetCreateEventTwoHours() string {
+	return createEventTwoHours
+}
+func GetCreateEventFourHours() string {
+	return createEventFourHours
+}
+func GetCreateEventSixHours() string {
+	return createEventSixHours
+}
 
-	if !e.To.IsZero() && !e.FullDay {
-		str += fmt.Sprintf(createEventDateEnd, monday.Format(e.From, formatDate, locale),
-			monday.Format(e.From, formatTime, locale))
-	}
+func GetCreateEventToText() string {
+	return createEventToText
+}
 
-	return str
+func GetUserNotAllow() string {
+	return userNotAllow
+}
+
+func GetEventCreatedText() string {
+	return createEventCreatedText
+}
+
+func GetCreatedEventHeader() string {
+	return createdEventHeader
+}
+
+func GetCreateFullDay() string {
+	return createEventFullDay
+}
+
+func GetCreateEventTitle() string {
+	return createEventTitleText
 }

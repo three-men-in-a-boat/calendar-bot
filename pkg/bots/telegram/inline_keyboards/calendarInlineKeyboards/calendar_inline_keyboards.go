@@ -32,9 +32,9 @@ func EventShowLessInlineKeyboard(event *types.Event) [][]tb.InlineButton {
 	}
 
 	inlineKeyboard = append(inlineKeyboard, []tb.InlineButton{{
-		Text: calendarMessages.ShowLessButton(),
+		Text:   calendarMessages.ShowLessButton(),
 		Unique: telegram.ShowShortEvent,
-		Data: event.Uid,
+		Data:   event.Uid,
 	}})
 
 	return inlineKeyboard
@@ -51,15 +51,33 @@ func GroupAlertsButtons(data string) [][]tb.InlineButton {
 	if strings.Contains(data, telegram.Date) {
 		inp = telegram.Date
 	}
-	return [][]tb.InlineButton {{
+	return [][]tb.InlineButton{{
 		{
-			Text: "Да",
+			Text:   "Да",
 			Unique: telegram.AlertCallbackYes,
-			Data: inp,
+			Data:   inp,
 		},
 		{
-			Text: "Нет",
+			Text:   "Нет",
 			Unique: telegram.AlertCallbackNo,
 		},
 	}}
+}
+
+func CreateEventButtons(event types.Event) [][]tb.InlineButton {
+	btns := make([][]tb.InlineButton, 0)
+
+	if !event.From.IsZero() && !event.To.IsZero() {
+		btns = append(btns, []tb.InlineButton{{
+			Text:   calendarMessages.GetCreateEventCreateText(),
+			Unique: telegram.CreateEvent,
+		}})
+	}
+
+	btns = append(btns, []tb.InlineButton{{
+		Text:   calendarMessages.GetCreateCancelText(),
+		Unique: telegram.CancelCreateEvent,
+	}})
+
+	return btns
 }

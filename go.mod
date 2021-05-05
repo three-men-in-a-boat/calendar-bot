@@ -8,6 +8,7 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/goodsign/monday v1.0.0
+	github.com/google/uuid v1.2.0
 	github.com/joho/godotenv v1.3.0
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/gommon v0.3.0 // indirect

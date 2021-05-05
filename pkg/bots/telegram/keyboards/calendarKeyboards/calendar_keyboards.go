@@ -100,3 +100,35 @@ func GetCreateFastCommand() [][]tb.ReplyButton {
 		},
 	}
 }
+
+func GetCreateDuration() [][]tb.ReplyButton {
+	return [][]tb.ReplyButton {
+		{
+			{
+				Text: calendarMessages.GetCreateEventHalfHour(),
+			},
+			{
+				Text: calendarMessages.GetCreateEventHour(),
+			},
+			{
+				Text: calendarMessages.GetCreateEventHourAndHalf(),
+			},
+		},
+		{
+			{
+				Text: calendarMessages.GetCreateEventTwoHours(),
+			},
+			{
+				Text: calendarMessages.GetCreateEventFourHours(),
+			},
+			{
+				Text: calendarMessages.GetCreateEventSixHours(),
+			},
+		},
+		{
+			{
+				Text: calendarMessages.GetCreateFullDay(),
+			},
+		},
+	}
+}

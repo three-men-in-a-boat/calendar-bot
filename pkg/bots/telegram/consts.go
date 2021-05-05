@@ -1,13 +1,12 @@
 package telegram
 
 const (
-	ShowFullEvent    = "SFE"
-	ShowShortEvent   = "SSE"
-	ShowGroupToday   = "SGT"
-	ShowGroupNext    = "SGN"
-	ShowGroupDate    = "SGD"
-	AlertCallbackYes = "ACY"
-	AlertCallbackNo  = "ACN"
+	ShowFullEvent     = "SFE"
+	ShowShortEvent    = "SSE"
+	CreateEvent       = "CRE"
+	CancelCreateEvent = "CCE"
+	AlertCallbackYes  = "ACY"
+	AlertCallbackNo   = "ACN"
 
 	Today = "/today"
 	Next  = "/next"
@@ -25,4 +24,10 @@ const (
 	StepCreateTitle
 	StepCreateDesc
 	StepCreateUser
+	StepCreateLocation
+
+	RoleRequired      = "REQUIRED"
+	StatusNeedsAction = "NEEDS_ACTION"
+	StatusAccepted    = "ACCEPTED"
+	StatusDeclined    = "DECLINED"
 )
