@@ -337,6 +337,18 @@ func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 	}
 }
 func (ch *CalendarHandlers) HandleAlertYes(c *tb.Callback) {
+	if c.Sender.ID != c.Message.ReplyTo.Sender.ID {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+			Text:       calendarMessages.GetUserNotAllow(),
+			ShowAlert:  true,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+
 	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
 		CallbackID: c.ID,
 	})
@@ -366,6 +378,18 @@ func (ch *CalendarHandlers) HandleAlertYes(c *tb.Callback) {
 
 }
 func (ch *CalendarHandlers) HandleAlertNo(c *tb.Callback) {
+	if c.Sender.ID != c.Message.ReplyTo.Sender.ID {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+			Text:       calendarMessages.GetUserNotAllow(),
+			ShowAlert:  true,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+
 	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
 		CallbackID: c.ID,
 	})
