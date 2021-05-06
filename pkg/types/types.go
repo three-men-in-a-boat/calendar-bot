@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"github.com/calendar-bot/pkg/bots/telegram/utils"
+	"github.com/senseyeio/spaniel"
 	"time"
 )
 
@@ -179,14 +180,14 @@ type ChangeStatus struct {
 }
 
 type FreeBusy struct {
-	Users []string `json:"users,omitempty"`
-	From  string   `json:"from,omitempty"`
-	To    string   `json:"to,omitempty"`
+	Users []string  `json:"users,omitempty"`
+	From  time.Time `json:"from,omitempty"`
+	To    time.Time `json:"to,omitempty"`
 }
 
 type FromTo struct {
-	From string `json:"from,omitempty"`
-	To   string `json:"to,omitempty"`
+	From time.Time `json:"from,omitempty"`
+	To   time.Time `json:"to,omitempty"`
 }
 
 type FreeBusyIntervals struct {
@@ -200,6 +201,22 @@ type FreeBusyUser struct {
 
 type FreeBusyResponse struct {
 	Data FreeBusyUser `json:"data,omitempty"`
+}
+
+func (ft FromTo) Start() time.Time {
+	return ft.From
+}
+
+func (ft FromTo) StartType() spaniel.EndPointType {
+	return spaniel.Closed
+}
+
+func (ft FromTo) End() time.Time {
+	return ft.To
+}
+
+func (ft FromTo) EndType() spaniel.EndPointType {
+	return spaniel.Open
 }
 
 

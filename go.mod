@@ -14,6 +14,8 @@ require (
 	github.com/labstack/gommon v0.3.0 // indirect
 	github.com/lib/pq v1.10.0
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.10.0
+	github.com/senseyeio/spaniel v1.0.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
