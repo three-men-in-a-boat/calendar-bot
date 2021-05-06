@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"github.com/calendar-bot/cmd/config"
-	"github.com/calendar-bot/pkg/middlewares"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/calendar-bot/pkg/users/repository"
 	"github.com/calendar-bot/pkg/users/usecase"
+	"github.com/calendar-bot/pkg/utils/contextutils"
+	"github.com/calendar-bot/pkg/utils/pathutils"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -41,7 +42,7 @@ func (uh *UserHandlers) InitHandlers(server *echo.Echo) {
 }
 
 func (uh *UserHandlers) generateOAuthLinkWithState(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromPathParams(ctx)
+	telegramID, err := pathutils.GetTelegramUserIDFromPathParams(ctx)
 	if err != nil {
 		return ctx.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}
@@ -55,7 +56,7 @@ func (uh *UserHandlers) generateOAuthLinkWithState(ctx echo.Context) error {
 }
 
 func (uh *UserHandlers) chekAuthOfTelegramUser(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromPathParams(ctx)
+	telegramID, err := pathutils.GetTelegramUserIDFromPathParams(ctx)
 	if err != nil {
 		return ctx.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}
@@ -104,12 +105,12 @@ func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
 }
 
 func (uh *UserHandlers) getMailruUserInfo(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -128,7 +129,7 @@ func (uh *UserHandlers) getMailruUserInfo(ctx echo.Context) error {
 }
 
 func (uh *UserHandlers) deleteLocalAuthenticatedUser(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromPathParams(ctx)
+	telegramID, err := pathutils.GetTelegramUserIDFromPathParams(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
