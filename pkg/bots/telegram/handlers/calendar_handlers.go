@@ -45,6 +45,17 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	bot.Handle("/date", ch.HandleDate)
 	bot.Handle("/create", ch.HandleCreate)
 
+	bot.Handle(calendarMessages.CreateEventAddTitleButton, ch.HandleTitleChange)
+	bot.Handle(calendarMessages.CreateEventChangeTitleButton, ch.HandleTitleChange)
+	bot.Handle(calendarMessages.CreateEventAddDescButton, ch.HandleDescChange)
+	bot.Handle(calendarMessages.CreateEventChangeDescButton, ch.HandleDescChange)
+	bot.Handle(calendarMessages.CreateEventAddLocationButton, ch.HandleLocationChange)
+	bot.Handle(calendarMessages.CreateEventChangeLocationButton, ch.HandleLocationChange)
+	bot.Handle(calendarMessages.CreateEventChangeStopTimeButton, ch.HandleStopTimeChange)
+	bot.Handle(calendarMessages.CreateEventChangeStartTimeButton, ch.HandleStartTimeChange)
+	bot.Handle(calendarMessages.CreateEventAddUser, ch.HandleUserChange)
+	bot.Handle(calendarMessages.GetCreateFullDay(), ch.HandleFullDayChange)
+
 	bot.Handle("\f"+telegram.ShowFullEvent, ch.HandleShowMore)
 	bot.Handle("\f"+telegram.ShowShortEvent, ch.HandleShowLess)
 	bot.Handle("\f"+telegram.AlertCallbackYes, ch.HandleAlertYes)
@@ -219,6 +230,7 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 				Status: telegram.StatusAccepted,
 			}
 			session.Event.Organizer = organizerAttendee
+			session.Event.Attendees = append(session.Event.Attendees, organizerAttendee)
 		}
 	}
 
@@ -262,6 +274,217 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 				customerrors.HandlerError(err)
 			}
 		}
+	}
+}
+
+func (ch *CalendarHandlers) HandleDescChange(m *tb.Message) {
+	session, err := ch.getSession(m.Sender)
+	if err != nil {
+		return
+	}
+
+	if session.IsCreate {
+		session.Step = telegram.StepCreateDesc
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventDescText, &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		err = ch.setSession(session, m.Sender)
+		if err != nil {
+			ch.handler.SendError(m.Chat, err)
+			customerrors.HandlerError(err)
+		}
+	} else {
+		ch.HandleText(m)
+	}
+}
+func (ch *CalendarHandlers) HandleTitleChange(m *tb.Message) {
+	session, err := ch.getSession(m.Sender)
+	if err != nil {
+		return
+	}
+
+	if session.IsCreate {
+		session.Step = telegram.StepCreateTitle
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		err = ch.setSession(session, m.Sender)
+		if err != nil {
+			ch.handler.SendError(m.Chat, err)
+			customerrors.HandlerError(err)
+		}
+	} else {
+		ch.HandleText(m)
+	}
+}
+func (ch *CalendarHandlers) HandleUserChange(m *tb.Message) {
+	session, err := ch.getSession(m.Sender)
+	if err != nil {
+		return
+	}
+
+	if session.IsCreate {
+		session.Step = telegram.StepCreateUser
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventUserText, &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		err = ch.setSession(session, m.Sender)
+		if err != nil {
+			ch.handler.SendError(m.Chat, err)
+			customerrors.HandlerError(err)
+		}
+	} else {
+		ch.HandleText(m)
+	}
+}
+func (ch *CalendarHandlers) HandleStartTimeChange(m *tb.Message) {
+	session, err := ch.getSession(m.Sender)
+	if err != nil {
+		return
+	}
+
+	if session.IsCreate {
+		session.Step = telegram.StepCreateFrom
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateInitText(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		err = ch.setSession(session, m.Sender)
+		if err != nil {
+			ch.handler.SendError(m.Chat, err)
+			customerrors.HandlerError(err)
+		}
+	} else {
+		ch.HandleText(m)
+	}
+}
+func (ch *CalendarHandlers) HandleStopTimeChange(m *tb.Message) {
+	session, err := ch.getSession(m.Sender)
+	if err != nil {
+		return
+	}
+
+	if session.IsCreate {
+		session.Step = telegram.StepCreateTo
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventToText(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		err = ch.setSession(session, m.Sender)
+		if err != nil {
+			ch.handler.SendError(m.Chat, err)
+			customerrors.HandlerError(err)
+		}
+	} else {
+		ch.HandleText(m)
+	}
+}
+func (ch *CalendarHandlers) HandleLocationChange(m *tb.Message) {
+	session, err := ch.getSession(m.Sender)
+	if err != nil {
+		return
+	}
+
+	if session.IsCreate {
+		session.Step = telegram.StepCreateLocation
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventLocationText, &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		err = ch.setSession(session, m.Sender)
+		if err != nil {
+			ch.handler.SendError(m.Chat, err)
+			customerrors.HandlerError(err)
+		}
+	} else {
+		ch.HandleText(m)
+	}
+}
+func (ch *CalendarHandlers) HandleFullDayChange(m *tb.Message) {
+	session, err := ch.getSession(m.Sender)
+	if err != nil {
+		return
+	}
+
+	if session.IsCreate {
+		session.Event.FullDay = true
+		session.Event.To = session.Event.From.Add(24 * time.Hour)
+		if session.InfoMsg.ChatID != 0 {
+			err := ch.handler.bot.Delete(&session.InfoMsg)
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+		}
+
+		newMsg, err := ch.handler.bot.Send(m.Chat,
+			calendarMessages.GetCreateEventHeader()+calendarMessages.SingleEventFullText(&session.Event),
+			&tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+				ReplyTo:   m,
+				ReplyMarkup: &tb.ReplyMarkup{
+					InlineKeyboard: calendarInlineKeyboards.CreateEventButtons(session.Event),
+					ReplyKeyboard:  calendarKeyboards.GetCreateOptionButtons(session),
+				},
+			})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		session.InfoMsg = utils.InitCustomEditable(newMsg.MessageSig())
+
+		err = ch.setSession(session, m.Sender)
+		if err != nil {
+			ch.handler.SendError(m.Chat, err)
+			customerrors.HandlerError(err)
+		}
+	} else {
+		ch.HandleText(m)
 	}
 }
 
@@ -705,12 +928,15 @@ Step:
 			return
 		}
 
-		session.Event.From = parsedDate.Date
 		if session.Event.To.IsZero() {
 			session.Step = telegram.StepCreateTo
+		} else {
+			session.Event.To = parsedDate.Date.Add(session.Event.To.Sub(session.Event.From))
 		}
+		session.Event.From = parsedDate.Date
 		break Step
 	case telegram.StepCreateTo:
+		session.Event.FullDay = false
 		switch m.Text {
 		case calendarMessages.GetCreateEventHalfHour():
 			session.Event.To = session.Event.From.Add(30 * time.Minute)
@@ -770,6 +996,26 @@ Step:
 			return
 		}
 
+		if parsedDate.Date.Before(session.Event.From) {
+			var replyKeyboard [][]tb.ReplyButton = nil
+
+			if session.Event.To.IsZero() {
+				replyKeyboard = calendarKeyboards.GetCreateDuration()
+			} else {
+				replyKeyboard = calendarKeyboards.GetCreateOptionButtons(session)
+			}
+			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.EventDateToIsBeforeFrom, &tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+				ReplyMarkup: &tb.ReplyMarkup{
+					ReplyKeyboard: replyKeyboard,
+				},
+			})
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+			return
+		}
+
 		if session.Event.Title == "" {
 			session.Step = telegram.StepCreateTitle
 		}
@@ -800,6 +1046,8 @@ Step:
 			customerrors.HandlerError(err)
 		}
 	}
+
+	e := session.Event
 
 	newMsg, err := ch.handler.bot.Send(m.Chat,
 		calendarMessages.GetCreateEventHeader()+calendarMessages.SingleEventFullText(&session.Event),
@@ -838,11 +1086,11 @@ Step:
 		return
 	}
 
-	if session.Event.Title == "" {
+	if e.Title == "" && e.Description == "" && e.Location.Description == "" && len(e.Attendees) < 2 && session.Step == telegram.StepCreateTitle {
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
-				ReplyKeyboardRemove: true,
+				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
 			},
 		})
 
@@ -1054,6 +1302,9 @@ func EventToEventInput(event types.Event) types.EventInput {
 	if len(event.Attendees) > 0 {
 		attendees := types.Attendees{}
 		for _, attendee := range event.Attendees {
+			if event.Organizer.Email == attendee.Email {
+				continue
+			}
 			attendees = append(attendees, types.Attendee{
 				Email: attendee.Email,
 				Role:  attendee.Role,

@@ -5,7 +5,6 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/goodsign/monday"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -41,6 +40,8 @@ const (
 	eventNoClosestEventFound = "У вас больше нет событий сегодня"
 
 	eventDateNotParsed   = "Мы не смогли распознать дату, попробуйте еще раз"
+	EventDateToIsBeforeFrom = "<b>Введенная дата раньше начала события, введите корректную дату.</b>\n\n" +
+		"Если вы хотите переставить события на другое время - измените время начала события"
 	eventSessionNotFound = "Мы не смогли найти необходимую информацию для обработки запроса.\nВоспользуйтесь нужной вам " +
 		"командой заново"
 	eventShowNotFoundError = "К сожалению мы не смогли найти информацию о событии.\nВозможно, это старое сообщение." +
@@ -60,6 +61,9 @@ const (
 		" воспользуйтесь кнопками или введите дату оконочания в формате <pre>&lt;число&gt; &lt;название месяца&gt; " +
 		"&lt;ЧЧ:ММ&gt;</pre> (например: <pre>22 марта 15:00</pre>)"
 	createEventTitleText = "<b>Введите название события</b>"
+	CreateEventDescText = "<b>Введите описание события</b>"
+	CreateEventLocationText = "<b>Введите место события</b>"
+	CreateEventUserText = "<b>Введите email пользователя, которого хотите добавить</b>"
 
 	createEventCreateText   = "Создать событие"
 	createEventCreatedText  = "Событие успешно создано"
@@ -73,6 +77,16 @@ const (
 	createEventFourHours   = "4 часа"
 	createEventSixHours    = "6 часов"
 	createEventFullDay     = "Весь день"
+
+	CreateEventChangeStartTimeButton = "Изменить время начала"
+	CreateEventChangeStopTimeButton = "Изменить время окончания"
+	CreateEventAddTitleButton = "Добавить название"
+	CreateEventChangeTitleButton = "Изменить название"
+	CreateEventAddDescButton = "Добавить описание"
+	CreateEventChangeDescButton = "Изменить описание"
+	CreateEventAddLocationButton = "Добавить место"
+	CreateEventChangeLocationButton = "Изменить место"
+	CreateEventAddUser = "Добавить участников"
 
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
 		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
@@ -182,7 +196,6 @@ func SingleEventFullText(event *types.Event) string {
 	}
 
 	if len(event.Attendees) > 1 {
-		fullEventText += eventSplitLine + strconv.Itoa(len(event.Attendees))
 		fullEventText += eventAttendeesHeaderText
 		for _, attendee := range event.Attendees {
 			if attendee.Email == event.Organizer.Email {
