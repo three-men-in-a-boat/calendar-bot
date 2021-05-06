@@ -26,13 +26,14 @@ func (bh *BaseHandlers) InitHandlers(bot *tb.Bot) {
 	bot.Handle("/start", bh.HandleStart)
 	bot.Handle("/help", bh.HandleHelp)
 	bot.Handle("/about", bh.HandleAbout)
+	bot.Handle("/stop", bh.HandleStop)
 }
 
 func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 	isAuth, err := bh.userUseCase.IsUserAuthenticatedByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
 		customerrors.HandlerError(err)
-		bh.handler.SendError(m.Sender, err)
+		bh.handler.SendError(m.Chat, err)
 		return
 	}
 
@@ -40,11 +41,11 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 		link, err := bh.userUseCase.GenOauthLinkForTelegramID(int64(m.Sender.ID))
 		if err != nil {
 			customerrors.HandlerError(err)
-			bh.handler.SendError(m.Sender, err)
+			bh.handler.SendError(m.Chat, err)
 			return
 		}
 
-		_, err = bh.handler.bot.Send(m.Sender, baseMessages.StartNoRegText(),
+		_, err = bh.handler.bot.Send(m.Chat, baseMessages.StartNoRegText(),
 			&tb.SendOptions{
 				ParseMode: tb.ModeHTML,
 				ReplyMarkup: &tb.ReplyMarkup{
@@ -60,14 +61,14 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 		token, err := bh.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 		if err != nil {
 			customerrors.HandlerError(err)
-			bh.handler.SendError(m.Sender, err)
+			bh.handler.SendError(m.Chat, err)
 			return
 		}
 
 		info, err := bh.userUseCase.GetMailruUserInfo(token)
 		if err != nil {
 			customerrors.HandlerError(err)
-			bh.handler.SendError(m.Sender, err)
+			bh.handler.SendError(m.Chat, err)
 			return
 		}
 
@@ -87,7 +88,7 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 }
 
 func (bh *BaseHandlers) HandleHelp(m *tb.Message) {
-	_, err := bh.handler.bot.Send(m.Sender, baseMessages.HelpInfoText(),
+	_, err := bh.handler.bot.Send(m.Chat, baseMessages.HelpInfoText(),
 		&tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
@@ -103,7 +104,7 @@ func (bh *BaseHandlers) HandleHelp(m *tb.Message) {
 }
 
 func (bh *BaseHandlers) HandleAbout(m *tb.Message) {
-	_, err := bh.handler.bot.Send(m.Sender, baseMessages.AboutText(), &tb.SendOptions{
+	_, err := bh.handler.bot.Send(m.Chat, baseMessages.AboutText(), &tb.SendOptions{
 		ParseMode: tb.ModeHTML,
 		ReplyMarkup: &tb.ReplyMarkup{
 			ReplyKeyboardRemove: true,
@@ -112,5 +113,18 @@ func (bh *BaseHandlers) HandleAbout(m *tb.Message) {
 
 	if err != nil {
 		customerrors.HandlerError(err)
+	}
+}
+
+func (bh *BaseHandlers) HandleStop(m *tb.Message) {
+	err := bh.userUseCase.DeleteLocalAuthenticatedUserByTelegramUserID(int64(m.Sender.ID))
+	if err != nil {
+		bh.handler.SendError(m.Chat, err)
+		customerrors.HandlerError(err)
+	} else {
+		 _, err = bh.handler.bot.Send(m.Chat, "Вы успешно разлогинились")
+		 if err != nil {
+		 	customerrors.HandlerError(err)
+		 }
 	}
 }
