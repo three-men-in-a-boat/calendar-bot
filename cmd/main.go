@@ -6,7 +6,6 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/calendar-bot/cmd/config"
 	teleHandlers "github.com/calendar-bot/pkg/bots/telegram/handlers"
-	eHandlers "github.com/calendar-bot/pkg/events/handlers"
 	eRepo "github.com/calendar-bot/pkg/events/repository"
 	eUsecase "github.com/calendar-bot/pkg/events/usecase"
 	"github.com/calendar-bot/pkg/middlewares"
@@ -24,7 +23,6 @@ import (
 )
 
 type RequestHandlers struct {
-	eventHandlers eHandlers.EventHandlers
 	userHandlers  uHandlers.UserHandlers
 	telegramBaseHandlers teleHandlers.BaseHandlers
 	telegramCalendarHandlers teleHandlers.CalendarHandlers
@@ -44,7 +42,6 @@ func newRequestHandler(db *sql.DB, client *redis.Client, botClient *redis.Client
 	teleCalendarHandler := teleHandlers.NewCalendarHandlers(eventUseCase, userUseCase, botClient, conf.ParseAddress)
 
 	return RequestHandlers{
-		eventHandlers: eventHandlers,
 		userHandlers:  userHandlers,
 		telegramBaseHandlers: teleBaseHandlers,
 		telegramCalendarHandlers: teleCalendarHandler,
@@ -116,7 +113,6 @@ func main() {
 
 	server.Use(middlewares.LogErrorMiddleware)
 
-	allHandler.eventHandlers.InitHandlers(server)
 	allHandler.userHandlers.InitHandlers(server)
 	allHandler.telegramBaseHandlers.InitHandlers(bot)
 	allHandler.telegramCalendarHandlers.InitHandlers(bot)
