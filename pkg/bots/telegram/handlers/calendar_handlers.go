@@ -264,15 +264,120 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 		ch.handleCreateText(m, session)
 	} else {
 		if m.Chat.Type == tb.ChatPrivate {
-			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.RedisSessionNotFound(), &tb.SendOptions{
-				ParseMode: tb.ModeHTML,
-				ReplyMarkup: &tb.ReplyMarkup{
-					ReplyKeyboardRemove: true,
-				},
-			})
+
+			data := ch.ParseEvent(m)
+
+			if data == nil || data.EventStart.IsZero(){
+				_, err = ch.handler.bot.Send(m.Chat, calendarMessages.EventNoEventDataFound, &tb.SendOptions{
+					ParseMode: tb.ModeHTML,
+					ReplyMarkup: &tb.ReplyMarkup{
+						ReplyKeyboardRemove: true,
+					},
+				})
+				if err != nil {
+					customerrors.HandlerError(err)
+				}
+
+				return
+			}
+
+			session.IsCreate = true
+			session.FromTextCreate = true
+			session.Event = types.Event{}
+			session.Step = telegram.StepCreateInit
+			session.Event.From = data.EventStart
+			session.Event.To = data.EventEnd
+			session.Event.Title = data.EventName
+
+			token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
+			if err != nil {
+				customerrors.HandlerError(err)
+				ch.handler.SendError(m.Chat, err)
+				return
+			} else {
+				userInfo, err := ch.userUseCase.GetMailruUserInfo(token)
+				if err != nil {
+					customerrors.HandlerError(err)
+				} else {
+					organizerAttendee := types.AttendeeEvent{
+						Email:  userInfo.Email,
+						Name:   userInfo.Name,
+						Role:   telegram.RoleRequired,
+						Status: telegram.StatusAccepted,
+					}
+					session.Event.Organizer = organizerAttendee
+					session.Event.Attendees = append(session.Event.Attendees, organizerAttendee)
+				}
+			}
+
+
+			newMsg, err := ch.handler.bot.Send(m.Chat,
+				calendarMessages.GetCreateEventHeader()+calendarMessages.SingleEventFullText(&session.Event),
+				&tb.SendOptions{
+					ParseMode: tb.ModeHTML,
+					ReplyTo:   m,
+					ReplyMarkup: &tb.ReplyMarkup{
+						InlineKeyboard: calendarInlineKeyboards.CreateEventButtons(session.Event),
+					},
+				})
+
 			if err != nil {
 				customerrors.HandlerError(err)
 			}
+
+			session.InfoMsg = utils.InitCustomEditable(newMsg.MessageSig())
+
+			if data.EventEnd.IsZero() {
+				session.Step = telegram.StepCreateTo
+
+				_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventToText(), &tb.SendOptions{
+					ParseMode: tb.ModeHTML,
+					ReplyMarkup: &tb.ReplyMarkup{
+						ReplyKeyboard:       calendarKeyboards.GetCreateDuration(),
+						ResizeReplyKeyboard: true,
+					},
+				})
+
+				if err != nil {
+					customerrors.HandlerError(err)
+				}
+
+			} else {
+				if data.EventName == "" {
+					session.Step = telegram.StepCreateTitle
+
+					_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
+						ParseMode: tb.ModeHTML,
+						ReplyMarkup: &tb.ReplyMarkup{
+							ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+						},
+					})
+
+					if err != nil {
+						customerrors.HandlerError(err)
+					}
+				}  else {
+					session.Step = telegram.StepCreateDesc
+
+					_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventDescText, &tb.SendOptions{
+						ParseMode: tb.ModeHTML,
+						ReplyMarkup: &tb.ReplyMarkup{
+							ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+						},
+					})
+
+					if err != nil {
+						customerrors.HandlerError(err)
+					}
+				}
+			}
+
+
+			err = ch.setSession(session, m.Sender)
+			if err == nil {
+				return
+			}
+
 		}
 	}
 }
@@ -651,6 +756,7 @@ func (ch *CalendarHandlers) HandleCancelCreateEvent(c *tb.Callback) {
 		customerrors.HandlerError(err)
 	}
 	session.IsCreate = false
+	session.IsDate = false
 	session.Step = telegram.StepCreateInit
 	session.Event = types.Event{}
 
@@ -1087,6 +1193,7 @@ Step:
 	}
 
 	if e.Title == "" && e.Description == "" && e.Location.Description == "" && len(e.Attendees) < 2 && session.Step == telegram.StepCreateTitle {
+		session.FromTextCreate = false
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
@@ -1098,8 +1205,38 @@ Step:
 			customerrors.HandlerError(err)
 		}
 
+		err = ch.setSession(session, m.Sender)
+		if err != nil {
+			return
+		}
+
 		return
 	}
+
+
+	if e.Title != "" && !e.To.IsZero() && !e.From.IsZero() && session.FromTextCreate {
+		session.FromTextCreate = false
+		session.Step = telegram.StepCreateDesc
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventDescText, &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		err = ch.setSession(session, m.Sender)
+		if err != nil {
+			return
+		}
+
+		return
+	}
+
+
 }
 func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedisSession) {
 	if calendarMessages.GetCancelDateReplyButton() == m.Text {
@@ -1215,6 +1352,50 @@ func (ch *CalendarHandlers) ParseDate(m *tb.Message) *types.ParseDateResp {
 	body, err := ioutil.ReadAll(resp.Body)
 
 	parseDate := &types.ParseDateResp{}
+	err = json.Unmarshal(body, parseDate)
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return nil
+	}
+
+	return parseDate
+}
+func (ch *CalendarHandlers) ParseEvent(m *tb.Message) *types.ParseEventResp {
+	reqData := &types.ParseDateReq{Timezone: "Europe/Moscow", Text: m.Text}
+	b, err := json.Marshal(reqData)
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return nil
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPut, ch.handler.parseAddress+"/parse/event", bytes.NewBuffer(b))
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return nil
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := client.Do(req)
+
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(m.Chat, err)
+		return nil
+	}
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+	}(resp.Body)
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	parseDate := &types.ParseEventResp{}
 	err = json.Unmarshal(body, parseDate)
 	if err != nil {
 		customerrors.HandlerError(err)

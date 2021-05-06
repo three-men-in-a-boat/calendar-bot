@@ -222,6 +222,7 @@ func (ft FromTo) EndType() spaniel.EndPointType {
 
 type BotRedisSession struct {
 	Step int
+	FromTextCreate bool `json:"from_text_create"`
 	IsDate bool `json:"is_date"`
 	IsCreate bool `json:"is_create"`
 	Event Event
@@ -235,4 +236,10 @@ type ParseDateReq struct {
 
 type ParseDateResp struct {
 	Date time.Time `json:"date,omitempty"`
+}
+
+type ParseEventResp struct {
+	EventStart time.Time `json:"event_start,omitempty"`
+	EventEnd time.Time `json:"event_end,omitempty"`
+	EventName string `json:"event_name,omitempty"`
 }
