@@ -54,16 +54,14 @@ func (m CheckOAuthTelegramMiddleware) Handle(next echo.HandlerFunc) echo.Handler
 	return func(context echo.Context) error {
 		telegramID, err := GetTelegramUserIDFromPathParams(context)
 		if err != nil {
-			const status = http.StatusBadRequest
-			return context.String(status, http.StatusText(status))
+			return context.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 		}
 
 		oAuthToken, err := m.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(telegramID)
 		if err != nil {
 			switch concreteErr := err.(type) {
 			case repository.OAuthError, repository.UserEntityError:
-				const status = http.StatusForbidden
-				return context.String(status, http.StatusText(status))
+				return context.String(http.StatusForbidden, http.StatusText(http.StatusForbidden))
 			default:
 				return errors.WithStack(concreteErr)
 			}

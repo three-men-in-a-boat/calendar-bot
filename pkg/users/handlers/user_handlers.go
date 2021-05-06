@@ -43,8 +43,7 @@ func (uh *UserHandlers) InitHandlers(server *echo.Echo) {
 func (uh *UserHandlers) generateOAuthLinkWithState(ctx echo.Context) error {
 	telegramID, err := middlewares.GetTelegramUserIDFromPathParams(ctx)
 	if err != nil {
-		const status = http.StatusBadRequest
-		return ctx.String(status, http.StatusText(status))
+		return ctx.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}
 
 	link, err := uh.userUseCase.GenOauthLinkForTelegramID(telegramID)
@@ -58,8 +57,7 @@ func (uh *UserHandlers) generateOAuthLinkWithState(ctx echo.Context) error {
 func (uh *UserHandlers) chekAuthOfTelegramUser(ctx echo.Context) error {
 	telegramID, err := middlewares.GetTelegramUserIDFromPathParams(ctx)
 	if err != nil {
-		const status = http.StatusBadRequest
-		return ctx.String(status, http.StatusText(status))
+		return ctx.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}
 
 	isAuth, err := uh.userUseCase.IsUserAuthenticatedByTelegramUserID(telegramID)
@@ -67,14 +65,10 @@ func (uh *UserHandlers) chekAuthOfTelegramUser(ctx echo.Context) error {
 		return errors.Wrapf(err, "cannot check oauth for telegramUserID=%d", telegramID)
 	}
 
-	var status int
 	if isAuth {
-		status = http.StatusOK
-	} else {
-		status = http.StatusUnauthorized
+		return ctx.String(http.StatusOK, http.StatusText(http.StatusOK))
 	}
-
-	return ctx.String(status, http.StatusText(status))
+	return ctx.String(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 }
 
 func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
@@ -84,8 +78,7 @@ func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
 	state := values.Get("state")
 
 	if code == "" || state == "" {
-		const status = http.StatusBadRequest
-		return ctx.String(status, http.StatusText(status))
+		return ctx.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}
 
 	telegramID, err := uh.userUseCase.GetTelegramIDByState(state)
@@ -142,12 +135,10 @@ func (uh *UserHandlers) deleteLocalAuthenticatedUser(ctx echo.Context) error {
 
 	if err := uh.userUseCase.DeleteLocalAuthenticatedUserByTelegramUserID(telegramID); err != nil {
 		if _, ok := err.(repository.UserEntityError); ok {
-			const status = http.StatusNoContent
-			return ctx.String(status, http.StatusText(status))
+			return ctx.String(http.StatusNoContent, http.StatusText(http.StatusNoContent))
 		}
 		return errors.Wrapf(err, "failed to delete local authenticated user by telegramUserID=%d", telegramID)
 	}
 
-	const status = http.StatusOK
-	return ctx.String(status, http.StatusText(status))
+	return ctx.String(http.StatusOK, http.StatusText(http.StatusOK))
 }
