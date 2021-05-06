@@ -8,6 +8,13 @@ import (
 const (
 	EnvAppEnvironment = "APP_ENVIRONMENT"
 	EnvAppAddress     = "APP_ADDRESS"
+	EnvParseAddress   = "PARSER_BACKEND_URL"
+)
+
+const (
+	EnvBotAddress    = "BOT_ADDRESS"
+	EnvBotToken      = "BOT_TOKEN"
+	EnvBotWebhookUrl = "BOT_WEBHOOK_URL"
 )
 
 const (
@@ -16,20 +23,34 @@ const (
 )
 
 type App struct {
-	Address     string `validate:"optional,dialstring"`
-	Environment string `validate:"optional,in(dev|prod)"`
-	DB          DB
-	Redis       Redis
-	OAuth       OAuth
-	Log         Log
+	Address       string `validate:"optional,dialstring"`
+	Environment   string `validate:"optional,in(dev|prod)"`
+	BotAddress    string `validate:"optional"`
+	BotToken      string
+	BotWebhookUrl string
+	DB            DB
+	ParseAddress  string
+	Redis         Redis
+	BotRedis      Redis
+	OAuth         OAuth
+	Log           Log
 }
 
 func LoadAppConfig() (App, error) {
 	address := os.Getenv(EnvAppAddress)
 	environment := os.Getenv(EnvAppEnvironment)
+	parseAddress := os.Getenv(EnvParseAddress)
+
+	botAddress := os.Getenv(EnvBotAddress)
+	botToken := os.Getenv(EnvBotToken)
+	botWebhookUrl := os.Getenv(EnvBotWebhookUrl)
 
 	if address == "" {
 		address = ":8080"
+	}
+
+	if botAddress == "" {
+		address = ":2000"
 	}
 
 	switch environment {
@@ -49,15 +70,24 @@ func LoadAppConfig() (App, error) {
 		return App{}, errors.WithMessage(err, "failed to load Redis config")
 	}
 
+	botRedis, err := LoadBotRedisConfig()
+	if err != nil {
+		return App{}, errors.WithMessage(err, "failed to load bot redis config")
+	}
 	// TODO(nickeskov): validate struct
 
 	return App{
-		Address:     address,
-		Environment: environment,
-		DB:          db,
-		Redis:       redis,
-		OAuth:       LoadOAuthConfig(),
-		Log:         LoadLogConfig(),
+		Address:       address,
+		BotAddress:    botAddress,
+		BotToken:      botToken,
+		BotWebhookUrl: botWebhookUrl,
+		Environment:   environment,
+		DB:            db,
+		ParseAddress:  parseAddress,
+		Redis:         redis,
+		BotRedis:      botRedis,
+		OAuth:         LoadOAuthConfig(),
+		Log:           LoadLogConfig(),
 	}, nil
 }
 
@@ -84,6 +114,11 @@ func (app *App) ToEnv() map[string]string {
 
 	ret[EnvAppAddress] = app.Address
 	ret[EnvAppEnvironment] = app.Environment
+	ret[EnvParseAddress] = app.ParseAddress
+
+	ret[EnvBotAddress] = app.BotAddress
+	ret[EnvBotToken] = app.BotToken
+	ret[EnvBotWebhookUrl] = app.BotWebhookUrl
 
 	return ret
 }

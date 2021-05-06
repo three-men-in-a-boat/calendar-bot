@@ -5,7 +5,7 @@ import (
 	_ "database/sql"
 	"github.com/asaskevich/govalidator"
 	"github.com/calendar-bot/cmd/config"
-	eHandlers "github.com/calendar-bot/pkg/events/handlers"
+	teleHandlers "github.com/calendar-bot/pkg/bots/telegram/handlers"
 	eRepo "github.com/calendar-bot/pkg/events/repository"
 	eUsecase "github.com/calendar-bot/pkg/events/usecase"
 	"github.com/calendar-bot/pkg/middlewares"
@@ -19,14 +19,16 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	tb "gopkg.in/tucnak/telebot.v2"
 )
 
 type RequestHandlers struct {
-	eventHandlers eHandlers.EventHandlers
 	userHandlers  uHandlers.UserHandlers
+	telegramBaseHandlers teleHandlers.BaseHandlers
+	telegramCalendarHandlers teleHandlers.CalendarHandlers
 }
 
-func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) RequestHandlers {
+func newRequestHandler(db *sql.DB, client *redis.Client, botClient *redis.Client, conf *config.App) RequestHandlers {
 
 	states := types.NewStatesDictionary()
 	userStorage := uRepo.NewUserRepository(db, client)
@@ -35,11 +37,14 @@ func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) Reque
 
 	eventStorage := eRepo.NewEventStorage(db)
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
-	eventHandlers := eHandlers.NewEventHandlers(eventUseCase, userUseCase)
+
+	teleBaseHandlers := teleHandlers.NewBaseHandlers(eventUseCase, userUseCase, conf.ParseAddress)
+	teleCalendarHandler := teleHandlers.NewCalendarHandlers(eventUseCase, userUseCase, botClient, conf.ParseAddress)
 
 	return RequestHandlers{
-		eventHandlers: eventHandlers,
 		userHandlers:  userHandlers,
+		telegramBaseHandlers: teleBaseHandlers,
+		telegramCalendarHandlers: teleCalendarHandler,
 	}
 }
 
@@ -64,6 +69,23 @@ func main() {
 	if err != nil {
 		zap.S().Fatalf("cannot load APP config: %v", err)
 	}
+
+	webhook := &tb.Webhook{
+		Listen:   appConf.BotAddress,
+		Endpoint: &tb.WebhookEndpoint{PublicURL: appConf.BotWebhookUrl},
+	}
+
+	botSettings := tb.Settings{
+		Token:  appConf.BotToken,
+		Poller: webhook,
+	}
+
+	if appConf.Environment == config.AppEnvironmentDev {
+		botSettings.Verbose = true
+	}
+
+	bot, err := tb.NewBot(botSettings)
+
 	server := echo.New()
 
 	db, err := config.ConnectToDB(&appConf.DB)
@@ -82,14 +104,22 @@ func main() {
 		zap.S().Fatalf("failed to connect to redis, %v", err)
 	}
 
-	allHandler := newRequestHandler(db, redisClient, &appConf)
+	botRedisClient, err := config.ConnectToRedis(&appConf.BotRedis)
+	if err != nil {
+		zap.S().Fatalf("failed to connect to bot redis, %v", err)
+	}
+
+	allHandler := newRequestHandler(db, redisClient, botRedisClient, &appConf)
 
 	server.Use(middlewares.LogErrorMiddleware)
 
-	allHandler.eventHandlers.InitHandlers(server)
 	allHandler.userHandlers.InitHandlers(server)
+	allHandler.telegramBaseHandlers.InitHandlers(bot)
+	allHandler.telegramCalendarHandlers.InitHandlers(bot)
 
 	server.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
-	server.Logger.Fatal(server.Start(appConf.Address))
+	go func() { server.Logger.Fatal(server.Start(appConf.Address)) }()
+
+	bot.Start()
 }

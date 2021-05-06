@@ -2,6 +2,7 @@ package customerrors
 
 import (
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	"io"
 )
 
@@ -14,4 +15,8 @@ func HandleCloser(outerErr error, closer io.Closer) error {
 		}
 	}
 	return outerErr
+}
+
+func HandlerError(err error) {
+	zap.S().Error(err)
 }

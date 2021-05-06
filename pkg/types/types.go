@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/calendar-bot/pkg/bots/telegram/utils"
 	"github.com/senseyeio/spaniel"
 	"time"
 )
@@ -216,4 +217,22 @@ func (ft FromTo) End() time.Time {
 
 func (ft FromTo) EndType() spaniel.EndPointType {
 	return spaniel.Open
+}
+
+
+type BotRedisSession struct {
+	Step int
+	IsDate bool `json:"is_date"`
+	IsCreate bool `json:"is_create"`
+	Event Event
+	InfoMsg utils.CustomEditable
+}
+
+type ParseDateReq struct {
+	Timezone string `json:"timezone,omitempty"`
+	Text string `json:"text"`
+}
+
+type ParseDateResp struct {
+	Date time.Time `json:"date,omitempty"`
 }

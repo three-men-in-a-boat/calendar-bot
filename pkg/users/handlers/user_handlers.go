@@ -27,15 +27,15 @@ func NewUserHandlers(eventUseCase usecase.UserUseCase, states types.StatesDictio
 }
 
 func (uh *UserHandlers) InitHandlers(server *echo.Echo) {
-	oauthMiddleware := middlewares.NewCheckOAuthTelegramMiddleware(&uh.userUseCase).Handle
-
-	userRouter := server.Group("/api/v1/oauth/telegram/user/" + middlewares.TelegramUserIDRouteKey)
-
-	userRouter.GET("/ref", uh.generateOAuthLinkWithState)
-	userRouter.GET("/is_auth", uh.chekAuthOfTelegramUser)
-	userRouter.GET("/info", uh.getMailruUserInfo, oauthMiddleware)
-
-	userRouter.DELETE("", uh.deleteLocalAuthenticatedUser)
+	//oauthMiddleware := middlewares.NewCheckOAuthTelegramMiddleware(&uh.userUseCase).Handle
+	//
+	//userRouter := server.Group("/api/v1/oauth/telegram/user/" + middlewares.TelegramUserIDRouteKey)
+	//
+	//userRouter.GET("/ref", uh.generateOAuthLinkWithState)
+	//userRouter.GET("/is_auth", uh.chekAuthOfTelegramUser)
+	//userRouter.GET("/info", uh.getMailruUserInfo, oauthMiddleware)
+	//
+	//userRouter.DELETE("", uh.deleteLocalAuthenticatedUser)
 
 	server.GET("/api/v1/oauth", uh.telegramOAuth)
 }
