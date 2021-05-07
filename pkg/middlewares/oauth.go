@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"github.com/calendar-bot/pkg/services/oauth"
 	"github.com/calendar-bot/pkg/users/repository"
 	"github.com/calendar-bot/pkg/users/usecase"
 	"github.com/calendar-bot/pkg/utils/contextutils"
@@ -30,7 +31,7 @@ func (m CheckOAuthTelegramMiddleware) Handle(next echo.HandlerFunc) echo.Handler
 		oAuthToken, err := m.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(telegramID)
 		if err != nil {
 			switch concreteErr := err.(type) {
-			case repository.OAuthError, repository.UserEntityError:
+			case oauth.Error, repository.UserEntityError:
 				return context.String(http.StatusForbidden, http.StatusText(http.StatusForbidden))
 			default:
 				return errors.WithStack(concreteErr)

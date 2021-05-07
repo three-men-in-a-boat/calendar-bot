@@ -17,7 +17,6 @@ func GetDateFastCommand() [][]tb.ReplyButton {
 			{
 				Text: "Через два дня",
 			},
-
 		},
 		{
 			{
@@ -102,7 +101,7 @@ func GetCreateFastCommand() [][]tb.ReplyButton {
 }
 
 func GetCreateDuration() [][]tb.ReplyButton {
-	return [][]tb.ReplyButton {
+	return [][]tb.ReplyButton{
 		{
 			{
 				Text: calendarMessages.GetCreateEventHalfHour(),
