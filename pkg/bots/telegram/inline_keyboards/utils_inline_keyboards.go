@@ -12,6 +12,6 @@ const (
 func ReportBugKeyboard() [][]tb.InlineButton {
 	return [][]tb.InlineButton{{{
 		Text: messages.GetMessageReportBug(),
-		URL: contactUrl,
+		URL:  contactUrl,
 	}}}
 }

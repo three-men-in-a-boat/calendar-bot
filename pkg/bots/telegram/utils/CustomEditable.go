@@ -2,7 +2,7 @@ package utils
 
 type CustomEditable struct {
 	MessageID string
-	ChatID int64
+	ChatID    int64
 }
 
 func (ce *CustomEditable) MessageSig() (messageID string, chatID int64) {

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"github.com/calendar-bot/pkg/services/oauth"
-	"github.com/calendar-bot/pkg/types"
 	"github.com/calendar-bot/pkg/users/repository"
 	"github.com/calendar-bot/pkg/users/usecase"
 	"github.com/calendar-bot/pkg/utils/contextutils"
@@ -15,15 +14,11 @@ import (
 
 type UserHandlers struct {
 	userUseCase usecase.UserUseCase
-	statesDict  types.StatesDictionary
-	conf        *oauth.Config
 }
 
-func NewUserHandlers(eventUseCase usecase.UserUseCase, states types.StatesDictionary, conf *oauth.Config) UserHandlers {
+func NewUserHandlers(eventUseCase usecase.UserUseCase) UserHandlers {
 	return UserHandlers{
 		userUseCase: eventUseCase,
-		statesDict:  states,
-		conf:        conf,
 	}
 }
 
@@ -82,11 +77,11 @@ func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
 		return ctx.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 	}
 
-	telegramID, err := uh.userUseCase.GetTelegramIDByState(state)
+	telegramID, err := uh.userUseCase.GetTelegramUserIDByState(state)
 	switch {
-	case err == repository.StateDoesNotExist:
+	case err == oauth.StateKeyDoesNotExist:
 		zap.S().Debugf("state='%s' does not exist in redis, maybe user already authenticated", state)
-		return ctx.Redirect(http.StatusTemporaryRedirect, uh.conf.TelegramBotRedirectURI)
+		return ctx.Redirect(http.StatusTemporaryRedirect, uh.userUseCase.GetTelegramBotRedirectURI())
 	case err != nil:
 		return errors.WithStack(err)
 	}
@@ -101,7 +96,7 @@ func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
 		}
 	}
 
-	return ctx.Redirect(http.StatusTemporaryRedirect, uh.conf.TelegramBotRedirectURI)
+	return ctx.Redirect(http.StatusTemporaryRedirect, uh.userUseCase.GetTelegramBotRedirectURI())
 }
 
 func (uh *UserHandlers) getMailruUserInfo(ctx echo.Context) error {
@@ -118,11 +113,6 @@ func (uh *UserHandlers) getMailruUserInfo(ctx echo.Context) error {
 	userInfo, err := uh.userUseCase.GetMailruUserInfo(accessToken)
 	if err != nil {
 		return errors.Wrapf(err, "cannot get userinfo for telegramUserID=%d", telegramID)
-	}
-
-	if !userInfo.IsValid() {
-		return errors.Wrapf(userInfo.GetError(),
-			"mailru oauth userinfo API, response error, telegramUserID=%d", telegramID)
 	}
 
 	return ctx.JSON(http.StatusOK, userInfo)

@@ -1,13 +1,14 @@
 package oauth
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"os"
+	"strings"
 	"time"
 )
 
 const (
+	EnvOAuthHostWithScheme         = "OAUTH_HOST_WITH_SCHEME"
 	EnvOAuthClientId               = "OAUTH_CLIENT_ID"
 	EnvOAuthClientSecret           = "OAUTH_CLIENT_SECRET"
 	EnvOAuthRedirectUri            = "OAUTH_REDIRECT_URI"
@@ -16,9 +17,13 @@ const (
 	EnvOAuthLinkExpireIn           = "OAUTH_LINK_EXPIRE_IN"
 )
 
-const oauthLinkExpireInDefault = 15 * time.Minute
+const (
+	oauthHostWithSchemeDefault = "https://oauth.mail.ru"
+	oauthLinkExpireInDefault   = 15 * time.Minute
+)
 
 type Config struct {
+	HostWithScheme         string        `valid:"requri"`
 	ClientID               string        `valid:"hexadecimal"`
 	ClientSecret           string        `valid:"hexadecimal"`
 	RedirectURI            string        `valid:"requri"`
@@ -28,6 +33,12 @@ type Config struct {
 }
 
 func LoadOAuthConfig() (Config, error) {
+	hostWithScheme := os.Getenv(EnvOAuthHostWithScheme)
+	if hostWithScheme == "" {
+		hostWithScheme = oauthHostWithSchemeDefault
+	}
+	hostWithScheme = strings.TrimRight(hostWithScheme, "/")
+
 	clientID := os.Getenv(EnvOAuthClientId)
 	clientSecret := os.Getenv(EnvOAuthClientSecret)
 	redirectURI := os.Getenv(EnvOAuthRedirectUri)
@@ -38,7 +49,7 @@ func LoadOAuthConfig() (Config, error) {
 	if linkExpireInStr := os.Getenv(EnvOAuthLinkExpireIn); linkExpireInStr != "" {
 		expire, err := time.ParseDuration(linkExpireInStr)
 		if err != nil {
-			return Config{}, errors.WithMessagef(
+			return Config{}, errors.Wrapf(
 				err,
 				"failed to parse %s environment variable as time.Duration",
 				EnvOAuthLinkExpireIn,
@@ -53,6 +64,7 @@ func LoadOAuthConfig() (Config, error) {
 	// TODO(nickeskov): validate struct
 
 	return Config{
+		HostWithScheme:         hostWithScheme,
 		ClientID:               clientID,
 		ClientSecret:           clientSecret,
 		RedirectURI:            redirectURI,
@@ -64,11 +76,12 @@ func LoadOAuthConfig() (Config, error) {
 
 func (o *Config) ToEnv() map[string]string {
 	return map[string]string{
+		EnvOAuthHostWithScheme:         o.HostWithScheme,
 		EnvOAuthClientId:               o.ClientID,
 		EnvOAuthClientSecret:           o.ClientSecret,
 		EnvOAuthRedirectUri:            o.RedirectURI,
 		EnvOAuthScope:                  o.Scope,
 		EnvOAuthTelegramBotRedirectUri: o.TelegramBotRedirectURI,
-		EnvOAuthLinkExpireIn:           fmt.Sprintf("%s", o.LinkExpireIn),
+		EnvOAuthLinkExpireIn:           o.LinkExpireIn.String(),
 	}
 }

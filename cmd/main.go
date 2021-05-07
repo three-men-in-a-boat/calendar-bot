@@ -11,8 +11,8 @@ import (
 	"github.com/calendar-bot/pkg/log"
 	"github.com/calendar-bot/pkg/middlewares"
 	"github.com/calendar-bot/pkg/services/db"
+	"github.com/calendar-bot/pkg/services/oauth"
 	redisService "github.com/calendar-bot/pkg/services/redis"
-	"github.com/calendar-bot/pkg/types"
 	uHandlers "github.com/calendar-bot/pkg/users/handlers"
 	uRepo "github.com/calendar-bot/pkg/users/repository"
 	uUsecase "github.com/calendar-bot/pkg/users/usecase"
@@ -32,11 +32,11 @@ type RequestHandlers struct {
 }
 
 func newRequestHandler(db *sql.DB, client *redis.Client, botClient *redis.Client, conf *config.AppConfig) RequestHandlers {
+	oauthService := oauth.NewService(&conf.OAuth, client)
 
-	states := types.NewStatesDictionary()
 	userStorage := uRepo.NewUserRepository(db, client)
-	userUseCase := uUsecase.NewUserUseCase(userStorage, &conf.OAuth)
-	userHandlers := uHandlers.NewUserHandlers(userUseCase, states, &conf.OAuth)
+	userUseCase := uUsecase.NewUserUseCase(userStorage, &oauthService)
+	userHandlers := uHandlers.NewUserHandlers(userUseCase)
 
 	eventStorage := eRepo.NewEventStorage(db)
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
