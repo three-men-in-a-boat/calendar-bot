@@ -42,17 +42,25 @@ func closestEvent(events []types.Event) *types.Event {
 		return nil
 	}
 
-	min := events[0]
+	var min types.Event
+	foundNotFullDay := false
+	for _, event := range events {
+		if !event.FullDay && event.To.Unix() > time.Now().Unix() {
+			min = event
+			foundNotFullDay = true
+		}
+	}
+
+	if !foundNotFullDay {
+		return nil
+	}
 
 	for _, event := range events {
-		if event.To.Unix() > time.Now().Unix() && event.From.Unix() < min.From.Unix() {
+		if event.To.Unix() > time.Now().Unix() && event.From.Unix() < min.From.Unix() && !event.FullDay {
 			min = event
 		}
 	}
-	if min.To.Unix() > time.Now().Unix() {
-		return &min
-	}
-	return nil
+	return &min
 }
 
 func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsResponse, error) {
