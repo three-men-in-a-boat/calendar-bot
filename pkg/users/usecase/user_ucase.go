@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/calendar-bot/cmd/config"
 	"github.com/calendar-bot/pkg/customerrors"
+	"github.com/calendar-bot/pkg/services/oauth"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/calendar-bot/pkg/users/repository"
 	"github.com/pkg/errors"
@@ -19,17 +19,15 @@ const (
 	nonceBase       = 16
 )
 
-const stateExpire = 15 * time.Minute
-
 type UserUseCase struct {
 	userRepository repository.UserRepository
-	conf           *config.App
+	oauthConf      *oauth.Config
 }
 
-func NewUserUseCase(userRepo repository.UserRepository, conf *config.App) UserUseCase {
+func NewUserUseCase(userRepo repository.UserRepository, conf *oauth.Config) UserUseCase {
 	return UserUseCase{
 		userRepository: userRepo,
-		conf:           conf,
+		oauthConf:      conf,
 	}
 }
 
@@ -55,7 +53,7 @@ func (uuc *UserUseCase) GenOauthLinkForTelegramID(telegramID int64) (string, err
 
 	state := bigInt.Text(nonceBase)
 
-	if err := uuc.userRepository.SetTelegramUserIDByState(state, telegramID, stateExpire); err != nil {
+	if err := uuc.userRepository.SetTelegramUserIDByState(state, telegramID, uuc.oauthConf.LinkExpireIn); err != nil {
 		return "", errors.Wrapf(err, "cannot insert telegramID=%d in redis, state=%s", telegramID, state)
 	}
 
@@ -95,9 +93,9 @@ func (uuc *UserUseCase) TelegramCreateAuthenticatedUser(tgUserID int64, mailAuth
 		url.Values{
 			"code":          []string{mailAuthCode},
 			"grant_type":    []string{"authorization_code"},
-			"redirect_uri":  []string{uuc.conf.OAuth.RedirectURI},
-			"client_id":     []string{uuc.conf.OAuth.ClientID},
-			"client_secret": []string{uuc.conf.OAuth.ClientSecret},
+			"redirect_uri":  []string{uuc.oauthConf.RedirectURI},
+			"client_id":     []string{uuc.oauthConf.ClientID},
+			"client_secret": []string{uuc.oauthConf.ClientSecret},
 		},
 	)
 
@@ -233,7 +231,7 @@ func (uuc *UserUseCase) obtainNewOAuthTokenByRefreshToken(refreshToken string) (
 		"https://oauth.mail.ru/token",
 		url.Values{
 			"grant_type":    []string{"refresh_token"},
-			"client_id":     []string{uuc.conf.OAuth.ClientID},
+			"client_id":     []string{uuc.oauthConf.ClientID},
 			"refresh_token": []string{refreshToken},
 		},
 	)
@@ -279,9 +277,9 @@ func (uuc *UserUseCase) GetOAuthAccessTokenByTelegramUserID(telegramID int64) (s
 func (uuc *UserUseCase) generateOAuthLink(state string) string {
 	return fmt.Sprintf(
 		"https://oauth.mail.ru/login?client_id=%s&response_type=code&scope=%s&redirect_uri=%s&state=%s",
-		uuc.conf.OAuth.ClientID,
-		uuc.conf.OAuth.Scope,
-		uuc.conf.OAuth.RedirectURI,
+		uuc.oauthConf.ClientID,
+		uuc.oauthConf.Scope,
+		uuc.oauthConf.RedirectURI,
 		state,
 	)
 }

@@ -85,7 +85,7 @@ func (us *UserRepository) DeleteOAuthAccessTokenByTelegramUserID(telegramID int6
 	return err
 }
 
-// Returns OAuthAccessToken
+// GetOAuthRefreshTokenByTelegramUserID returns OAuthAccessToken
 // Error types = error, OAuthError, UserEntityError
 func (us *UserRepository) GetOAuthRefreshTokenByTelegramUserID(telegramID int64) (string, error) {
 	var refreshToken sql.NullString

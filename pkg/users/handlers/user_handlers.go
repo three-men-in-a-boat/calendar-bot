@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/calendar-bot/cmd/config"
+	"github.com/calendar-bot/pkg/services/oauth"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/calendar-bot/pkg/users/repository"
 	"github.com/calendar-bot/pkg/users/usecase"
@@ -16,10 +16,10 @@ import (
 type UserHandlers struct {
 	userUseCase usecase.UserUseCase
 	statesDict  types.StatesDictionary
-	conf        *config.App
+	conf        *oauth.Config
 }
 
-func NewUserHandlers(eventUseCase usecase.UserUseCase, states types.StatesDictionary, conf *config.App) UserHandlers {
+func NewUserHandlers(eventUseCase usecase.UserUseCase, states types.StatesDictionary, conf *oauth.Config) UserHandlers {
 	return UserHandlers{
 		userUseCase: eventUseCase,
 		statesDict:  states,
@@ -86,7 +86,7 @@ func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
 	switch {
 	case err == repository.StateDoesNotExist:
 		zap.S().Debugf("state='%s' does not exist in redis, maybe user already authenticated", state)
-		return ctx.Redirect(http.StatusTemporaryRedirect, uh.conf.OAuth.TelegramBotRedirectURI)
+		return ctx.Redirect(http.StatusTemporaryRedirect, uh.conf.TelegramBotRedirectURI)
 	case err != nil:
 		return errors.WithStack(err)
 	}
@@ -101,7 +101,7 @@ func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
 		}
 	}
 
-	return ctx.Redirect(http.StatusTemporaryRedirect, uh.conf.OAuth.TelegramBotRedirectURI)
+	return ctx.Redirect(http.StatusTemporaryRedirect, uh.conf.TelegramBotRedirectURI)
 }
 
 func (uh *UserHandlers) getMailruUserInfo(ctx echo.Context) error {

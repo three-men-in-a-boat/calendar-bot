@@ -2,7 +2,7 @@ package messages
 
 import (
 	"fmt"
-	"github.com/calendar-bot/cmd/config"
+	config2 "github.com/calendar-bot/pkg/config"
 	"os"
 )
 
@@ -16,7 +16,7 @@ const (
 )
 
 func MessageUnexpectedError(err string) string  {
-	if os.Getenv(config.EnvAppEnvironment) == config.AppEnvironmentDev {
+	if os.Getenv(config2.EnvAppEnvironment) == config2.AppEnvironmentDev {
 		return fmt.Sprintf(errorTextDev, err)
 	} else {
 		return errorTextProd
@@ -24,7 +24,7 @@ func MessageUnexpectedError(err string) string  {
 }
 
 func MessageAuthError(err string) string {
-	if os.Getenv(config.EnvAppEnvironment) == config.AppEnvironmentDev {
+	if os.Getenv(config2.EnvAppEnvironment) == config2.AppEnvironmentDev {
 		return fmt.Sprintf(errorAuthDev, err)
 	} else {
 		return errorAuthProd

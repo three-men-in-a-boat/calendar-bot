@@ -1,6 +1,10 @@
 package config
 
 import (
+	"github.com/calendar-bot/pkg/log"
+	"github.com/calendar-bot/pkg/services/db"
+	"github.com/calendar-bot/pkg/services/oauth"
+	"github.com/calendar-bot/pkg/services/redis"
 	"github.com/pkg/errors"
 	"os"
 )
@@ -22,21 +26,21 @@ const (
 	AppEnvironmentProd string = "prod"
 )
 
-type App struct {
+type AppConfig struct {
 	Address       string `validate:"optional,dialstring"`
 	Environment   string `validate:"optional,in(dev|prod)"`
 	BotAddress    string `validate:"optional"`
 	BotToken      string
 	BotWebhookUrl string
-	DB            DB
+	DB            db.Config
 	ParseAddress  string
-	Redis         Redis
-	BotRedis      Redis
-	OAuth         OAuth
-	Log           Log
+	Redis         redis.Config
+	BotRedis      redis.Config
+	OAuth         oauth.Config
+	Log           log.Config
 }
 
-func LoadAppConfig() (App, error) {
+func LoadAppConfig() (AppConfig, error) {
 	address := os.Getenv(EnvAppAddress)
 	environment := os.Getenv(EnvAppEnvironment)
 	parseAddress := os.Getenv(EnvParseAddress)
@@ -60,40 +64,47 @@ func LoadAppConfig() (App, error) {
 		environment = AppEnvironmentProd
 	}
 
-	db, err := LoadDBConfig()
+	dbConfig, err := db.LoadDBConfig()
 	if err != nil {
-		return App{}, errors.WithMessage(err, "failed to load DB config")
+		return AppConfig{}, errors.WithMessage(err, "failed to load db config")
 	}
 
-	redis, err := LoadRedisConfig()
+	redisConfig, err := redis.LoadRedisConfig()
 	if err != nil {
-		return App{}, errors.WithMessage(err, "failed to load Redis config")
+		return AppConfig{}, errors.WithMessage(err, "failed to load redis config")
 	}
 
-	botRedis, err := LoadBotRedisConfig()
+	botRedisConfig, err := redis.LoadBotRedisConfig()
 	if err != nil {
-		return App{}, errors.WithMessage(err, "failed to load bot redis config")
+		return AppConfig{}, errors.WithMessage(err, "failed to load bot redis config")
 	}
+
+	oauthConfig, err := oauth.LoadOAuthConfig()
+	if err != nil {
+		return AppConfig{}, errors.WithMessage(err, "failed to load oauth config")
+	}
+
 	// TODO(nickeskov): validate struct
 
-	return App{
+	return AppConfig{
 		Address:       address,
 		BotAddress:    botAddress,
 		BotToken:      botToken,
 		BotWebhookUrl: botWebhookUrl,
 		Environment:   environment,
-		DB:            db,
+		DB:            dbConfig,
 		ParseAddress:  parseAddress,
-		Redis:         redis,
-		BotRedis:      botRedis,
-		OAuth:         LoadOAuthConfig(),
-		Log:           LoadLogConfig(),
+		Redis:         redisConfig,
+		BotRedis:      botRedisConfig,
+		OAuth:         oauthConfig,
+		Log:           log.LoadLogConfig(),
 	}, nil
 }
 
-func (app *App) ToEnv() map[string]string {
+func (app *AppConfig) ToEnv() map[string]string {
 	envMaps := [...]map[string]string{
 		app.DB.ToEnv(),
+		app.BotRedis.ToEnv(),
 		app.Redis.ToEnv(),
 		app.OAuth.ToEnv(),
 		app.Log.ToEnv(),
