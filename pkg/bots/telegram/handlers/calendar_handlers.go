@@ -15,6 +15,7 @@ import (
 	uUseCase "github.com/calendar-bot/pkg/users/usecase"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	tb "gopkg.in/tucnak/telebot.v2"
 	"io"
@@ -63,6 +64,7 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	bot.Handle("\f"+telegram.CancelCreateEvent, ch.HandleCancelCreateEvent)
 	bot.Handle("\f"+telegram.CreateEvent, ch.HandleCreateEvent)
 	bot.Handle("\f"+telegram.GroupGo, ch.HandleGroupGo)
+	bot.Handle("\f"+telegram.GroupNotGo, ch.HandleGroupNotGo)
 	bot.Handle(tb.OnText, ch.HandleText)
 }
 
@@ -602,7 +604,7 @@ func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 		}
 		return
 	}
-	event := ch.getEventByIdForCallback(c)
+	event := ch.getEventByIdForCallback(c, c.Sender.ID)
 	if event == nil {
 		return
 	}
@@ -625,6 +627,7 @@ func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 	if err != nil {
 		customerrors.HandlerError(err)
 	}
+
 }
 func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 	if !ch.AuthMiddleware(c.Sender, c.Message.Chat) {
@@ -636,7 +639,7 @@ func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 		}
 		return
 	}
-	event := ch.getEventByIdForCallback(c)
+	event := ch.getEventByIdForCallback(c, c.Sender.ID)
 	if event == nil {
 		return
 	}
@@ -809,11 +812,20 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 		return
 	}
 
+	session.Event.Uid = uuid.NewString()
+
 	inpEvent := EventToEventInput(session.Event)
-	_, err = ch.eventUseCase.CreateEvent(token, inpEvent)
+	info, err := ch.eventUseCase.CreateEvent(token, inpEvent)
+
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
 		customerrors.HandlerError(err)
+		return
+	}
+
+	respInfo := &types.CreateEventResp{}
+	err = json.Unmarshal(info, respInfo)
+	if err != nil {
 		return
 	}
 
@@ -825,6 +837,7 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 		customerrors.HandlerError(err)
 	}
 
+	session.Event.Calendar = respInfo.Data.CreateEvent.Calendar
 
 	_, err = ch.handler.bot.Send(c.Message.Chat,
 		calendarMessages.GetCreatedEventHeader(), &tb.SendOptions{
@@ -840,22 +853,20 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 
 	var groupButtons [][]tb.InlineButton = nil
 	if c.Message.Chat.Type == tb.ChatGroup {
-		groupButtons, err = calendarInlineKeyboards.GroupChatButtons(&session.Event, ch.redisDB)
+		groupButtons, err = calendarInlineKeyboards.GroupChatButtons(&session.Event, ch.redisDB, c.Sender.ID)
 		if err != nil {
 			customerrors.HandlerError(err)
 		}
 	}
 
 	_, err = ch.handler.bot.Send(c.Message.Chat,
-		calendarMessages.SingleEventShortText(&session.Event),
+		calendarMessages.SingleEventFullText(&session.Event),
 		&tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				InlineKeyboard: groupButtons,
 			},
 		})
-
-
 
 	session.IsCreate = false
 	session.Step = telegram.StepCreateInit
@@ -875,28 +886,13 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 		return
 	}
 }
-func (ch *CalendarHandlers) HandleGroupGo(c *tb.Callback) {
-	if !ch.AuthMiddleware(c.Sender, c.Message.Chat) {
-		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
-			CallbackID: c.ID,
-		})
-		if err != nil {
-			customerrors.HandlerError(err)
-		}
-		return
-	}
-	event := ch.getEventByIdForCallback(c)
-	if event == nil {
-		return
-	}
-
-	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
-		CallbackID: c.ID,
-	})
-	if err != nil {
-		customerrors.HandlerError(err)
-	}
+func (ch CalendarHandlers) HandleGroupGo(c *tb.Callback)  {
+	ch.handleGroup(c, telegram.StatusAccepted)
 }
+func (ch CalendarHandlers) HandleGroupNotGo(c *tb.Callback)  {
+	ch.handleGroup(c, telegram.StatusDeclined)
+}
+
 
 func (ch *CalendarHandlers) getSession(user *tb.User) (*types.BotRedisSession, error) {
 	resp, err := ch.redisDB.Get(context.TODO(), strconv.Itoa(user.ID)).Result()
@@ -979,7 +975,7 @@ func (ch *CalendarHandlers) sendShortEvents(events *types.Events, user tb.Recipi
 		}
 	}
 }
-func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event {
+func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback, senderID int) *types.Event {
 	calUid, err := ch.redisDB.Get(context.TODO(), c.Data).Result()
 	if err != nil {
 		customerrors.HandlerError(err)
@@ -994,7 +990,7 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback) *types.Event
 		return nil
 	}
 
-	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(c.Sender.ID))
+	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(senderID))
 
 	if err != nil {
 		customerrors.HandlerError(err)
@@ -1355,6 +1351,186 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 		}
 	}
 }
+func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
+	if !ch.AuthMiddleware(c.Sender, c.Message.Chat) {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+	data := strings.Split(c.Data, "|")
+	userId, err := strconv.Atoi(data[1])
+	c.Data = data[0]
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+	}
+	event := ch.getEventByIdForCallback(c, userId)
+	if event == nil {
+		return
+	}
+
+	eventToken, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(userId))
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return
+	}
+
+	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(c.Sender.ID))
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return
+	}
+
+	userInfo, err := ch.userUseCase.GetMailruUserInfo(token)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return
+	}
+
+	if event.Organizer.Email == userInfo.Email {
+		err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+			Text:       calendarMessages.CreateEventAlreadyOrganize,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+
+	for idx, attendee := range event.Attendees {
+		if attendee.Email == userInfo.Email {
+			if attendee.Status == status {
+				text := ""
+				if status == telegram.StatusAccepted {
+					text = calendarMessages.CreateEventAlreadyGo
+				} else {
+					text = calendarMessages.CreateEventAlreadyNotGo
+				}
+				err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
+					CallbackID: c.ID,
+					Text:       text,
+				})
+				if err != nil {
+					customerrors.HandlerError(err)
+				}
+			} else {
+				if attendee.Status == telegram.StatusDeclined {
+					_, err = ch.eventUseCase.AddAttendee(eventToken, types.AddAttendee{
+						EventID:    event.Uid,
+						CalendarID: event.Calendar.UID,
+						Email:      userInfo.Email,
+						Role:       telegram.RoleRequired,
+					})
+
+					if err != nil {
+						ch.handler.SendError(c.Message.Chat, err)
+						customerrors.HandlerError(err)
+					}
+				}
+
+				err = ch.ChangeStatusCallback(c, token, event, status)
+				if err != nil {
+					err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
+						CallbackID: c.ID,
+					})
+					if err != nil {
+						customerrors.HandlerError(err)
+					}
+					return
+				}
+
+				err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
+					CallbackID: c.ID,
+				})
+
+
+
+				event.Attendees[idx].Status = status
+
+				inlineKeyboard, err := calendarInlineKeyboards.GroupChatButtons(event, ch.redisDB, userId)
+
+				if err != nil {
+					ch.handler.SendError(c.Message.Chat, err)
+					customerrors.HandlerError(err)
+					return
+				}
+
+				_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventFullText(event), &tb.SendOptions{
+					ParseMode: tb.ModeHTML,
+					ReplyMarkup: &tb.ReplyMarkup{
+						InlineKeyboard: inlineKeyboard,
+					},
+				})
+
+				if err != nil {
+					customerrors.HandlerError(err)
+				}
+
+				return
+			}
+
+			return
+		}
+	}
+
+	_, err = ch.eventUseCase.AddAttendee(eventToken, types.AddAttendee{
+		EventID:    event.Uid,
+		CalendarID: event.Calendar.UID,
+		Email:      userInfo.Email,
+		Role:       telegram.RoleRequired,
+	})
+
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+	}
+
+	err = ch.ChangeStatusCallback(c, token, event, status)
+	if err != nil {
+		return
+	}
+
+	err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
+		CallbackID: c.ID,
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	event.Attendees = append(event.Attendees, types.AttendeeEvent{
+		Email: 	userInfo.Email,
+		Name:   userInfo.Name,
+		Role:   telegram.RoleRequired,
+		Status: status,
+	})
+
+	inlineKeyboard, err := calendarInlineKeyboards.GroupChatButtons(event, ch.redisDB, userId)
+
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return
+	}
+
+	_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventFullText(event), &tb.SendOptions{
+		ParseMode: tb.ModeHTML,
+		ReplyMarkup: &tb.ReplyMarkup{
+			InlineKeyboard: inlineKeyboard,
+		},
+	})
+
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+}
 func (ch *CalendarHandlers) ParseDate(m *tb.Message) *types.ParseDateResp {
 	reqData := &types.ParseDateReq{Timezone: "Europe/Moscow", Text: m.Text}
 	b, err := json.Marshal(reqData)
@@ -1485,11 +1661,65 @@ func (ch *CalendarHandlers) GroupMiddleware(m *tb.Message) bool {
 
 	return false
 }
+func (ch *CalendarHandlers) ChangeStatusCallback(c *tb.Callback, token string, event *types.Event, status string) error {
+	userInfo, err := ch.userUseCase.GetMailruUserInfo(token)
+	if err != nil {
+		return err
+	}
+	userCalId, err := ch.redisDB.Get(context.TODO(), userInfo.Email + event.Uid).Result()
+	events, err := ch.eventUseCase.GetEventsByDate(token, event.From)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return err
+	}
+
+	if events != nil {
+		for _, userEvent := range events.Data.Events {
+			if userEvent.Uid == event.Uid {
+				userCalId = userEvent.Calendar.UID
+			}
+		}
+	}
+
+	if userCalId == "" {
+		err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+			Text:       calendarMessages.CreateEventCannotAdd,
+			ShowAlert:  true,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		return errors.New("Calendar UID not found")
+	}
+
+	err = ch.redisDB.Set(context.TODO(), userInfo.Email+event.Uid, userCalId, 0).Err()
+
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+
+	_, err = ch.eventUseCase.ChangeStatus(token, types.ChangeStatus{
+		EventID:    event.Uid,
+		CalendarID: userCalId,
+		Status:     status,
+	})
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return err
+	}
+
+	return nil
+}
 
 func EventToEventInput(event types.Event) types.EventInput {
 	ret := types.EventInput{}
 
-	id := uuid.NewString()
+	id := event.Uid
 	from := event.From.Format(time.RFC3339)
 	to := event.To.Format(time.RFC3339)
 

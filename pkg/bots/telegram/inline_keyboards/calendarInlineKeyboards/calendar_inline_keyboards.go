@@ -7,6 +7,7 @@ import (
 	"github.com/calendar-bot/pkg/types"
 	"github.com/go-redis/redis/v8"
 	tb "gopkg.in/tucnak/telebot.v2"
+	"strconv"
 	"strings"
 )
 
@@ -82,21 +83,21 @@ func CreateEventButtons(event types.Event) [][]tb.InlineButton {
 	return btns
 }
 
-func GroupChatButtons(event *types.Event, db *redis.Client) ([][]tb.InlineButton, error) {
+func GroupChatButtons(event *types.Event, db *redis.Client, senderID int) ([][]tb.InlineButton, error) {
 	err := db.Set(context.TODO(), event.Uid, event.Calendar.UID, 0).Err()
 	if err != nil {
 		return nil, err
 	}
-	return [][]tb.InlineButton {{
+	return [][]tb.InlineButton{{
 		{
-			Text: calendarMessages.CreateEventGo,
+			Text:   calendarMessages.CreateEventGo,
 			Unique: telegram.GroupGo,
-			Data:   event.Uid,
+			Data:   event.Uid + "|" + strconv.Itoa(senderID),
 		},
 		{
-			Text: calendarMessages.CreateEventNotGo,
+			Text:   calendarMessages.CreateEventNotGo,
 			Unique: telegram.GroupNotGo,
-			Data:   event.Uid,
+			Data:   event.Uid + "|" + strconv.Itoa(senderID),
 		},
 	}}, nil
 }
