@@ -5,11 +5,15 @@ SOURCE_DIRS = cmd pkg
 
 export GO111MODULE=on
 
-.PHONY: vendor vetcheck fmtcheck clean build build-debug gotest
+.PHONY: ver vendor vetcheck golangci-lint fmtcheck gotest clean mod-clean \
+			build build-linux-amd64 build-debug build-debug-linux-amd64 \
+			inside-docker-build docker-build docker-build-alpine docker-build-scratch
 
-all: vendor vetcheck fmtcheck build gotest mod-clean
+all: vendor vetcheck golangci-lint fmtcheck build gotest mod-clean
 
-debug: vendor vetcheck fmtcheck build-debug gotest mod-clean
+debug: vendor vetcheck golangci-lint fmtcheck build-debug gotest mod-clean
+
+inside-docker-build: vetcheck fmtcheck gotest build
 
 ver:
 	@echo Building version: $(VERSION)
@@ -39,6 +43,8 @@ vendor:
 
 vetcheck:
 	go vet ./...
+
+golangci-lint:
 	golangci-lint run
 
 build-debug:
@@ -48,3 +54,12 @@ build-debug:
 build-debug-linux-amd64:
 	@mkdir -p build/debug/linux-amd64
 	@CGO_ENABLE=0 GOOS=linux GOARCH=amd64 go build -o build/debug/linux-amd64/botbackend -gcflags="all=-N -l" ./cmd/main.go
+
+docker-build:
+	docker build -t calendar-bot -f Dockerfile .
+
+docker-build-alpine:
+	docker build -t calendar-bot-alpine -f Dockerfile-alpine .
+
+docker-build-scratch:
+	docker build -t calendar-bot-scratch -f Dockerfile-scratch .
