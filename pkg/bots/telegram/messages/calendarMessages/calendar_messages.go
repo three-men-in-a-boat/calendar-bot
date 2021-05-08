@@ -90,6 +90,9 @@ const (
 	CreateEventChangeLocationButton = "Изменить место"
 	CreateEventAddUser = "Добавить участников"
 
+	CreateEventGo = "✅ Я иду"
+	CreateEventNotGo = "❌ Я не иду"
+
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
 		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
 	middlewaresGroupAlertBase  = "Вы уверены, что хотите показать "

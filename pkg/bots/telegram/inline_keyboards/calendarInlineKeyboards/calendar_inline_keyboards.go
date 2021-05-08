@@ -81,3 +81,22 @@ func CreateEventButtons(event types.Event) [][]tb.InlineButton {
 
 	return btns
 }
+
+func GroupChatButtons(event *types.Event, db *redis.Client) ([][]tb.InlineButton, error) {
+	err := db.Set(context.TODO(), event.Uid, event.Calendar.UID, 0).Err()
+	if err != nil {
+		return nil, err
+	}
+	return [][]tb.InlineButton {{
+		{
+			Text: calendarMessages.CreateEventGo,
+			Unique: telegram.GroupGo,
+			Data:   event.Uid,
+		},
+		{
+			Text: calendarMessages.CreateEventNotGo,
+			Unique: telegram.GroupNotGo,
+			Data:   event.Uid,
+		},
+	}}, nil
+}

@@ -7,6 +7,8 @@ const (
 	CancelCreateEvent = "CCE"
 	AlertCallbackYes  = "ACY"
 	AlertCallbackNo   = "ACN"
+	GroupGo = "GG"
+	GroupNotGo = "GNG"
 
 	Today = "/today"
 	Next  = "/next"

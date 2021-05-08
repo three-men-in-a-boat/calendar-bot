@@ -2,7 +2,7 @@ package baseMessages
 
 import (
 	"fmt"
-	"github.com/calendar-bot/pkg/types"
+	"github.com/calendar-bot/pkg/services/oauth"
 )
 
 const (
@@ -31,7 +31,7 @@ func StartRegButtonText() string {
 	return startRegButtonText
 }
 
-func StartRegText(info types.MailruUserInfo) string {
+func StartRegText(info oauth.UserInfoResponse) string {
 	return fmt.Sprintf(startRegText, info.Name)
 }
 

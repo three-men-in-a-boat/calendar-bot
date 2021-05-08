@@ -11,7 +11,7 @@ import (
 )
 
 type BaseHandlers struct {
-	handler Handler
+	handler      Handler
 	eventUseCase eUseCase.EventUseCase
 	userUseCase  uUseCase.UserUseCase
 }
@@ -72,7 +72,7 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 			return
 		}
 
-		_ ,err = bh.handler.bot.Send(m.Sender,
+		_, err = bh.handler.bot.Send(m.Sender,
 			baseMessages.StartRegText(info),
 			&tb.SendOptions{
 				ParseMode: tb.ModeHTML,

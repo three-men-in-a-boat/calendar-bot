@@ -62,6 +62,7 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	bot.Handle("\f"+telegram.AlertCallbackNo, ch.HandleAlertNo)
 	bot.Handle("\f"+telegram.CancelCreateEvent, ch.HandleCancelCreateEvent)
 	bot.Handle("\f"+telegram.CreateEvent, ch.HandleCreateEvent)
+	bot.Handle("\f"+telegram.GroupGo, ch.HandleGroupGo)
 	bot.Handle(tb.OnText, ch.HandleText)
 }
 
@@ -267,7 +268,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 
 			data := ch.ParseEvent(m)
 
-			if data == nil || data.EventStart.IsZero(){
+			if data == nil || data.EventStart.IsZero() {
 				_, err = ch.handler.bot.Send(m.Chat, calendarMessages.EventNoEventDataFound, &tb.SendOptions{
 					ParseMode: tb.ModeHTML,
 					ReplyMarkup: &tb.ReplyMarkup{
@@ -309,7 +310,6 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 					session.Event.Attendees = append(session.Event.Attendees, organizerAttendee)
 				}
 			}
-
 
 			newMsg, err := ch.handler.bot.Send(m.Chat,
 				calendarMessages.GetCreateEventHeader()+calendarMessages.SingleEventFullText(&session.Event),
@@ -356,7 +356,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 					if err != nil {
 						customerrors.HandlerError(err)
 					}
-				}  else {
+				} else {
 					session.Step = telegram.StepCreateDesc
 
 					_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventDescText, &tb.SendOptions{
@@ -371,7 +371,6 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 					}
 				}
 			}
-
 
 			err = ch.setSession(session, m.Sender)
 			if err == nil {
@@ -826,9 +825,9 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 		customerrors.HandlerError(err)
 	}
 
+
 	_, err = ch.handler.bot.Send(c.Message.Chat,
-		calendarMessages.GetCreatedEventHeader()+calendarMessages.SingleEventShortText(&session.Event),
-		&tb.SendOptions{
+		calendarMessages.GetCreatedEventHeader(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -838,6 +837,25 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 	if err != nil {
 		customerrors.HandlerError(err)
 	}
+
+	var groupButtons [][]tb.InlineButton = nil
+	if c.Message.Chat.Type == tb.ChatGroup {
+		groupButtons, err = calendarInlineKeyboards.GroupChatButtons(&session.Event, ch.redisDB)
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+	}
+
+	_, err = ch.handler.bot.Send(c.Message.Chat,
+		calendarMessages.SingleEventShortText(&session.Event),
+		&tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				InlineKeyboard: groupButtons,
+			},
+		})
+
+
 
 	session.IsCreate = false
 	session.Step = telegram.StepCreateInit
@@ -855,6 +873,28 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 	err = ch.setSession(session, c.Sender)
 	if err != nil {
 		return
+	}
+}
+func (ch *CalendarHandlers) HandleGroupGo(c *tb.Callback) {
+	if !ch.AuthMiddleware(c.Sender, c.Message.Chat) {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+	event := ch.getEventByIdForCallback(c)
+	if event == nil {
+		return
+	}
+
+	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+		CallbackID: c.ID,
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
 	}
 }
 
@@ -1213,7 +1253,6 @@ Step:
 		return
 	}
 
-
 	if e.Title != "" && !e.To.IsZero() && !e.From.IsZero() && session.FromTextCreate {
 		session.FromTextCreate = false
 		session.Step = telegram.StepCreateDesc
@@ -1235,7 +1274,6 @@ Step:
 
 		return
 	}
-
 
 }
 func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedisSession) {

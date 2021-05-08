@@ -8,7 +8,7 @@ import (
 )
 
 type Handler struct {
-	bot *tb.Bot
+	bot          *tb.Bot
 	parseAddress string
 }
 
@@ -17,7 +17,7 @@ func (h *Handler) SendError(sender tb.Recipient, outerErr error) {
 		&tb.SendOptions{
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
-				InlineKeyboard: inline_keyboards.ReportBugKeyboard(),
+				InlineKeyboard:      inline_keyboards.ReportBugKeyboard(),
 			},
 		})
 

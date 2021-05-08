@@ -16,6 +16,5 @@ func HelpCommandKeyboard() [][]tb.ReplyButton {
 		keyboard[idx/2] = append(keyboard[idx/2], tb.ReplyButton{Text: command})
 	}
 
-
 	return keyboard
 }

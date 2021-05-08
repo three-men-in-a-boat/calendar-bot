@@ -6,6 +6,8 @@ import (
 	"github.com/calendar-bot/pkg/middlewares"
 	"github.com/calendar-bot/pkg/types"
 	uUseCase "github.com/calendar-bot/pkg/users/usecase"
+	"github.com/calendar-bot/pkg/utils/contextutils"
+	"github.com/calendar-bot/pkg/utils/pathutils"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 	"net/http"
@@ -24,7 +26,7 @@ func NewEventHandlers(eventUseCase eUseCase.EventUseCase, userUseCase uUseCase.U
 func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
 	oauthMiddleware := middlewares.NewCheckOAuthTelegramMiddleware(&eh.userUseCase)
 
-	eventRouter := server.Group("/api/v1/telegram/user/"+middlewares.TelegramUserIDRouteKey+"/events", oauthMiddleware.Handle)
+	eventRouter := server.Group("/api/v1/telegram/user/"+pathutils.TelegramUserIDRouteKey+"/events", oauthMiddleware.Handle)
 
 	eventRouter.GET("/today", eh.getEventsToday)
 	eventRouter.GET("/closest", eh.getClosestEvent)
@@ -38,12 +40,12 @@ func (eh *EventHandlers) InitHandlers(server *echo.Echo) {
 }
 
 func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -61,12 +63,12 @@ func (eh *EventHandlers) getEventsToday(ctx echo.Context) error {
 }
 
 func (eh *EventHandlers) getClosestEvent(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -84,12 +86,12 @@ func (eh *EventHandlers) getClosestEvent(ctx echo.Context) error {
 }
 
 func (eh *EventHandlers) getEventsByDate(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -118,12 +120,12 @@ type EventCalendarIDs struct {
 }
 
 func (eh *EventHandlers) getUsersBusyIntervals(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -147,12 +149,12 @@ func (eh *EventHandlers) getUsersBusyIntervals(ctx echo.Context) error {
 }
 
 func (eh *EventHandlers) getEventByEventID(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -176,12 +178,12 @@ func (eh *EventHandlers) getEventByEventID(ctx echo.Context) error {
 }
 
 func (eh *EventHandlers) createEvent(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -204,12 +206,12 @@ func (eh *EventHandlers) createEvent(ctx echo.Context) error {
 }
 
 func (eh *EventHandlers) addAttendee(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -233,12 +235,12 @@ func (eh *EventHandlers) addAttendee(ctx echo.Context) error {
 }
 
 func (eh *EventHandlers) changeStatus(ctx echo.Context) error {
-	telegramID, err := middlewares.GetTelegramUserIDFromContext(ctx)
+	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	accessToken, err := middlewares.GetOAuthAccessTokenFromContext(ctx)
+	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
