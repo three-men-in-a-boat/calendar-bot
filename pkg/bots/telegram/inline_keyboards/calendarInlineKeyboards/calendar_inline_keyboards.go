@@ -120,40 +120,113 @@ func FindTimeDayPartButtons(t time.Time) [][]tb.InlineButton {
 	return [][]tb.InlineButton{
 		{
 			{
-				Text: "Утром",
+				Text:   "Утром",
 				Unique: telegram.FindTimeDayPart,
-				Data: time.Date(t.Year(), t.Month(), t.Day(), 6,0,0,0, t.Location()).Format(time.RFC3339),
+				Data:   time.Date(t.Year(), t.Month(), t.Day(), 6, 0, 0, 0, t.Location()).Format(time.RFC3339),
 			},
 			{
-				Text: "Днем",
+				Text:   "Днем",
 				Unique: telegram.FindTimeDayPart,
-				Data: time.Date(t.Year(), t.Month(), t.Day(), 12,0,0,0, t.Location()).Format(time.RFC3339),
-			},
-		},
-		{
-			{
-				Text: "Вечером",
-				Unique: telegram.FindTimeDayPart,
-				Data: time.Date(t.Year(), t.Month(), t.Day(), 18,0,0,0, t.Location()).Format(time.RFC3339),
-			},
-			{
-				Text: "Ночью",
-				Unique: telegram.FindTimeDayPart,
-				Data: time.Date(t.Year(), t.Month(), t.Day(), 0,0,0,0, t.Location()).Format(time.RFC3339),
+				Data:   time.Date(t.Year(), t.Month(), t.Day(), 12, 0, 0, 0, t.Location()).Format(time.RFC3339),
 			},
 		},
 		{
 			{
-				Text: "В любое время",
+				Text:   "Вечером",
 				Unique: telegram.FindTimeDayPart,
-				Data: "All day",
+				Data:   time.Date(t.Year(), t.Month(), t.Day(), 18, 0, 0, 0, t.Location()).Format(time.RFC3339),
+			},
+			{
+				Text:   "Ночью",
+				Unique: telegram.FindTimeDayPart,
+				Data:   time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Format(time.RFC3339),
+			},
+		},
+		{
+			{
+				Text:   "В любое время",
+				Unique: telegram.FindTimeDayPart,
+				Data:   "All day",
 			},
 
 			{
-				Text: calendarMessages.GetCreateCancelText(),
+				Text:   calendarMessages.GetCreateCancelText(),
 				Unique: telegram.FindTimeDayPart,
-				Data: calendarMessages.GetCreateCancelText(),
+				Data:   calendarMessages.GetCreateCancelText(),
 			},
 		},
+	}
+}
+
+func FindTimeLengthButtons() [][]tb.InlineButton {
+	return [][]tb.InlineButton{
+		{
+			{
+				Text:   "30 мин",
+				Unique: telegram.FindTimeLength,
+				Data:   "30m",
+			},
+			{
+				Text:   "1 час",
+				Unique: telegram.FindTimeLength,
+				Data:   "1h",
+			},
+			{
+				Text:   "1,5 часа",
+				Unique: telegram.FindTimeLength,
+				Data:   "1h30m",
+			},
+			{
+				Text:   "2 часа",
+				Unique: telegram.FindTimeLength,
+				Data:   "2h",
+			},
+		},
+		{
+			{
+				Text:   "2,5 часа",
+				Unique: telegram.FindTimeLength,
+				Data:   "2h30m",
+			},
+			{
+				Text:   "3 часа",
+				Unique: telegram.FindTimeLength,
+				Data:   "3h",
+			},
+			{
+				Text:   "4 часа",
+				Unique: telegram.FindTimeLength,
+				Data:   "4h",
+			},
+			{
+				Text:   "6 часов",
+				Unique: telegram.FindTimeLength,
+				Data:   "6h",
+			},
+		},
+
+		{
+			{
+				Text:   calendarMessages.GetCreateCancelText(),
+				Unique: telegram.FindTimeLength,
+				Data:   calendarMessages.GetCreateCancelText(),
+			},
+		},
+	}
+}
+
+func FindTimePollButtons(sender int) [][]tb.InlineButton {
+	return [][]tb.InlineButton {{
+		{
+			Text: calendarMessages.FindTimeAdd,
+			Unique: telegram.FindTimeAdd,
+			Data: strconv.Itoa(sender),
+		},
+	}, {
+		{
+			Text: calendarMessages.GetCreateEventCreateText(),
+			Unique: telegram.FindTimeCreate,
+		},
+	},
 	}
 }

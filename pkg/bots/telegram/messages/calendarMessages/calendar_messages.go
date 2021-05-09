@@ -5,6 +5,7 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/goodsign/monday"
+	"github.com/senseyeio/spaniel"
 	"strings"
 	"time"
 )
@@ -37,13 +38,21 @@ const (
 	findTimeInfoHeader          = "<b>Поиск будет производиться этом временном промежутке </b>\n\n"
 	findTimeStartTime           = "<b>Начало поиска: </b> %s\n"
 	findTimeStopTime            = "<b>Окончание поиска: </b> %s"
+	findTimeTextFormat          = "%s с %s до %s"
 	FindTimeChooseDayPartHeader = "<b>Выберите период дня для события</b>\n\n"
+	FindTimeChooseLengthHeader  = "<b>Выберите продолжительность события</b>\n\n"
 	eventGetDateMessage         = "Для выбора даты воспользуйтесь кнопками или введите дату в формате " +
 		"<pre>&lt;число&gt; &lt;название месяца&gt;</pre> (например: <pre>22 марта</pre>)"
 
 	eventNoTodayEventsFound  = "У вас нет событий сегодня"
 	eventNoDateEventsFound   = "У вас нет событий за выбранную дату"
 	eventNoClosestEventFound = "У вас больше нет событий сегодня"
+
+	FindTimePollHeader = "Выберите время. Если хотите, чтобы ваш календарь учитывался - нажмите на кнопку " +
+		"\"Участвую\""
+	FindTimeAdd = "✅ Участвую"
+	FindTimeExist = "Вы уже участвуете"
+	FindTimeNotFound = "К сожалению мы не нашли свободного времени для всех участников с учетом данных параметров"
 
 	eventDateNotParsed      = "Мы не смогли распознать дату, попробуйте еще раз"
 	EventDateToIsBeforeFrom = "<b>Введенная дата раньше начала события, введите корректную дату.</b>\n\n" +
@@ -120,6 +129,7 @@ const (
 )
 
 const (
+	formatSpan = "2 January"
 	formatDate = "2 January 2006"
 	formatTime = "15:04"
 	locale     = monday.LocaleRuRU
@@ -414,4 +424,18 @@ func GetFindTimeStopText(time time.Time) string {
 func GetFindTimeInfoText(timeFrom, timeTo time.Time) string {
 	return findTimeInfoHeader + fmt.Sprintf(findTimeStartTime, monday.Format(timeFrom, formatDate, locale)) +
 		fmt.Sprintf(findTimeStopTime, monday.Format(timeTo, formatDate, locale))
+}
+
+func GenOptionsForPoll(spans spaniel.Spans) []string {
+	str := make([]string, 0)
+
+	for _, span := range spans {
+		str = append(str, fmt.Sprintf(findTimeTextFormat,
+			monday.Format(span.Start(), formatSpan, locale),
+			monday.Format(span.Start(), formatTime, locale),
+			monday.Format(span.End(), formatTime, locale),
+		))
+	}
+
+	return str
 }

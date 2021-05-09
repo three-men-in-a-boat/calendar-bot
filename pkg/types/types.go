@@ -160,15 +160,18 @@ type DayPart struct {
 }
 
 type BotRedisSession struct {
-	Step           int                  `json:"step"`
-	FromTextCreate bool                 `json:"from_text_create"`
-	IsDate         bool                 `json:"is_date"`
-	IsCreate       bool                 `json:"is_create"`
-	FindTimeDone   bool                 `json:"find_time_done"`
-	Event          Event                `json:"event"`
-	FreeBusy       FreeBusy             `json:"free_busy"`
-	DayPart        *DayPart              `json:"day_part"`
-	InfoMsg        utils.CustomEditable `json:"info_msg"`
+	Step             int                  `json:"step"`
+	FromTextCreate   bool                 `json:"from_text_create"`
+	IsDate           bool                 `json:"is_date"`
+	IsCreate         bool                 `json:"is_create"`
+	FindTimeDone     bool                 `json:"find_time_done"`
+	Event            Event                `json:"event"`
+	FreeBusy         FreeBusy             `json:"free_busy"`
+	FindTimeDayPart  *DayPart             `json:"day_part"`
+	FindTimeDuration time.Duration        `json:"find_time_duration"`
+	Users            []int64              `json:"users"`
+	InfoMsg          utils.CustomEditable `json:"info_msg"`
+	PollMsg          utils.CustomEditable `json:"poll_msg"`
 }
 
 type ParseDateReq struct {

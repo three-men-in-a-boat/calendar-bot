@@ -12,6 +12,9 @@ const (
 	GroupFindTimeYes = "GFTY"
 	GroupFindTimeNo = "GFTN"
 	FindTimeDayPart = "FTDP"
+	FindTimeLength = "FTL"
+	FindTimeAdd = "FTA"
+	FindTimeCreate = "FTC"
 
 	Today = "/today"
 	Next  = "/next"
