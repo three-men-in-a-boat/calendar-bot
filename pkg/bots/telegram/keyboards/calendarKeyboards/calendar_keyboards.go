@@ -7,8 +7,8 @@ import (
 	tb "gopkg.in/tucnak/telebot.v2"
 )
 
-func GetDateFastCommand() [][]tb.ReplyButton {
-	return [][]tb.ReplyButton{
+func GetDateFastCommand(cancelText bool) [][]tb.ReplyButton {
+	ret := [][]tb.ReplyButton{
 		{
 			{
 				Text: "Сегодня",
@@ -31,12 +31,23 @@ func GetDateFastCommand() [][]tb.ReplyButton {
 				Text: "Через месяц",
 			},
 		},
-		{
+	}
+
+	if !cancelText {
+		ret = append(ret, []tb.ReplyButton{
 			{
 				Text: calendarMessages.GetCancelDateReplyButton(),
 			},
-		},
+		})
+	} else {
+		ret = append(ret, []tb.ReplyButton{
+			{
+				Text: calendarMessages.GetCreateCancelText(),
+			},
+		})
 	}
+
+	return ret
 }
 
 func GetCreateFastCommand() [][]tb.ReplyButton {
@@ -206,7 +217,6 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.ReplyButton {
 		}
 		idx++
 	}
-
 
 	return btns
 }

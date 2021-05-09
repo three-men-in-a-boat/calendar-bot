@@ -9,6 +9,8 @@ const (
 	AlertCallbackNo   = "ACN"
 	GroupGo = "GG"
 	GroupNotGo = "GNG"
+	GroupFindTimeYes = "GFTY"
+	GroupFindTimeNo = "GFTN"
 
 	Today = "/today"
 	Next  = "/next"

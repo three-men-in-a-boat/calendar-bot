@@ -101,3 +101,16 @@ func GroupChatButtons(event *types.Event, db *redis.Client, senderID int) ([][]t
 		},
 	}}, nil
 }
+
+func GroupFindTimeButtons() [][]tb.InlineButton {
+	return [][]tb.InlineButton{{
+		{
+			Text: calendarMessages.CreateEventFindTimeYesButton,
+			Unique: telegram.GroupFindTimeYes,
+		},
+		{
+			Text: calendarMessages.CreateEventFindTimeNoButton,
+			Unique: telegram.GroupFindTimeNo,
+		},
+	}}
+}

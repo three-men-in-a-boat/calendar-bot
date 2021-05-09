@@ -65,6 +65,8 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	bot.Handle("\f"+telegram.CreateEvent, ch.HandleCreateEvent)
 	bot.Handle("\f"+telegram.GroupGo, ch.HandleGroupGo)
 	bot.Handle("\f"+telegram.GroupNotGo, ch.HandleGroupNotGo)
+	bot.Handle("\f"+telegram.GroupFindTimeNo, ch.HandleGroupFindTimeNo)
+	bot.Handle("\f"+telegram.GroupFindTimeYes, ch.HandleGroupFindTimeYes)
 	bot.Handle(tb.OnText, ch.HandleText)
 }
 
@@ -195,7 +197,7 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 	_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetInitDateMessage(), &tb.SendOptions{
 		ParseMode: tb.ModeHTML,
 		ReplyMarkup: &tb.ReplyMarkup{
-			ReplyKeyboard: calendarKeyboards.GetDateFastCommand(),
+			ReplyKeyboard: calendarKeyboards.GetDateFastCommand(false),
 		},
 	})
 	if err != nil {
@@ -212,6 +214,22 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 		ch.handler.SendError(m.Chat, err)
 		return
 	}
+
+	if m.Chat.Type == tb.ChatGroup && !session.FindTimeDone {
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventFindTimeMessage, &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				InlineKeyboard: calendarInlineKeyboards.GroupFindTimeButtons(),
+			},
+			ReplyTo: m,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		} else {
+			return
+		}
+	}
+
 	session.IsDate = false
 	session.IsCreate = true
 	session.Event = types.Event{}
@@ -263,8 +281,10 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 
 	if session.IsDate {
 		ch.handleDateText(m, session)
-	} else if session.IsCreate {
+	} else if session.IsCreate && session.FindTimeDone {
 		ch.handleCreateText(m, session)
+	} else if session.IsCreate && !session.FindTimeDone {
+		ch.handleFindTimeText(m, session)
 	} else {
 		if m.Chat.Type == tb.ChatPrivate {
 
@@ -759,6 +779,7 @@ func (ch *CalendarHandlers) HandleCancelCreateEvent(c *tb.Callback) {
 	}
 	session.IsCreate = false
 	session.IsDate = false
+	session.FindTimeDone = false
 	session.Step = telegram.StepCreateInit
 	session.Event = types.Event{}
 
@@ -869,6 +890,8 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 		})
 
 	session.IsCreate = false
+	session.IsDate = false
+	session.FindTimeDone = false
 	session.Step = telegram.StepCreateInit
 	session.Event = types.Event{}
 
@@ -886,13 +909,99 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 		return
 	}
 }
-func (ch CalendarHandlers) HandleGroupGo(c *tb.Callback)  {
+func (ch *CalendarHandlers) HandleGroupGo(c *tb.Callback) {
 	ch.handleGroup(c, telegram.StatusAccepted)
 }
-func (ch CalendarHandlers) HandleGroupNotGo(c *tb.Callback)  {
+func (ch *CalendarHandlers) HandleGroupNotGo(c *tb.Callback) {
 	ch.handleGroup(c, telegram.StatusDeclined)
 }
+func (ch *CalendarHandlers) HandleGroupFindTimeYes(c *tb.Callback) {
+	if c.Sender.ID != c.Message.ReplyTo.Sender.ID {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+			Text:       calendarMessages.GetUserNotAllow(),
+			ShowAlert:  true,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
 
+	session, err := ch.getSession(c.Sender)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return
+	}
+
+	session.IsCreate = true
+	session.IsDate = false
+
+	err = ch.setSession(session, c.Sender)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return
+	}
+
+	err = ch.handler.bot.Delete(c.Message)
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	_, err = ch.handler.bot.Send(c.Message.Chat, calendarMessages.GetFindTimeStartText(), &tb.SendOptions{
+		ParseMode: tb.ModeHTML,
+		ReplyMarkup: &tb.ReplyMarkup{
+			ReplyKeyboard: calendarKeyboards.GetDateFastCommand(true),
+		},
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+}
+func (ch *CalendarHandlers) HandleGroupFindTimeNo(c *tb.Callback) {
+	if c.Sender.ID != c.Message.ReplyTo.Sender.ID {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+			Text:       calendarMessages.GetUserNotAllow(),
+			ShowAlert:  true,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+
+	session, err := ch.getSession(c.Sender)
+	if err != nil {
+		customerrors.HandlerError(err)
+		ch.handler.SendError(c.Message.Chat, err)
+		return
+	}
+
+	session.FindTimeDone = true
+	err = ch.setSession(session, c.Sender)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return
+	}
+
+	err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
+		CallbackID: c.ID,
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	err = ch.handler.bot.Delete(c.Message)
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	ch.HandleCreate(c.Message.ReplyTo)
+}
 
 func (ch *CalendarHandlers) getSession(user *tb.User) (*types.BotRedisSession, error) {
 	resp, err := ch.redisDB.Get(context.TODO(), strconv.Itoa(user.ID)).Result()
@@ -1023,6 +1132,8 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback, senderID int
 func (ch *CalendarHandlers) handleCreateText(m *tb.Message, session *types.BotRedisSession) {
 	if calendarMessages.GetCreateCancelText() == m.Text {
 		session.IsCreate = false
+		session.IsDate = false
+		session.FindTimeDone = false
 		session.Step = telegram.StepCreateInit
 		session.Event = types.Event{}
 
@@ -1272,6 +1383,42 @@ Step:
 	}
 
 }
+func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.BotRedisSession) {
+	if calendarMessages.GetCreateCancelText() == m.Text {
+		session.IsCreate = false
+		session.IsDate = false
+		session.FindTimeDone = false
+		session.Step = telegram.StepCreateInit
+		session.Event = types.Event{}
+
+		if session.InfoMsg.ChatID != 0 {
+			err := ch.handler.bot.Delete(&session.InfoMsg)
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+		}
+
+		session.InfoMsg = utils.InitCustomEditable("", 0)
+
+		err := ch.setSession(session, m.Sender)
+		if err != nil {
+			return
+		}
+
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateCanceledText(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		return
+	}
+}
 func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedisSession) {
 	if calendarMessages.GetCancelDateReplyButton() == m.Text {
 		session.IsDate = false
@@ -1451,8 +1598,6 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 					CallbackID: c.ID,
 				})
 
-
-
 				event.Attendees[idx].Status = status
 
 				inlineKeyboard, err := calendarInlineKeyboards.GroupChatButtons(event, ch.redisDB, userId)
@@ -1506,7 +1651,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 	}
 
 	event.Attendees = append(event.Attendees, types.AttendeeEvent{
-		Email: 	userInfo.Email,
+		Email:  userInfo.Email,
 		Name:   userInfo.Name,
 		Role:   telegram.RoleRequired,
 		Status: status,
@@ -1666,7 +1811,7 @@ func (ch *CalendarHandlers) ChangeStatusCallback(c *tb.Callback, token string, e
 	if err != nil {
 		return err
 	}
-	userCalId, err := ch.redisDB.Get(context.TODO(), userInfo.Email + event.Uid).Result()
+	userCalId, err := ch.redisDB.Get(context.TODO(), userInfo.Email+event.Uid).Result()
 	events, err := ch.eventUseCase.GetEventsByDate(token, event.From)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
@@ -1701,7 +1846,6 @@ func (ch *CalendarHandlers) ChangeStatusCallback(c *tb.Callback, token string, e
 		customerrors.HandlerError(err)
 	}
 
-
 	_, err = ch.eventUseCase.ChangeStatus(token, types.ChangeStatus{
 		EventID:    event.Uid,
 		CalendarID: userCalId,
@@ -1720,8 +1864,9 @@ func EventToEventInput(event types.Event) types.EventInput {
 	ret := types.EventInput{}
 
 	id := event.Uid
-	from := event.From.Format(time.RFC3339)
-	to := event.To.Format(time.RFC3339)
+	location, _ := time.LoadLocation("Europe/Moscow")
+	from := event.From.In(location).Format(time.RFC3339)
+	to := event.To.In(location).Format(time.RFC3339)
 
 	ret.Uid = &id
 	ret.From = &from

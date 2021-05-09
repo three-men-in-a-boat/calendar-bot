@@ -32,6 +32,8 @@ const (
 	eventNextTitle  = "<b>Ваше следуюшее событие</b>"
 
 	eventGetDateHeader  = "<b>Получение событий за определенную дату: </b>\n\n"
+	findTimeStartHeader = "<b>Выберите дату начала для поиска времени: </b>\n\n"
+	findTimeStopHeader = "<b>Выберите дату начала для поиска времени: </b>\n\n"
 	eventGetDateMessage = "Для выбора даты воспользуйтесь кнопками или введите дату в формате " +
 		"<pre>&lt;число&gt; &lt;название месяца&gt;</pre> (например: <pre>22 марта</pre>)"
 
@@ -99,6 +101,10 @@ const (
 	CreateEventCannotAdd = "Мы не смогли изменить ваш статус в событии - подтвердите его с помощью календаря или письма" +
 		" из почты"
 
+	CreateEventFindTimeMessage = "Найти удобное время для всех в этом чате?"
+	CreateEventFindTimeYesButton = "✅ Да"
+	CreateEventFindTimeNoButton = "❌ Нет"
+
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
 		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
 	middlewaresGroupAlertBase  = "Вы уверены, что хотите показать "
@@ -107,6 +113,7 @@ const (
 	middlewaresGroupAlertDate  = "<b>ВСЕМ</b> свои события за определенную дату?"
 
 	userNotAllow = "Вы не можете взаимодействовать с данной кнопкой"
+
 )
 
 const (
@@ -390,4 +397,12 @@ func GetCreateFullDay() string {
 
 func GetCreateEventTitle() string {
 	return createEventTitleText
+}
+
+func GetFindTimeStartText() string {
+	return findTimeStartHeader + eventGetDateMessage
+}
+
+func GetFindTimeStopText() string {
+	return findTimeStopHeader + eventGetDateMessage
 }

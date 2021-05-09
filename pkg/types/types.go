@@ -155,12 +155,13 @@ func (ft FromTo) EndType() spaniel.EndPointType {
 }
 
 type BotRedisSession struct {
-	Step           int
-	FromTextCreate bool `json:"from_text_create"`
-	IsDate         bool `json:"is_date"`
-	IsCreate       bool `json:"is_create"`
-	Event          Event
-	InfoMsg        utils.CustomEditable
+	Step           int                  `json:"step"`
+	FromTextCreate bool                 `json:"from_text_create"`
+	IsDate         bool                 `json:"is_date"`
+	IsCreate       bool                 `json:"is_create"`
+	FindTimeDone   bool                 `json:"find_time_done"`
+	Event          Event                `json:"event"`
+	InfoMsg        utils.CustomEditable `json:"info_msg"`
 }
 
 type ParseDateReq struct {
@@ -179,7 +180,7 @@ type ParseEventResp struct {
 }
 
 type CreateEvent struct {
-	Uid      string `json:"uid,omitempty"`
+	Uid      string   `json:"uid,omitempty"`
 	Calendar Calendar `json:"calendar,omitempty"`
 }
 
