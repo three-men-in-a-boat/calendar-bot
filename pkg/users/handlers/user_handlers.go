@@ -6,7 +6,7 @@ import (
 	"github.com/calendar-bot/pkg/users/usecase"
 	"github.com/calendar-bot/pkg/utils/contextutils"
 	"github.com/calendar-bot/pkg/utils/pathutils"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"net/http"
