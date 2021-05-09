@@ -34,7 +34,7 @@ type RequestHandlers struct {
 func newRequestHandler(db *sql.DB, client *redis.Client, botClient *redis.Client, conf *config.AppConfig) RequestHandlers {
 	oauthService := oauth.NewService(&conf.OAuth, client)
 
-	userStorage := uRepo.NewUserRepository(db, client)
+	userStorage := uRepo.NewUserRepository(db)
 	userUseCase := uUsecase.NewUserUseCase(userStorage, &oauthService)
 	userHandlers := uHandlers.NewUserHandlers(userUseCase)
 
