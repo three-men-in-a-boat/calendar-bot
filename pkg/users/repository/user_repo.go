@@ -80,7 +80,7 @@ func (us *UserRepository) TryGetUsersEmailsByTelegramUserIDs(telegramIDs []int64
 		placeholders,
 	)
 	queryArgs := make([]interface{}, 0, len(telegramIDs))
-	for _, id := range queryArgs {
+	for _, id := range telegramIDs {
 		queryArgs = append(queryArgs, id)
 	}
 
