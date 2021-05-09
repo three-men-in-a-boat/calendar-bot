@@ -118,6 +118,32 @@ func (uuc *UserUseCase) GetMailruUserInfo(accessToken string) (oauth.UserInfoRes
 	return response, nil
 }
 
+func (uuc *UserUseCase) GetUserEmailByTelegramUserID(telegramID int64) (string, error) {
+	email, err := uuc.userRepository.GetUserEmailByTelegramUserID(telegramID)
+	if err != nil {
+		switch err.(type) {
+		case repository.UserEntityError:
+			return "", err
+		default:
+			return "", errors.Wrap(err, "GetUserEmailByTelegramUserID")
+		}
+	}
+	return email, nil
+}
+
+func (uuc *UserUseCase) TryGetUsersEmailsByTelegramUserIDs(telegramIDs []int64) ([]string, error) {
+	emails, err := uuc.userRepository.TryGetUsersEmailsByTelegramUserIDs(telegramIDs)
+	if err != nil {
+		switch err.(type) {
+		case repository.UserEntityError:
+			return nil, err
+		default:
+			return nil, errors.Wrap(err, "TryGetUsersEmailsByTelegramUserIDs")
+		}
+	}
+	return emails, nil
+}
+
 func (uuc *UserUseCase) IsUserAuthenticatedByTelegramUserID(telegramID int64) (bool, error) {
 	_, err := uuc.getOAuthAccessTokenByTelegramUserID(telegramID)
 	if err == nil {
