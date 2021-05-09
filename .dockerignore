@@ -1,0 +1,43 @@
+# Binaries for programs and plugins
+.idea/
+build/
+.vscode/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.env
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+
+### Go Patch ###
+/vendor/
+/Godeps/
+
+# Other
+tmp/
+systemd/
+postgresql-schemas/
+ngrok
+README.md
+
+# Git
+.github/
+.git/
+.gitignore
+
+# Go other
+.golangci.yml
+go.sum
+
+# Docker
+Dockerfile
+.dockerignore
