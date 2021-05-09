@@ -61,7 +61,7 @@ func init() {
 	}
 
 	if dotenvErr != nil {
-		zap.S().Info("No .env file found: %v", dotenvErr)
+		zap.S().Infof("No .env file found: %v", dotenvErr)
 	}
 
 	govalidator.SetFieldsRequiredByDefault(true)
@@ -122,7 +122,7 @@ func main() {
 
 	server.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
-	go func() { server.Logger.Fatal(server.Start(appConf.Address)) }()
+	go func() { zap.S().Fatal(server.Start(appConf.Address)) }()
 
 	bot.Start()
 }

@@ -29,13 +29,10 @@ func (o *APIResponseErr) Error() string {
 }
 
 func (o *APIResponseErr) IsError() bool {
-	if o == nil {
+	if o == nil || o.ErrorName == "" {
 		return false
 	}
-	if o.ErrorName != "" {
-		return true
-	}
-	return false
+	return true
 }
 
 func (o *APIResponseErr) GetError() *APIResponseErr {
