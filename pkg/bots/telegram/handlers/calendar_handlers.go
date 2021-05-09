@@ -67,6 +67,7 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	bot.Handle("\f"+telegram.GroupNotGo, ch.HandleGroupNotGo)
 	bot.Handle("\f"+telegram.GroupFindTimeNo, ch.HandleGroupFindTimeNo)
 	bot.Handle("\f"+telegram.GroupFindTimeYes, ch.HandleGroupFindTimeYes)
+	bot.Handle("\f"+telegram.FindTimeDayPart, ch.HandleFindTimeDayPart)
 	bot.Handle(tb.OnText, ch.HandleText)
 }
 
@@ -1002,6 +1003,108 @@ func (ch *CalendarHandlers) HandleGroupFindTimeNo(c *tb.Callback) {
 
 	ch.HandleCreate(c.Message.ReplyTo)
 }
+func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
+	if c.Sender.ID != c.Message.ReplyTo.Sender.ID {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+			Text:       calendarMessages.GetUserNotAllow(),
+			ShowAlert:  true,
+		})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+
+	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+		CallbackID: c.ID,
+	})
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
+
+	session, err := ch.getSession(c.Sender)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+	}
+
+	if c.Data == calendarMessages.GetCreateCancelText() {
+		session.IsCreate = false
+		session.IsDate = false
+		session.FindTimeDone = false
+		session.Step = telegram.StepCreateInit
+		session.Event = types.Event{}
+		session.FreeBusy = types.FreeBusy{}
+		session.DayPart = nil
+
+		if session.InfoMsg.ChatID != 0 {
+			err := ch.handler.bot.Delete(&session.InfoMsg)
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+		}
+
+		session.InfoMsg = utils.InitCustomEditable("", 0)
+
+		err = ch.setSession(session, c.Sender)
+		if err != nil {
+			return
+		}
+
+		_, err = ch.handler.bot.Send(c.Message.Chat, calendarMessages.GetCreateCanceledText(), &tb.SendOptions{
+			ParseMode: tb.ModeHTML,
+			ReplyMarkup: &tb.ReplyMarkup{
+				ReplyKeyboardRemove: true,
+			},
+		})
+
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		err = ch.handler.bot.Delete(c.Message)
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+
+	if c.Data == "All day" {
+		session.DayPart = nil
+		err = ch.setSession(session, c.Sender)
+		if err != nil {
+			ch.handler.SendError(c.Message.Chat, err)
+			customerrors.HandlerError(err)
+		}
+
+		return
+	}
+
+	t, err := time.Parse(time.RFC3339, c.Data)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return
+	}
+
+	d, _ :=time.ParseDuration("6h")
+
+	session.DayPart = &types.DayPart{
+		Start: t,
+		Duration: d,
+	}
+
+	err = ch.setSession(session, c.Sender)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return
+	}
+
+
+
+}
 
 func (ch *CalendarHandlers) getSession(user *tb.User) (*types.BotRedisSession, error) {
 	resp, err := ch.redisDB.Get(context.TODO(), strconv.Itoa(user.ID)).Result()
@@ -1390,6 +1493,8 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 		session.FindTimeDone = false
 		session.Step = telegram.StepCreateInit
 		session.Event = types.Event{}
+		session.FreeBusy = types.FreeBusy{}
+		session.DayPart = nil
 
 		if session.InfoMsg.ChatID != 0 {
 			err := ch.handler.bot.Delete(&session.InfoMsg)
@@ -1418,6 +1523,93 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 
 		return
 	}
+
+	if !session.FreeBusy.From.IsZero() && !session.FreeBusy.To.IsZero() {
+		return
+	}
+
+	resp := ch.ParseDate(m)
+	if resp == nil {
+		return
+	}
+
+	if resp.Date.IsZero() {
+		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateNotParsed())
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+
+	if session.FreeBusy.From.IsZero() {
+		t := resp.Date
+		session.FreeBusy.From = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+
+		err := ch.setSession(session, m.Sender)
+		if err != nil {
+			ch.handler.SendError(m.Chat, err)
+			customerrors.HandlerError(err)
+			return
+		}
+
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetFindTimeStopText(session.FreeBusy.From),
+			&tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+				ReplyMarkup: &tb.ReplyMarkup{
+					ReplyKeyboard: calendarKeyboards.GetDateFastCommand(true),
+				},
+			})
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+		return
+	}
+
+	if session.FreeBusy.To.IsZero() {
+		if resp.Date.Before(session.FreeBusy.From) {
+			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.EventDateToIsBeforeFrom, &tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+			})
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+		} else {
+			t := resp.Date
+			session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, t.Location())
+
+			err := ch.setSession(session, m.Sender)
+			if err != nil {
+				ch.handler.SendError(m.Chat, err)
+				customerrors.HandlerError(err)
+				return
+			}
+
+			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetFindTimeInfoText(session.FreeBusy.From,
+				session.FreeBusy.To),
+				&tb.SendOptions{
+					ParseMode: tb.ModeHTML,
+					ReplyMarkup: &tb.ReplyMarkup{
+						ReplyKeyboardRemove: true,
+					},
+				})
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+
+			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.FindTimeChooseDayPartHeader,
+				&tb.SendOptions{
+					ParseMode: tb.ModeHTML,
+					ReplyMarkup: &tb.ReplyMarkup{
+						InlineKeyboard: calendarInlineKeyboards.FindTimeDayPartButtons(session.FreeBusy.From),
+					},
+					ReplyTo: m,
+				})
+			if err != nil {
+				customerrors.HandlerError(err)
+			}
+		}
+	}
+
 }
 func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedisSession) {
 	if calendarMessages.GetCancelDateReplyButton() == m.Text {

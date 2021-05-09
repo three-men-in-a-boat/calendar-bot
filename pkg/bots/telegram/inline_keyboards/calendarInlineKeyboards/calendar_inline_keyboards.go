@@ -9,6 +9,7 @@ import (
 	tb "gopkg.in/tucnak/telebot.v2"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func EventShowMoreInlineKeyboard(event *types.Event, db *redis.Client) ([][]tb.InlineButton, error) {
@@ -105,12 +106,54 @@ func GroupChatButtons(event *types.Event, db *redis.Client, senderID int) ([][]t
 func GroupFindTimeButtons() [][]tb.InlineButton {
 	return [][]tb.InlineButton{{
 		{
-			Text: calendarMessages.CreateEventFindTimeYesButton,
+			Text:   calendarMessages.CreateEventFindTimeYesButton,
 			Unique: telegram.GroupFindTimeYes,
 		},
 		{
-			Text: calendarMessages.CreateEventFindTimeNoButton,
+			Text:   calendarMessages.CreateEventFindTimeNoButton,
 			Unique: telegram.GroupFindTimeNo,
 		},
 	}}
+}
+
+func FindTimeDayPartButtons(t time.Time) [][]tb.InlineButton {
+	return [][]tb.InlineButton{
+		{
+			{
+				Text: "Утром",
+				Unique: telegram.FindTimeDayPart,
+				Data: time.Date(t.Year(), t.Month(), t.Day(), 6,0,0,0, t.Location()).Format(time.RFC3339),
+			},
+			{
+				Text: "Днем",
+				Unique: telegram.FindTimeDayPart,
+				Data: time.Date(t.Year(), t.Month(), t.Day(), 12,0,0,0, t.Location()).Format(time.RFC3339),
+			},
+		},
+		{
+			{
+				Text: "Вечером",
+				Unique: telegram.FindTimeDayPart,
+				Data: time.Date(t.Year(), t.Month(), t.Day(), 18,0,0,0, t.Location()).Format(time.RFC3339),
+			},
+			{
+				Text: "Ночью",
+				Unique: telegram.FindTimeDayPart,
+				Data: time.Date(t.Year(), t.Month(), t.Day(), 0,0,0,0, t.Location()).Format(time.RFC3339),
+			},
+		},
+		{
+			{
+				Text: "В любое время",
+				Unique: telegram.FindTimeDayPart,
+				Data: "All day",
+			},
+
+			{
+				Text: calendarMessages.GetCreateCancelText(),
+				Unique: telegram.FindTimeDayPart,
+				Data: calendarMessages.GetCreateCancelText(),
+			},
+		},
+	}
 }

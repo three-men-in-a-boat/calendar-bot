@@ -154,6 +154,11 @@ func (ft FromTo) EndType() spaniel.EndPointType {
 	return spaniel.Open
 }
 
+type DayPart struct {
+	Start    time.Time
+	Duration time.Duration
+}
+
 type BotRedisSession struct {
 	Step           int                  `json:"step"`
 	FromTextCreate bool                 `json:"from_text_create"`
@@ -161,6 +166,8 @@ type BotRedisSession struct {
 	IsCreate       bool                 `json:"is_create"`
 	FindTimeDone   bool                 `json:"find_time_done"`
 	Event          Event                `json:"event"`
+	FreeBusy       FreeBusy             `json:"free_busy"`
+	DayPart        *DayPart              `json:"day_part"`
 	InfoMsg        utils.CustomEditable `json:"info_msg"`
 }
 

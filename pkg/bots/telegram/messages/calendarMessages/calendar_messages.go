@@ -31,17 +31,21 @@ const (
 	eventDateTitle  = "<b>Ваши события за %s</b>"
 	eventNextTitle  = "<b>Ваше следуюшее событие</b>"
 
-	eventGetDateHeader  = "<b>Получение событий за определенную дату: </b>\n\n"
-	findTimeStartHeader = "<b>Выберите дату начала для поиска времени: </b>\n\n"
-	findTimeStopHeader = "<b>Выберите дату начала для поиска времени: </b>\n\n"
-	eventGetDateMessage = "Для выбора даты воспользуйтесь кнопками или введите дату в формате " +
+	eventGetDateHeader          = "<b>Получение событий за определенную дату: </b>\n\n"
+	findTimeStartHeader         = "<b>Выберите дату начала для поиска времени: </b>\n\n"
+	findTimeStopHeader          = "<b>Выберите дату оконачания для поиска времени: </b>\n\n"
+	findTimeInfoHeader          = "<b>Поиск будет производиться этом временном промежутке </b>\n\n"
+	findTimeStartTime           = "<b>Начало поиска: </b> %s\n"
+	findTimeStopTime            = "<b>Окончание поиска: </b> %s"
+	FindTimeChooseDayPartHeader = "<b>Выберите период дня для события</b>\n\n"
+	eventGetDateMessage         = "Для выбора даты воспользуйтесь кнопками или введите дату в формате " +
 		"<pre>&lt;число&gt; &lt;название месяца&gt;</pre> (например: <pre>22 марта</pre>)"
 
 	eventNoTodayEventsFound  = "У вас нет событий сегодня"
 	eventNoDateEventsFound   = "У вас нет событий за выбранную дату"
 	eventNoClosestEventFound = "У вас больше нет событий сегодня"
 
-	eventDateNotParsed   = "Мы не смогли распознать дату, попробуйте еще раз"
+	eventDateNotParsed      = "Мы не смогли распознать дату, попробуйте еще раз"
 	EventDateToIsBeforeFrom = "<b>Введенная дата раньше начала события, введите корректную дату.</b>\n\n" +
 		"Если вы хотите переставить события на другое время - измените время начала события"
 	eventSessionNotFound = "Мы не смогли найти необходимую информацию для обработки запроса.\nВоспользуйтесь нужной вам " +
@@ -64,10 +68,10 @@ const (
 	createEventToText = "<b>Введите время окончания события</b>\n\nДля продолжительности события" +
 		" воспользуйтесь кнопками или введите дату оконочания в формате <pre>&lt;число&gt; &lt;название месяца&gt; " +
 		"&lt;ЧЧ:ММ&gt;</pre> (например: <pre>22 марта 15:00</pre>)"
-	createEventTitleText = "<b>Введите название события</b>"
-	CreateEventDescText = "<b>Введите описание события</b>"
+	createEventTitleText    = "<b>Введите название события</b>"
+	CreateEventDescText     = "<b>Введите описание события</b>"
 	CreateEventLocationText = "<b>Введите место события</b>"
-	CreateEventUserText = "<b>Введите email пользователя, которого хотите добавить</b>"
+	CreateEventUserText     = "<b>Введите email пользователя, которого хотите добавить</b>"
 
 	createEventCreateText   = "Создать событие"
 	createEventCreatedText  = "Событие успешно создано"
@@ -83,27 +87,27 @@ const (
 	createEventFullDay     = "Весь день"
 
 	CreateEventChangeStartTimeButton = "Изменить время начала"
-	CreateEventChangeStopTimeButton = "Изменить время окончания"
-	CreateEventAddTitleButton = "Добавить название"
-	CreateEventChangeTitleButton = "Изменить название"
-	CreateEventAddDescButton = "Добавить описание"
-	CreateEventChangeDescButton = "Изменить описание"
-	CreateEventAddLocationButton = "Добавить место"
-	CreateEventChangeLocationButton = "Изменить место"
-	CreateEventAddUser = "Добавить участников"
+	CreateEventChangeStopTimeButton  = "Изменить время окончания"
+	CreateEventAddTitleButton        = "Добавить название"
+	CreateEventChangeTitleButton     = "Изменить название"
+	CreateEventAddDescButton         = "Добавить описание"
+	CreateEventChangeDescButton      = "Изменить описание"
+	CreateEventAddLocationButton     = "Добавить место"
+	CreateEventChangeLocationButton  = "Изменить место"
+	CreateEventAddUser               = "Добавить участников"
 
-	CreateEventGo = "✅ Я иду"
+	CreateEventGo    = "✅ Я иду"
 	CreateEventNotGo = "❌ Я не иду"
 
 	CreateEventAlreadyOrganize = "Вы являетесь создателем события и учавстуете в нем по умолчанию"
-	CreateEventAlreadyGo = "Вы уже дали согласие на участие в событии"
-	CreateEventAlreadyNotGo = "Вы уже дали отказ от участия в событии"
-	CreateEventCannotAdd = "Мы не смогли изменить ваш статус в событии - подтвердите его с помощью календаря или письма" +
+	CreateEventAlreadyGo       = "Вы уже дали согласие на участие в событии"
+	CreateEventAlreadyNotGo    = "Вы уже дали отказ от участия в событии"
+	CreateEventCannotAdd       = "Мы не смогли изменить ваш статус в событии - подтвердите его с помощью календаря или письма" +
 		" из почты"
 
-	CreateEventFindTimeMessage = "Найти удобное время для всех в этом чате?"
+	CreateEventFindTimeMessage   = "Найти удобное время для всех в этом чате?"
 	CreateEventFindTimeYesButton = "✅ Да"
-	CreateEventFindTimeNoButton = "❌ Нет"
+	CreateEventFindTimeNoButton  = "❌ Нет"
 
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
 		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
@@ -113,7 +117,6 @@ const (
 	middlewaresGroupAlertDate  = "<b>ВСЕМ</b> свои события за определенную дату?"
 
 	userNotAllow = "Вы не можете взаимодействовать с данной кнопкой"
-
 )
 
 const (
@@ -403,6 +406,12 @@ func GetFindTimeStartText() string {
 	return findTimeStartHeader + eventGetDateMessage
 }
 
-func GetFindTimeStopText() string {
-	return findTimeStopHeader + eventGetDateMessage
+func GetFindTimeStopText(time time.Time) string {
+	return findTimeStopHeader + fmt.Sprintf(findTimeStartTime, monday.Format(time, formatDate, locale)) +
+		"\n" + eventGetDateMessage
+}
+
+func GetFindTimeInfoText(timeFrom, timeTo time.Time) string {
+	return findTimeInfoHeader + fmt.Sprintf(findTimeStartTime, monday.Format(timeFrom, formatDate, locale)) +
+		fmt.Sprintf(findTimeStopTime, monday.Format(timeTo, formatDate, locale))
 }

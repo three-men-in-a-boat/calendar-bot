@@ -11,6 +11,7 @@ const (
 	GroupNotGo = "GNG"
 	GroupFindTimeYes = "GFTY"
 	GroupFindTimeNo = "GFTN"
+	FindTimeDayPart = "FTDP"
 
 	Today = "/today"
 	Next  = "/next"
