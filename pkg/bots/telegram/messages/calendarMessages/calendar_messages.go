@@ -428,13 +428,17 @@ func GetFindTimeInfoText(timeFrom, timeTo time.Time) string {
 
 func GenOptionsForPoll(spans spaniel.Spans) []string {
 	str := make([]string, 0)
-
+	counter := 0
 	for _, span := range spans {
+		if counter == 9 {
+			return str
+		}
 		str = append(str, fmt.Sprintf(findTimeTextFormat,
 			monday.Format(span.Start(), formatSpan, locale),
 			monday.Format(span.Start(), formatTime, locale),
 			monday.Format(span.End(), formatTime, locale),
 		))
+		counter++
 	}
 
 	return str
