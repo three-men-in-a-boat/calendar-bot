@@ -148,7 +148,7 @@ func metricStatusFromErr(err error) string {
 	}
 	switch err := errors.Cause(err).(type) {
 	case *APIResponseErr:
-		return fmt.Sprintf("api_err_%d", err.ErrorCode)
+		return fmt.Sprintf("oauth_api_err_%d", err.ErrorCode)
 	case redis.Error:
 		switch err {
 		case redis.Nil:
