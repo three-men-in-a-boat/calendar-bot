@@ -192,6 +192,15 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 		return
 	}
 
+	if currSession.IsCreate {
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.DateCreateAlreadyError)
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		return
+	}
+
 	currSession.IsDate = true
 	currSession.IsCreate = false
 	err = ch.setSession(currSession, m.Sender)
@@ -216,6 +225,16 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 	if err != nil {
 		customerrors.HandlerError(err)
 		ch.handler.SendError(m.Chat, err)
+		return
+	}
+
+
+	if session.IsCreate {
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateAlreadyError)
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
 		return
 	}
 
@@ -1062,6 +1081,23 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 		err = ch.setSession(session, c.Sender)
 		if err != nil {
 			ch.handler.SendError(c.Message.Chat, err)
+			customerrors.HandlerError(err)
+		}
+
+		err = ch.handler.bot.Delete(c.Message)
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
+
+		_, err = ch.handler.bot.Send(c.Message.Chat, calendarMessages.FindTimeChooseLengthHeader,
+			&tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+				ReplyMarkup: &tb.ReplyMarkup{
+					InlineKeyboard: calendarInlineKeyboards.FindTimeLengthButtons(),
+				},
+				ReplyTo: c.Message.ReplyTo,
+			})
+		if err != nil {
 			customerrors.HandlerError(err)
 		}
 

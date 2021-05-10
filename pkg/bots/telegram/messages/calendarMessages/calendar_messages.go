@@ -64,6 +64,8 @@ const (
 	eventShowNotFoundError = "К сожалению мы не смогли найти информацию о событии.\nВозможно, это старое сообщение." +
 		"\nЗапросите событие с помощью бота заново."
 	eventCallbackResponseText = "Событие: %s"
+	CreateAlreadyError = "Вы уже создаете событие"
+	DateCreateAlreadyError = "Закончите создание события для просмотра событий за определенную дату"
 
 	eventCancelSearchDate   = "Отмена поиска событий за опреденную дату"
 	eventCanceledSearchDate = "Поиск события отменен"
