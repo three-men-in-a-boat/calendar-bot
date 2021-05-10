@@ -18,9 +18,9 @@ import (
 	uUsecase "github.com/calendar-bot/pkg/users/usecase"
 	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
-	"github.com/labstack/echo"
+	echoProm "github.com/labstack/echo-contrib/prometheus"
+	"github.com/labstack/echo/v4"
 	_ "github.com/lib/pq"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	tb "gopkg.in/tucnak/telebot.v2"
 )
@@ -61,7 +61,7 @@ func init() {
 	}
 
 	if dotenvErr != nil {
-		zap.S().Info("No .env file found: %v", dotenvErr)
+		zap.S().Infof("No .env file found: %v", dotenvErr)
 	}
 
 	govalidator.SetFieldsRequiredByDefault(true)
@@ -120,9 +120,9 @@ func main() {
 	allHandler.telegramBaseHandlers.InitHandlers(bot)
 	allHandler.telegramCalendarHandlers.InitHandlers(bot)
 
-	server.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
+	echoProm.NewPrometheus("http", nil).Use(server)
 
-	go func() { server.Logger.Fatal(server.Start(appConf.Address)) }()
+	go func() { zap.S().Fatal(server.Start(appConf.Address)) }()
 
 	bot.Start()
 }

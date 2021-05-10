@@ -6,6 +6,7 @@ import (
 	"github.com/calendar-bot/pkg/types"
 	"github.com/calendar-bot/pkg/users/repository"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"time"
 )
 
@@ -47,7 +48,13 @@ func (uuc *UserUseCase) GetTelegramUserIDByState(state string) (int64, error) {
 	return telegramUserID, nil
 }
 
-func (uuc *UserUseCase) GetOrRefreshOAuthAccessTokenByTelegramUserID(telegramID int64) (string, error) {
+func (uuc *UserUseCase) GetOrRefreshOAuthAccessTokenByTelegramUserID(telegramID int64) (token string, err error) {
+	timer := prometheus.NewTimer(metricGetOrRefreshOAuthAccessTokenByTelegramUserIDDuration)
+	defer func() {
+		metricGetOrRefreshOAuthAccessTokenByTelegramUserIDTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
 	oAuthToken, err := uuc.getOAuthAccessTokenByTelegramUserID(telegramID)
 	switch {
 	case err == oauth.AccessTokenDoesNotExist:
@@ -67,6 +74,12 @@ func (uuc *UserUseCase) GetOrRefreshOAuthAccessTokenByTelegramUserID(telegramID 
 }
 
 func (uuc *UserUseCase) TelegramCreateAuthenticatedUser(tgUserID int64, mailAuthCode string) (err error) {
+	timer := prometheus.NewTimer(metricTelegramCreateAuthenticatedUserDuration)
+	defer func() {
+		metricTelegramCreateAuthenticatedUserTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
 	tokenResp, err := uuc.oauthService.ObtainTokensFromOAuthHost(mailAuthCode)
 	if err != nil {
 		switch err.(type) {
@@ -118,8 +131,14 @@ func (uuc *UserUseCase) GetMailruUserInfo(accessToken string) (oauth.UserInfoRes
 	return response, nil
 }
 
-func (uuc *UserUseCase) GetUserEmailByTelegramUserID(telegramID int64) (string, error) {
-	email, err := uuc.userRepository.GetUserEmailByTelegramUserID(telegramID)
+func (uuc *UserUseCase) GetUserEmailByTelegramUserID(telegramID int64) (email string, err error) {
+	timer := prometheus.NewTimer(metricGetUserEmailByTelegramUserIDDuration)
+	defer func() {
+		metricGetUserEmailByTelegramUserIDCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
+	email, err = uuc.userRepository.GetUserEmailByTelegramUserID(telegramID)
 	if err != nil {
 		switch err.(type) {
 		case repository.UserEntityError:
@@ -131,8 +150,14 @@ func (uuc *UserUseCase) GetUserEmailByTelegramUserID(telegramID int64) (string, 
 	return email, nil
 }
 
-func (uuc *UserUseCase) TryGetUsersEmailsByTelegramUserIDs(telegramIDs []int64) ([]string, error) {
-	emails, err := uuc.userRepository.TryGetUsersEmailsByTelegramUserIDs(telegramIDs)
+func (uuc *UserUseCase) TryGetUsersEmailsByTelegramUserIDs(telegramIDs []int64) (emails []string, err error) {
+	timer := prometheus.NewTimer(metricTryGetUsersEmailsByTelegramUserIDsDuration)
+	defer func() {
+		metricTryGetUsersEmailsByTelegramUserIDsCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
+	emails, err = uuc.userRepository.TryGetUsersEmailsByTelegramUserIDs(telegramIDs)
 	if err != nil {
 		switch err.(type) {
 		case repository.UserEntityError:
@@ -144,8 +169,14 @@ func (uuc *UserUseCase) TryGetUsersEmailsByTelegramUserIDs(telegramIDs []int64) 
 	return emails, nil
 }
 
-func (uuc *UserUseCase) IsUserAuthenticatedByTelegramUserID(telegramID int64) (bool, error) {
-	_, err := uuc.getOAuthAccessTokenByTelegramUserID(telegramID)
+func (uuc *UserUseCase) IsUserAuthenticatedByTelegramUserID(telegramID int64) (isAuth bool, err error) {
+	timer := prometheus.NewTimer(metricIsUserAuthenticatedByTelegramUserIDDuration)
+	defer func() {
+		metricIsUserAuthenticatedByTelegramUserIDCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
+	_, err = uuc.getOAuthAccessTokenByTelegramUserID(telegramID)
 	if err == nil {
 		return true, nil
 	}
@@ -191,7 +222,13 @@ func (uuc *UserUseCase) refreshOAuthTokenByTelegramUserID(telegramID int64) (str
 	return tokenResp.AccessToken, nil
 }
 
-func (uuc *UserUseCase) DeleteLocalAuthenticatedUserByTelegramUserID(telegramID int64) error {
+func (uuc *UserUseCase) DeleteLocalAuthenticatedUserByTelegramUserID(telegramID int64) (err error) {
+	timer := prometheus.NewTimer(metricDeleteLocalAuthenticatedUserByTelegramUserIDDuration)
+	defer func() {
+		metricDeleteLocalAuthenticatedUserByTelegramUserIDCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
 	if err := uuc.delOAuthAccessTokenByTelegramUserID(telegramID); err != nil {
 		return errors.Wrapf(err, "failed to delete acces token in redis by telegramUserID=%d", telegramID)
 	}

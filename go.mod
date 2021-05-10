@@ -10,7 +10,8 @@ require (
 	github.com/goodsign/monday v1.0.0
 	github.com/google/uuid v1.2.0
 	github.com/joho/godotenv v1.3.0
-	github.com/labstack/echo v3.3.10+incompatible
+	github.com/labstack/echo-contrib v0.9.0
+	github.com/labstack/echo/v4 v4.1.6
 	github.com/labstack/gommon v0.3.0 // indirect
 	github.com/lib/pq v1.10.0
 	github.com/pkg/errors v0.9.1
