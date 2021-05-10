@@ -234,6 +234,7 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 		}
 	}
 
+	session.FindTimeDone = true
 	session.IsDate = false
 	session.IsCreate = true
 	session.Event = types.Event{}
@@ -376,6 +377,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 						ParseMode: tb.ModeHTML,
 						ReplyMarkup: &tb.ReplyMarkup{
 							ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+							OneTimeKeyboard: true,
 						},
 					})
 
@@ -389,6 +391,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 						ParseMode: tb.ModeHTML,
 						ReplyMarkup: &tb.ReplyMarkup{
 							ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+							OneTimeKeyboard: true,
 						},
 					})
 
@@ -417,9 +420,6 @@ func (ch *CalendarHandlers) HandleDescChange(m *tb.Message) {
 		session.Step = telegram.StepCreateDesc
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventDescText, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
-			ReplyMarkup: &tb.ReplyMarkup{
-				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
-			},
 		})
 
 		if err != nil {
@@ -445,9 +445,6 @@ func (ch *CalendarHandlers) HandleTitleChange(m *tb.Message) {
 		session.Step = telegram.StepCreateTitle
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
-			ReplyMarkup: &tb.ReplyMarkup{
-				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
-			},
 		})
 
 		if err != nil {
@@ -473,9 +470,6 @@ func (ch *CalendarHandlers) HandleUserChange(m *tb.Message) {
 		session.Step = telegram.StepCreateUser
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventUserText, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
-			ReplyMarkup: &tb.ReplyMarkup{
-				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
-			},
 		})
 
 		if err != nil {
@@ -501,9 +495,6 @@ func (ch *CalendarHandlers) HandleStartTimeChange(m *tb.Message) {
 		session.Step = telegram.StepCreateFrom
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateInitText(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
-			ReplyMarkup: &tb.ReplyMarkup{
-				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
-			},
 		})
 
 		if err != nil {
@@ -529,9 +520,6 @@ func (ch *CalendarHandlers) HandleStopTimeChange(m *tb.Message) {
 		session.Step = telegram.StepCreateTo
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventToText(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
-			ReplyMarkup: &tb.ReplyMarkup{
-				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
-			},
 		})
 
 		if err != nil {
@@ -557,9 +545,6 @@ func (ch *CalendarHandlers) HandleLocationChange(m *tb.Message) {
 		session.Step = telegram.StepCreateLocation
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.CreateEventLocationText, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
-			ReplyMarkup: &tb.ReplyMarkup{
-				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
-			},
 		})
 
 		if err != nil {
@@ -598,7 +583,6 @@ func (ch *CalendarHandlers) HandleFullDayChange(m *tb.Message) {
 				ReplyTo:   m,
 				ReplyMarkup: &tb.ReplyMarkup{
 					InlineKeyboard: calendarInlineKeyboards.CreateEventButtons(session.Event),
-					ReplyKeyboard:  calendarKeyboards.GetCreateOptionButtons(session),
 				},
 			})
 
@@ -1321,6 +1305,7 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback)  {
 		ParseMode: tb.ModeHTML,
 		ReplyMarkup: &tb.ReplyMarkup{
 			ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+			OneTimeKeyboard: true,
 		},
 	})
 
@@ -1576,18 +1561,8 @@ Step:
 		}
 
 		if parsedDate.Date.Before(session.Event.From) {
-			var replyKeyboard [][]tb.ReplyButton = nil
-
-			if session.Event.To.IsZero() {
-				replyKeyboard = calendarKeyboards.GetCreateDuration()
-			} else {
-				replyKeyboard = calendarKeyboards.GetCreateOptionButtons(session)
-			}
 			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.EventDateToIsBeforeFrom, &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
-				ReplyMarkup: &tb.ReplyMarkup{
-					ReplyKeyboard: replyKeyboard,
-				},
 			})
 			if err != nil {
 				customerrors.HandlerError(err)
@@ -1599,7 +1574,7 @@ Step:
 			session.Step = telegram.StepCreateTitle
 		}
 
-		session.Event.From = parsedDate.Date
+		session.Event.To = parsedDate.Date
 		break Step
 	case telegram.StepCreateTitle:
 		session.Event.Title = m.Text
@@ -1671,6 +1646,7 @@ Step:
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+				OneTimeKeyboard: true,
 			},
 		})
 
@@ -1693,6 +1669,7 @@ Step:
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboard: calendarKeyboards.GetCreateOptionButtons(session),
+				OneTimeKeyboard: true,
 			},
 		})
 
