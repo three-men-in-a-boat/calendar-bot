@@ -397,6 +397,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 
 			session.IsCreate = true
 			session.FromTextCreate = true
+			session.FindTimeDone = true
 			session.Event = types.Event{}
 			session.Step = telegram.StepCreateInit
 			session.Event.From = data.EventStart
@@ -877,13 +878,10 @@ func (ch *CalendarHandlers) HandleAlertYes(c *tb.Callback) {
 	switch c.Data {
 	case telegram.Today:
 		ch.HandleToday(c.Message)
-		break
 	case telegram.Next:
 		ch.HandleNext(c.Message)
-		break
 	case telegram.Date:
 		ch.HandleDate(c.Message)
-		break
 	}
 
 }
@@ -1055,6 +1053,10 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 				InlineKeyboard: groupButtons,
 			},
 		})
+
+	if err != nil {
+		customerrors.HandlerError(err)
+	}
 
 	session.IsCreate = false
 	session.IsDate = false
@@ -1595,22 +1597,16 @@ func (ch *CalendarHandlers) HandleGroupText(c *tb.Callback) {
 	switch c.Data {
 	case calendarMessages.CreateEventAddDescButton, calendarMessages.CreateEventChangeDescButton:
 		ch.HandleDescChange(c.Message.ReplyTo)
-		break
 	case calendarMessages.CreateEventAddTitleButton, calendarMessages.CreateEventChangeTitleButton:
 		ch.HandleTitleChange(c.Message.ReplyTo)
-		break
 	case calendarMessages.CreateEventAddLocationButton, calendarMessages.CreateEventChangeLocationButton:
 		ch.HandleLocationChange(c.Message.ReplyTo)
-		break
 	case calendarMessages.CreateEventAddUser:
 		ch.HandleUserChange(c.Message.ReplyTo)
-		break
 	case calendarMessages.CreateEventChangeStartTimeButton:
 		ch.HandleStartTimeChange(c.Message.ReplyTo)
-		break
 	case calendarMessages.CreateEventChangeStopTimeButton:
 		ch.HandleStopTimeChange(c.Message.ReplyTo)
-		break
 	case calendarMessages.GetCreateFullDay():
 		ch.HandleFullDayChange(c.Message.ReplyTo)
 	default:
@@ -1677,7 +1673,7 @@ func (ch *CalendarHandlers) setSession(session *types.BotRedisSession, user *tb.
 }
 func (ch *CalendarHandlers) sendShortEvents(events *types.Events, user tb.Recipient, chat *tb.Chat) {
 	for _, event := range *events {
-		var err error = nil
+		var err error
 		var keyboard [][]tb.InlineButton = nil
 		if chat.Type == tb.ChatPrivate {
 			keyboard, err = calendarInlineKeyboards.EventShowMoreInlineKeyboard(&event, ch.redisDB)
@@ -1894,7 +1890,6 @@ Step:
 			Role:   telegram.RoleRequired,
 			Status: telegram.StatusNeedsAction,
 		})
-		break
 	case telegram.StepCreateLocation:
 		session.Event.Location.Description = m.Text
 		break Step
@@ -2352,6 +2347,10 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 					CallbackID: c.ID,
 				})
 
+				if err != nil {
+					customerrors.HandlerError(err)
+				}
+
 				event.Attendees[idx].Status = status
 
 				inlineKeyboard, err := calendarInlineKeyboards.GroupChatButtons(event, ch.redisDB, userId)
@@ -2463,6 +2462,10 @@ func (ch *CalendarHandlers) ParseDate(m *tb.Message) *types.ParseDateResp {
 	}(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		ch.handler.SendError(m.Chat, err)
+		customerrors.HandlerError(err)
+	}
 
 	parseDate := &types.ParseDateResp{}
 	err = json.Unmarshal(body, parseDate)
@@ -2507,6 +2510,11 @@ func (ch *CalendarHandlers) ParseEvent(m *tb.Message) *types.ParseEventResp {
 	}(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		ch.handler.SendError(m.Chat, err)
+		customerrors.HandlerError(err)
+	}
 
 	parseDate := &types.ParseEventResp{}
 	err = json.Unmarshal(body, parseDate)
@@ -2644,6 +2652,11 @@ func (ch *CalendarHandlers) ChangeStatusCallback(c *tb.Callback, token string, e
 		return err
 	}
 	userCalId, err := ch.redisDB.Get(context.TODO(), userInfo.Email+event.Uid).Result()
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err)
+		return err
+	}
 	events, err := ch.eventUseCase.GetEventsByDate(token, event.From)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)

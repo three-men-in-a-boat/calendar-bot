@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-
-
 // ------------span modifiers----
 
 func StretchOutSpan(span spaniel.Span, d time.Duration) spaniel.Span {

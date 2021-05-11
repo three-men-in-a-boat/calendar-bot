@@ -2,11 +2,10 @@ package handlers
 
 import (
 	"github.com/calendar-bot/pkg/services/oauth"
-	"github.com/calendar-bot/pkg/users/repository"
 	"github.com/calendar-bot/pkg/users/usecase"
 	"github.com/calendar-bot/pkg/utils/contextutils"
 	"github.com/calendar-bot/pkg/utils/pathutils"
-	"github.com/labstack/echo/v4"
+
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"net/http"
@@ -34,37 +33,6 @@ func (uh *UserHandlers) InitHandlers(server *echo.Echo) {
 	//userRouter.DELETE("", uh.deleteLocalAuthenticatedUser)
 
 	server.GET("/api/v1/oauth", uh.telegramOAuth)
-}
-
-func (uh *UserHandlers) generateOAuthLinkWithState(ctx echo.Context) error {
-	telegramID, err := pathutils.GetTelegramUserIDFromPathParams(ctx)
-	if err != nil {
-		return ctx.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-	}
-
-	link, err := uh.userUseCase.GenOauthLinkForTelegramID(telegramID)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	return ctx.String(http.StatusOK, link)
-}
-
-func (uh *UserHandlers) chekAuthOfTelegramUser(ctx echo.Context) error {
-	telegramID, err := pathutils.GetTelegramUserIDFromPathParams(ctx)
-	if err != nil {
-		return ctx.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-	}
-
-	isAuth, err := uh.userUseCase.IsUserAuthenticatedByTelegramUserID(telegramID)
-	if err != nil {
-		return errors.Wrapf(err, "cannot check oauth for telegramUserID=%d", telegramID)
-	}
-
-	if isAuth {
-		return ctx.String(http.StatusOK, http.StatusText(http.StatusOK))
-	}
-	return ctx.String(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 }
 
 func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
@@ -97,39 +65,4 @@ func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
 	}
 
 	return ctx.Redirect(http.StatusTemporaryRedirect, uh.userUseCase.GetTelegramBotRedirectURI())
-}
-
-func (uh *UserHandlers) getMailruUserInfo(ctx echo.Context) error {
-	telegramID, err := contextutils.GetTelegramUserIDFromContext(ctx)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	accessToken, err := contextutils.GetOAuthAccessTokenFromContext(ctx)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	userInfo, err := uh.userUseCase.GetMailruUserInfo(accessToken)
-	if err != nil {
-		return errors.Wrapf(err, "cannot get userinfo for telegramUserID=%d", telegramID)
-	}
-
-	return ctx.JSON(http.StatusOK, userInfo)
-}
-
-func (uh *UserHandlers) deleteLocalAuthenticatedUser(ctx echo.Context) error {
-	telegramID, err := pathutils.GetTelegramUserIDFromPathParams(ctx)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if err := uh.userUseCase.DeleteLocalAuthenticatedUserByTelegramUserID(telegramID); err != nil {
-		if _, ok := err.(repository.UserEntityError); ok {
-			return ctx.String(http.StatusNoContent, http.StatusText(http.StatusNoContent))
-		}
-		return errors.Wrapf(err, "failed to delete local authenticated user by telegramUserID=%d", telegramID)
-	}
-
-	return ctx.String(http.StatusOK, http.StatusText(http.StatusOK))
 }

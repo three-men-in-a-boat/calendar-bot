@@ -236,13 +236,10 @@ func SingleEventFullText(event *types.Event) string {
 			switch attendee.Status {
 			case telegram.StatusAccepted:
 				fullEventText += eventAttendeeStatusAccepted
-				break
 			case telegram.StatusDeclined:
 				fullEventText += eventAttendeeStatusDeclined
-				break
 			default:
 				fullEventText += eventAttendeeStatusNeedsAction
-				break
 			}
 		}
 	}

@@ -99,9 +99,6 @@ func GetCreateFastCommand() [][]tb.ReplyButton {
 				Text: "Через неделю в 12:00",
 			},
 			{
-				Text: "Через неделю в 15:00",
-			},
-			{
 				Text: "Через неделю в 18:00",
 			},
 		},
@@ -215,7 +212,6 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.ReplyButton {
 		btns[idx/2][idx%2] = tb.ReplyButton{
 			Text: calendarMessages.GetCreateFullDay(),
 		}
-		idx++
 	}
 
 	return btns
