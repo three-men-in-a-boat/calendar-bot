@@ -212,7 +212,6 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.ReplyButton {
 		btns[idx/2][idx%2] = tb.ReplyButton{
 			Text: calendarMessages.GetCreateFullDay(),
 		}
-		idx++
 	}
 
 	return btns

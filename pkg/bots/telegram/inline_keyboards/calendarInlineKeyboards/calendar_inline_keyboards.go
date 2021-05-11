@@ -248,29 +248,29 @@ func GetDateFastCommand(cancelText bool) [][]tb.InlineButton {
 			{
 				Text:   "Завтра",
 				Unique: unique,
-				Data: "Завтра",
+				Data:   "Завтра",
 			},
 			{
 				Text:   "Через два дня",
 				Unique: unique,
-				Data: "Через два дня",
+				Data:   "Через два дня",
 			},
 		},
 		{
 			{
 				Text:   "Через неделю",
 				Unique: unique,
-				Data: "Через неделю",
+				Data:   "Через неделю",
 			},
 			{
 				Text:   "Через две недели",
 				Unique: unique,
-				Data: "Через две недели",
+				Data:   "Через две недели",
 			},
 			{
 				Text:   "Через месяц",
 				Unique: unique,
-				Data: "Через месяц",
+				Data:   "Через месяц",
 			},
 		},
 	}
@@ -278,17 +278,17 @@ func GetDateFastCommand(cancelText bool) [][]tb.InlineButton {
 	if !cancelText {
 		ret = append(ret, []tb.InlineButton{
 			{
-				Text: calendarMessages.GetCancelDateReplyButton(),
+				Text:   calendarMessages.GetCancelDateReplyButton(),
 				Unique: unique,
-				Data: calendarMessages.GetCancelDateReplyButton(),
+				Data:   calendarMessages.GetCancelDateReplyButton(),
 			},
 		})
 	} else {
 		ret = append(ret, []tb.InlineButton{
 			{
-				Text: calendarMessages.GetCreateCancelText(),
+				Text:   calendarMessages.GetCreateCancelText(),
 				Unique: unique,
-				Data: calendarMessages.GetCreateCancelText(),
+				Data:   calendarMessages.GetCreateCancelText(),
 			},
 		})
 	}
@@ -301,92 +301,92 @@ func GetCreateFastCommand() [][]tb.InlineButton {
 	return [][]tb.InlineButton{
 		{
 			{
-				Text: "Через полчаса",
+				Text:   "Через полчаса",
 				Unique: unique,
-				Data: "Через полчаса",
+				Data:   "Через полчаса",
 			},
 			{
-				Text: "Через час",
+				Text:   "Через час",
 				Unique: unique,
-				Data: "Через час",
+				Data:   "Через час",
 			},
 			{
-				Text: "Через два часа",
+				Text:   "Через два часа",
 				Unique: unique,
-				Data: "Через два часа",
+				Data:   "Через два часа",
 			},
 			{
-				Text: "Через три часа",
+				Text:   "Через три часа",
 				Unique: unique,
-				Data: "Через три часа",
-			},
-		},
-		{
-			{
-				Text: "Сегодня в 9:00",
-				Unique: unique,
-				Data: "Сегодня в 9:00",
-			},
-			{
-				Text: "Сегодня в 12:00",
-				Unique: unique,
-				Data: "Сегодня в 12:00",
-			},
-			{
-				Text: "Сегодня в 15:00",
-				Unique: unique,
-				Data: "Сегодня в 15:00",
-			},
-			{
-				Text: "Сегодня в 18:00",
-				Unique: unique,
-				Data: "Сегодня в 18:00",
+				Data:   "Через три часа",
 			},
 		},
 		{
 			{
-				Text: "Завтра в 9:00",
+				Text:   "Сегодня в 9:00",
 				Unique: unique,
-				Data: "Завтра в 9:00",
+				Data:   "Сегодня в 9:00",
 			},
 			{
-				Text: "Завтра в 12:00",
+				Text:   "Сегодня в 12:00",
 				Unique: unique,
-				Data: "Завтра в 12:00",
+				Data:   "Сегодня в 12:00",
 			},
 			{
-				Text: "Завтра в 15:00",
+				Text:   "Сегодня в 15:00",
 				Unique: unique,
-				Data: "Завтра в 15:00",
+				Data:   "Сегодня в 15:00",
 			},
 			{
-				Text: "Завтра в 18:00",
+				Text:   "Сегодня в 18:00",
 				Unique: unique,
-				Data: "Завтра в 18:00",
-			},
-		},
-		{
-			{
-				Text: "Через неделю в 12:00",
-				Unique: unique,
-				Data: "Через неделю в 12:00",
-			},
-			{
-				Text: "Через неделю в 15:00",
-				Unique: unique,
-				Data: "Через неделю в 15:00",
-			},
-			{
-				Text: "Через неделю в 18:00",
-				Unique: unique,
-				Data: "Через неделю в 18:00",
+				Data:   "Сегодня в 18:00",
 			},
 		},
 		{
 			{
-				Text: calendarMessages.GetCreateCancelText(),
+				Text:   "Завтра в 9:00",
 				Unique: unique,
-				Data: calendarMessages.GetCreateCancelText(),
+				Data:   "Завтра в 9:00",
+			},
+			{
+				Text:   "Завтра в 12:00",
+				Unique: unique,
+				Data:   "Завтра в 12:00",
+			},
+			{
+				Text:   "Завтра в 15:00",
+				Unique: unique,
+				Data:   "Завтра в 15:00",
+			},
+			{
+				Text:   "Завтра в 18:00",
+				Unique: unique,
+				Data:   "Завтра в 18:00",
+			},
+		},
+		{
+			{
+				Text:   "Через неделю в 12:00",
+				Unique: unique,
+				Data:   "Через неделю в 12:00",
+			},
+			{
+				Text:   "Через неделю в 15:00",
+				Unique: unique,
+				Data:   "Через неделю в 15:00",
+			},
+			{
+				Text:   "Через неделю в 18:00",
+				Unique: unique,
+				Data:   "Через неделю в 18:00",
+			},
+		},
+		{
+			{
+				Text:   calendarMessages.GetCreateCancelText(),
+				Unique: unique,
+				Data:   calendarMessages.GetCreateCancelText(),
 			},
 		},
 	}
@@ -397,43 +397,43 @@ func GetCreateDuration() [][]tb.InlineButton {
 	return [][]tb.InlineButton{
 		{
 			{
-				Text: calendarMessages.GetCreateEventHalfHour(),
+				Text:   calendarMessages.GetCreateEventHalfHour(),
 				Unique: unique,
-				Data: calendarMessages.GetCreateEventHalfHour(),
+				Data:   calendarMessages.GetCreateEventHalfHour(),
 			},
 			{
-				Text: calendarMessages.GetCreateEventHour(),
+				Text:   calendarMessages.GetCreateEventHour(),
 				Unique: unique,
-				Data: calendarMessages.GetCreateEventHour(),
+				Data:   calendarMessages.GetCreateEventHour(),
 			},
 			{
-				Text: calendarMessages.GetCreateEventHourAndHalf(),
+				Text:   calendarMessages.GetCreateEventHourAndHalf(),
 				Unique: unique,
-				Data: calendarMessages.GetCreateEventHourAndHalf(),
-			},
-		},
-		{
-			{
-				Text: calendarMessages.GetCreateEventTwoHours(),
-				Unique: unique,
-				Data: calendarMessages.GetCreateEventTwoHours(),
-			},
-			{
-				Text: calendarMessages.GetCreateEventFourHours(),
-				Unique: unique,
-				Data: calendarMessages.GetCreateEventFourHours(),
-			},
-			{
-				Text: calendarMessages.GetCreateEventSixHours(),
-				Unique: unique,
-				Data: calendarMessages.GetCreateEventSixHours(),
+				Data:   calendarMessages.GetCreateEventHourAndHalf(),
 			},
 		},
 		{
 			{
-				Text: calendarMessages.GetCreateFullDay(),
+				Text:   calendarMessages.GetCreateEventTwoHours(),
 				Unique: unique,
-				Data: calendarMessages.GetCreateFullDay(),
+				Data:   calendarMessages.GetCreateEventTwoHours(),
+			},
+			{
+				Text:   calendarMessages.GetCreateEventFourHours(),
+				Unique: unique,
+				Data:   calendarMessages.GetCreateEventFourHours(),
+			},
+			{
+				Text:   calendarMessages.GetCreateEventSixHours(),
+				Unique: unique,
+				Data:   calendarMessages.GetCreateEventSixHours(),
+			},
+		},
+		{
+			{
+				Text:   calendarMessages.GetCreateFullDay(),
+				Unique: unique,
+				Data:   calendarMessages.GetCreateFullDay(),
 			},
 		},
 	}
@@ -448,18 +448,18 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton 
 	unique := telegram.HandleGroupText
 	if session.Step != telegram.StepCreateFrom {
 		btns[idx/2][idx%2] = tb.InlineButton{
-			Text: calendarMessages.CreateEventChangeStartTimeButton,
+			Text:   calendarMessages.CreateEventChangeStartTimeButton,
 			Unique: unique,
-			Data: calendarMessages.CreateEventChangeStartTimeButton,
+			Data:   calendarMessages.CreateEventChangeStartTimeButton,
 		}
 		idx++
 	}
 
 	if session.Step != telegram.StepCreateTo {
 		btns[idx/2][idx%2] = tb.InlineButton{
-			Text: calendarMessages.CreateEventChangeStopTimeButton,
+			Text:   calendarMessages.CreateEventChangeStopTimeButton,
 			Unique: unique,
-			Data: calendarMessages.CreateEventChangeStopTimeButton,
+			Data:   calendarMessages.CreateEventChangeStopTimeButton,
 		}
 		idx++
 	}
@@ -467,15 +467,15 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton 
 	if session.Step != telegram.StepCreateTitle {
 		if session.Event.Title == "" {
 			btns[idx/2][idx%2] = tb.InlineButton{
-				Text: calendarMessages.CreateEventAddTitleButton,
+				Text:   calendarMessages.CreateEventAddTitleButton,
 				Unique: unique,
-				Data: calendarMessages.CreateEventAddTitleButton,
+				Data:   calendarMessages.CreateEventAddTitleButton,
 			}
 		} else {
 			btns[idx/2][idx%2] = tb.InlineButton{
-				Text: calendarMessages.CreateEventChangeTitleButton,
+				Text:   calendarMessages.CreateEventChangeTitleButton,
 				Unique: unique,
-				Data: calendarMessages.CreateEventChangeTitleButton,
+				Data:   calendarMessages.CreateEventChangeTitleButton,
 			}
 		}
 		idx++
@@ -484,15 +484,15 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton 
 	if session.Step != telegram.StepCreateDesc {
 		if session.Event.Description == "" {
 			btns[idx/2][idx%2] = tb.InlineButton{
-				Text: calendarMessages.CreateEventAddDescButton,
+				Text:   calendarMessages.CreateEventAddDescButton,
 				Unique: unique,
-				Data: calendarMessages.CreateEventAddDescButton,
+				Data:   calendarMessages.CreateEventAddDescButton,
 			}
 		} else {
 			btns[idx/2][idx%2] = tb.InlineButton{
-				Text: calendarMessages.CreateEventChangeDescButton,
+				Text:   calendarMessages.CreateEventChangeDescButton,
 				Unique: unique,
-				Data: calendarMessages.CreateEventChangeDescButton,
+				Data:   calendarMessages.CreateEventChangeDescButton,
 			}
 		}
 		idx++
@@ -501,15 +501,15 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton 
 	if session.Step != telegram.StepCreateLocation {
 		if session.Event.Location.Description == "" {
 			btns[idx/2][idx%2] = tb.InlineButton{
-				Text: calendarMessages.CreateEventAddLocationButton,
+				Text:   calendarMessages.CreateEventAddLocationButton,
 				Unique: unique,
-				Data: calendarMessages.CreateEventAddLocationButton,
+				Data:   calendarMessages.CreateEventAddLocationButton,
 			}
 		} else {
 			btns[idx/2][idx%2] = tb.InlineButton{
-				Text: calendarMessages.CreateEventChangeLocationButton,
+				Text:   calendarMessages.CreateEventChangeLocationButton,
 				Unique: unique,
-				Data: calendarMessages.CreateEventChangeLocationButton,
+				Data:   calendarMessages.CreateEventChangeLocationButton,
 			}
 		}
 		idx++
@@ -517,20 +517,19 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton 
 
 	if session.Step != telegram.StepCreateUser {
 		btns[idx/2][idx%2] = tb.InlineButton{
-			Text: calendarMessages.CreateEventAddUser,
+			Text:   calendarMessages.CreateEventAddUser,
 			Unique: unique,
-			Data: calendarMessages.CreateEventAddUser,
+			Data:   calendarMessages.CreateEventAddUser,
 		}
 		idx++
 	}
 
 	if !session.Event.FullDay {
 		btns[idx/2][idx%2] = tb.InlineButton{
-			Text: calendarMessages.GetCreateFullDay(),
+			Text:   calendarMessages.GetCreateFullDay(),
 			Unique: unique,
-			Data: calendarMessages.GetCreateFullDay(),
+			Data:   calendarMessages.GetCreateFullDay(),
 		}
-		idx++
 	}
 
 	return btns

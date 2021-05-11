@@ -88,6 +88,9 @@ func main() {
 	}
 
 	bot, err := tb.NewBot(botSettings)
+	if err != nil {
+		zap.S().Fatalf("failed to start bot, %v", err)
+	}
 
 	server := echo.New()
 
