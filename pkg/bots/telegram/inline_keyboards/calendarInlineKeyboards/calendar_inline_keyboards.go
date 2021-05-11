@@ -227,6 +227,11 @@ func FindTimePollButtons(sender int) [][]tb.InlineButton {
 			Text: calendarMessages.GetCreateEventCreateText(),
 			Unique: telegram.FindTimeCreate,
 		},
+		{
+			Text: calendarMessages.GetCreateCancelText(),
+			Unique: telegram.FindTimeCreate,
+			Data: calendarMessages.GetCreateCancelText(),
+		},
 	},
 	}
 }

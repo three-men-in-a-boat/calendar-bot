@@ -48,10 +48,10 @@ const (
 	eventNoDateEventsFound   = "У вас нет событий за выбранную дату"
 	eventNoClosestEventFound = "У вас больше нет событий сегодня"
 
-	FindTimePollHeader = "Выберите время. Если хотите, чтобы ваш календарь учитывался - нажмите на кнопку " +
-		"\"Участвую\""
-	FindTimeAdd = "✅ Участвую"
-	FindTimeExist = "Вы уже участвуете"
+	findTimePollHeader = "Выберите время. Если хотите, чтобы ваш календарь учитывался - нажмите на кнопку " +
+		"\"Участвую\"\n\nНа данный момент учитываются календари: "
+	FindTimeAdd      = "✅ Участвую"
+	FindTimeExist    = "Вы уже участвуете"
 	FindTimeNotFound = "К сожалению мы не нашли свободного времени для всех участников с учетом данных параметров"
 
 	eventDateNotParsed      = "Мы не смогли распознать дату, попробуйте еще раз"
@@ -64,8 +64,6 @@ const (
 	eventShowNotFoundError = "К сожалению мы не смогли найти информацию о событии.\nВозможно, это старое сообщение." +
 		"\nЗапросите событие с помощью бота заново."
 	eventCallbackResponseText = "Событие: %s"
-	CreateAlreadyError = "Вы уже создаете событие"
-	DateCreateAlreadyError = "Закончите создание события для просмотра событий за определенную дату"
 
 	eventCancelSearchDate   = "Отмена поиска событий за опреденную дату"
 	eventCanceledSearchDate = "Поиск события отменен"
@@ -444,4 +442,8 @@ func GenOptionsForPoll(spans spaniel.Spans) []string {
 	}
 
 	return str
+}
+
+func GenFindTimePollHeader(emails []string) string {
+	return findTimePollHeader + strings.Join(emails, ", ")
 }
