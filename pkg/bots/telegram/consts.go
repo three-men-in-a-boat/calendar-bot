@@ -16,6 +16,8 @@ const (
 	FindTimeAdd = "FTA"
 	FindTimeCreate = "FTC"
 
+	HandleGroupText = "HGT"
+
 	Today = "/today"
 	Next  = "/next"
 	Date  = "/date"

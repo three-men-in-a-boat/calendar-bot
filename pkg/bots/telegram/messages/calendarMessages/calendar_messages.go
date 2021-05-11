@@ -65,7 +65,7 @@ const (
 		"\nЗапросите событие с помощью бота заново."
 	eventCallbackResponseText = "Событие: %s"
 
-	eventCancelSearchDate   = "Отмена поиска событий за опреденную дату"
+	eventCancelSearchDate   = "Отмена поиска событий"
 	eventCanceledSearchDate = "Поиск события отменен"
 
 	createEventHeader  = "<u><b>Что получается:</b></u>\n\n"

@@ -216,22 +216,322 @@ func FindTimeLengthButtons() [][]tb.InlineButton {
 }
 
 func FindTimePollButtons(sender int) [][]tb.InlineButton {
-	return [][]tb.InlineButton {{
+	return [][]tb.InlineButton{{
 		{
-			Text: calendarMessages.FindTimeAdd,
+			Text:   calendarMessages.FindTimeAdd,
 			Unique: telegram.FindTimeAdd,
-			Data: strconv.Itoa(sender),
+			Data:   strconv.Itoa(sender),
 		},
 	}, {
 		{
-			Text: calendarMessages.GetCreateEventCreateText(),
+			Text:   calendarMessages.GetCreateEventCreateText(),
 			Unique: telegram.FindTimeCreate,
 		},
 		{
-			Text: calendarMessages.GetCreateCancelText(),
+			Text:   calendarMessages.GetCreateCancelText(),
 			Unique: telegram.FindTimeCreate,
-			Data: calendarMessages.GetCreateCancelText(),
+			Data:   calendarMessages.GetCreateCancelText(),
 		},
 	},
 	}
+}
+
+func GetDateFastCommand(cancelText bool) [][]tb.InlineButton {
+	unique := telegram.HandleGroupText
+	ret := [][]tb.InlineButton{
+		{
+			{
+				Text:   "Сегодня",
+				Unique: unique,
+				Data:   "Сегодня",
+			},
+			{
+				Text:   "Завтра",
+				Unique: unique,
+				Data: "Завтра",
+			},
+			{
+				Text:   "Через два дня",
+				Unique: unique,
+				Data: "Через два дня",
+			},
+		},
+		{
+			{
+				Text:   "Через неделю",
+				Unique: unique,
+				Data: "Через неделю",
+			},
+			{
+				Text:   "Через две недели",
+				Unique: unique,
+				Data: "Через две недели",
+			},
+			{
+				Text:   "Через месяц",
+				Unique: unique,
+				Data: "Через месяц",
+			},
+		},
+	}
+
+	if !cancelText {
+		ret = append(ret, []tb.InlineButton{
+			{
+				Text: calendarMessages.GetCancelDateReplyButton(),
+				Unique: unique,
+				Data: calendarMessages.GetCancelDateReplyButton(),
+			},
+		})
+	} else {
+		ret = append(ret, []tb.InlineButton{
+			{
+				Text: calendarMessages.GetCreateCancelText(),
+				Unique: unique,
+				Data: calendarMessages.GetCreateCancelText(),
+			},
+		})
+	}
+
+	return ret
+}
+
+func GetCreateFastCommand() [][]tb.InlineButton {
+	unique := telegram.HandleGroupText
+	return [][]tb.InlineButton{
+		{
+			{
+				Text: "Через полчаса",
+				Unique: unique,
+				Data: "Через полчаса",
+			},
+			{
+				Text: "Через час",
+				Unique: unique,
+				Data: "Через час",
+			},
+			{
+				Text: "Через два часа",
+				Unique: unique,
+				Data: "Через два часа",
+			},
+			{
+				Text: "Через три часа",
+				Unique: unique,
+				Data: "Через три часа",
+			},
+		},
+		{
+			{
+				Text: "Сегодня в 9:00",
+				Unique: unique,
+				Data: "Сегодня в 9:00",
+			},
+			{
+				Text: "Сегодня в 12:00",
+				Unique: unique,
+				Data: "Сегодня в 12:00",
+			},
+			{
+				Text: "Сегодня в 15:00",
+				Unique: unique,
+				Data: "Сегодня в 15:00",
+			},
+			{
+				Text: "Сегодня в 18:00",
+				Unique: unique,
+				Data: "Сегодня в 18:00",
+			},
+		},
+		{
+			{
+				Text: "Завтра в 9:00",
+				Unique: unique,
+				Data: "Завтра в 9:00",
+			},
+			{
+				Text: "Завтра в 12:00",
+				Unique: unique,
+				Data: "Завтра в 12:00",
+			},
+			{
+				Text: "Завтра в 15:00",
+				Unique: unique,
+				Data: "Завтра в 15:00",
+			},
+			{
+				Text: "Завтра в 18:00",
+				Unique: unique,
+				Data: "Завтра в 18:00",
+			},
+		},
+		{
+			{
+				Text: "Через неделю в 12:00",
+				Unique: unique,
+				Data: "Через неделю в 12:00",
+			},
+			{
+				Text: "Через неделю в 15:00",
+				Unique: unique,
+				Data: "Через неделю в 15:00",
+			},
+			{
+				Text: "Через неделю в 18:00",
+				Unique: unique,
+				Data: "Через неделю в 18:00",
+			},
+		},
+		{
+			{
+				Text: calendarMessages.GetCreateCancelText(),
+				Unique: unique,
+				Data: calendarMessages.GetCreateCancelText(),
+			},
+		},
+	}
+}
+
+func GetCreateDuration() [][]tb.InlineButton {
+	unique := telegram.HandleGroupText
+	return [][]tb.InlineButton{
+		{
+			{
+				Text: calendarMessages.GetCreateEventHalfHour(),
+				Unique: unique,
+				Data: calendarMessages.GetCreateEventHalfHour(),
+			},
+			{
+				Text: calendarMessages.GetCreateEventHour(),
+				Unique: unique,
+				Data: calendarMessages.GetCreateEventHour(),
+			},
+			{
+				Text: calendarMessages.GetCreateEventHourAndHalf(),
+				Unique: unique,
+				Data: calendarMessages.GetCreateEventHourAndHalf(),
+			},
+		},
+		{
+			{
+				Text: calendarMessages.GetCreateEventTwoHours(),
+				Unique: unique,
+				Data: calendarMessages.GetCreateEventTwoHours(),
+			},
+			{
+				Text: calendarMessages.GetCreateEventFourHours(),
+				Unique: unique,
+				Data: calendarMessages.GetCreateEventFourHours(),
+			},
+			{
+				Text: calendarMessages.GetCreateEventSixHours(),
+				Unique: unique,
+				Data: calendarMessages.GetCreateEventSixHours(),
+			},
+		},
+		{
+			{
+				Text: calendarMessages.GetCreateFullDay(),
+				Unique: unique,
+				Data: calendarMessages.GetCreateFullDay(),
+			},
+		},
+	}
+}
+
+func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton {
+	btns := make([][]tb.InlineButton, 4)
+	for i := range btns {
+		btns[i] = make([]tb.InlineButton, 2)
+	}
+	idx := 0
+	unique := telegram.HandleGroupText
+	if session.Step != telegram.StepCreateFrom {
+		btns[idx/2][idx%2] = tb.InlineButton{
+			Text: calendarMessages.CreateEventChangeStartTimeButton,
+			Unique: unique,
+			Data: calendarMessages.CreateEventChangeStartTimeButton,
+		}
+		idx++
+	}
+
+	if session.Step != telegram.StepCreateTo {
+		btns[idx/2][idx%2] = tb.InlineButton{
+			Text: calendarMessages.CreateEventChangeStopTimeButton,
+			Unique: unique,
+			Data: calendarMessages.CreateEventChangeStopTimeButton,
+		}
+		idx++
+	}
+
+	if session.Step != telegram.StepCreateTitle {
+		if session.Event.Title == "" {
+			btns[idx/2][idx%2] = tb.InlineButton{
+				Text: calendarMessages.CreateEventAddTitleButton,
+				Unique: unique,
+				Data: calendarMessages.CreateEventAddTitleButton,
+			}
+		} else {
+			btns[idx/2][idx%2] = tb.InlineButton{
+				Text: calendarMessages.CreateEventChangeTitleButton,
+				Unique: unique,
+				Data: calendarMessages.CreateEventChangeTitleButton,
+			}
+		}
+		idx++
+	}
+
+	if session.Step != telegram.StepCreateDesc {
+		if session.Event.Description == "" {
+			btns[idx/2][idx%2] = tb.InlineButton{
+				Text: calendarMessages.CreateEventAddDescButton,
+				Unique: unique,
+				Data: calendarMessages.CreateEventAddDescButton,
+			}
+		} else {
+			btns[idx/2][idx%2] = tb.InlineButton{
+				Text: calendarMessages.CreateEventChangeDescButton,
+				Unique: unique,
+				Data: calendarMessages.CreateEventChangeDescButton,
+			}
+		}
+		idx++
+	}
+
+	if session.Step != telegram.StepCreateLocation {
+		if session.Event.Location.Description == "" {
+			btns[idx/2][idx%2] = tb.InlineButton{
+				Text: calendarMessages.CreateEventAddLocationButton,
+				Unique: unique,
+				Data: calendarMessages.CreateEventAddLocationButton,
+			}
+		} else {
+			btns[idx/2][idx%2] = tb.InlineButton{
+				Text: calendarMessages.CreateEventChangeLocationButton,
+				Unique: unique,
+				Data: calendarMessages.CreateEventChangeLocationButton,
+			}
+		}
+		idx++
+	}
+
+	if session.Step != telegram.StepCreateUser {
+		btns[idx/2][idx%2] = tb.InlineButton{
+			Text: calendarMessages.CreateEventAddUser,
+			Unique: unique,
+			Data: calendarMessages.CreateEventAddUser,
+		}
+		idx++
+	}
+
+	if !session.Event.FullDay {
+		btns[idx/2][idx%2] = tb.InlineButton{
+			Text: calendarMessages.GetCreateFullDay(),
+			Unique: unique,
+			Data: calendarMessages.GetCreateFullDay(),
+		}
+		idx++
+	}
+
+	return btns
 }

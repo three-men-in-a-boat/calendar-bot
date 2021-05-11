@@ -172,6 +172,7 @@ type BotRedisSession struct {
 	Users            []int64              `json:"users"`
 	InfoMsg          utils.CustomEditable `json:"info_msg"`
 	PollMsg          utils.CustomEditable `json:"poll_msg"`
+	InlineMsg        utils.CustomEditable `json:"inline_msg"`
 }
 
 type ParseDateReq struct {
