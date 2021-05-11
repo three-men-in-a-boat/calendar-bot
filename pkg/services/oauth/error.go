@@ -5,11 +5,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Error error
+type Error struct {
+	error
+}
 
 var (
-	StateKeyDoesNotExist    Error = errors.New("state does not exist in redis")
-	AccessTokenDoesNotExist Error = errors.New("OAuth access token does not exist in redis")
+	StateKeyDoesNotExist    = Error{errors.New("state does not exist in redis")}
+	AccessTokenDoesNotExist = Error{errors.New("OAuth access token does not exist in redis")}
 )
 
 type APIResponseErr struct {
