@@ -154,12 +154,25 @@ func (ft FromTo) EndType() spaniel.EndPointType {
 	return spaniel.Open
 }
 
+type DayPart struct {
+	Start    time.Time
+	Duration time.Duration
+}
+
 type BotRedisSession struct {
-	Step     int
-	IsDate   bool `json:"is_date"`
-	IsCreate bool `json:"is_create"`
-	Event    Event
-	InfoMsg  utils.CustomEditable
+	Step             int                  `json:"step"`
+	FromTextCreate   bool                 `json:"from_text_create"`
+	IsDate           bool                 `json:"is_date"`
+	IsCreate         bool                 `json:"is_create"`
+	FindTimeDone     bool                 `json:"find_time_done"`
+	Event            Event                `json:"event"`
+	FreeBusy         FreeBusy             `json:"free_busy"`
+	FindTimeDayPart  *DayPart             `json:"day_part"`
+	FindTimeDuration time.Duration        `json:"find_time_duration"`
+	Users            []int64              `json:"users"`
+	InfoMsg          utils.CustomEditable `json:"info_msg"`
+	PollMsg          utils.CustomEditable `json:"poll_msg"`
+	InlineMsg        utils.CustomEditable `json:"inline_msg"`
 }
 
 type ParseDateReq struct {
@@ -169,4 +182,23 @@ type ParseDateReq struct {
 
 type ParseDateResp struct {
 	Date time.Time `json:"date,omitempty"`
+}
+
+type ParseEventResp struct {
+	EventStart time.Time `json:"event_start,omitempty"`
+	EventEnd   time.Time `json:"event_end,omitempty"`
+	EventName  string    `json:"event_name,omitempty"`
+}
+
+type CreateEvent struct {
+	Uid      string   `json:"uid,omitempty"`
+	Calendar Calendar `json:"calendar,omitempty"`
+}
+
+type RespData struct {
+	CreateEvent CreateEvent `json:"createEvent,omitempty"`
+}
+
+type CreateEventResp struct {
+	Data RespData `json:"data,omitempty"`
 }

@@ -5,7 +5,7 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/goodsign/monday"
-	"strconv"
+	"github.com/senseyeio/spaniel"
 	"strings"
 	"time"
 )
@@ -32,22 +32,40 @@ const (
 	eventDateTitle  = "<b>Ваши события за %s</b>"
 	eventNextTitle  = "<b>Ваше следуюшее событие</b>"
 
-	eventGetDateHeader  = "<b>Получение событий за определенную дату: </b>\n\n"
-	eventGetDateMessage = "Для выбора даты воспользуйтесь кнопками или введите дату в формате " +
+	eventGetDateHeader          = "<b>Получение событий за определенную дату: </b>\n\n"
+	findTimeStartHeader         = "<b>Выберите дату начала для поиска времени: </b>\n\n"
+	findTimeStopHeader          = "<b>Выберите дату оконачания для поиска времени: </b>\n\n"
+	findTimeInfoHeader          = "<b>Поиск будет производиться этом временном промежутке </b>\n\n"
+	findTimeStartTime           = "<b>Начало поиска: </b> %s\n"
+	findTimeStopTime            = "<b>Окончание поиска: </b> %s"
+	findTimeTextFormat          = "%s с %s до %s"
+	FindTimeChooseDayPartHeader = "<b>Выберите период дня для события</b>\n\n"
+	FindTimeChooseLengthHeader  = "<b>Выберите продолжительность события</b>\n\n"
+	eventGetDateMessage         = "Для выбора даты воспользуйтесь кнопками или введите дату в формате " +
 		"<pre>&lt;число&gt; &lt;название месяца&gt;</pre> (например: <pre>22 марта</pre>)"
 
 	eventNoTodayEventsFound  = "У вас нет событий сегодня"
 	eventNoDateEventsFound   = "У вас нет событий за выбранную дату"
 	eventNoClosestEventFound = "У вас больше нет событий сегодня"
 
-	eventDateNotParsed   = "Мы не смогли распознать дату, попробуйте еще раз"
+	findTimePollHeader = "Выберите время. Если хотите, чтобы ваш календарь учитывался - нажмите на кнопку " +
+		"\"Участвую\"\n\nНа данный момент учитываются календари: "
+	FindTimeAdd      = "✅ Участвую"
+	FindTimeExist    = "Вы уже участвуете"
+	FindTimeNotFound = "К сожалению мы не нашли свободного времени для всех участников с учетом данных параметров"
+
+	eventDateNotParsed      = "Мы не смогли распознать дату, попробуйте еще раз"
+	EventDateToIsBeforeFrom = "<b>Введенная дата раньше начала события, введите корректную дату.</b>\n\n" +
+		"Если вы хотите переставить события на другое время - измените время начала события"
 	eventSessionNotFound = "Мы не смогли найти необходимую информацию для обработки запроса.\nВоспользуйтесь нужной вам " +
 		"командой заново"
+	EventNoEventDataFound = "<b>Мы не смогли распознать данные о событии. Попробуйте сформулировать предложение иначе." +
+		"</b>\n\nНапример: Учеба завтра с 10:00 до 13:00"
 	eventShowNotFoundError = "К сожалению мы не смогли найти информацию о событии.\nВозможно, это старое сообщение." +
 		"\nЗапросите событие с помощью бота заново."
 	eventCallbackResponseText = "Событие: %s"
 
-	eventCancelSearchDate   = "Отмена поиска событий за опреденную дату"
+	eventCancelSearchDate   = "Отмена поиска событий"
 	eventCanceledSearchDate = "Поиск события отменен"
 
 	createEventHeader  = "<u><b>Что получается:</b></u>\n\n"
@@ -59,7 +77,10 @@ const (
 	createEventToText = "<b>Введите время окончания события</b>\n\nДля продолжительности события" +
 		" воспользуйтесь кнопками или введите дату оконочания в формате <pre>&lt;число&gt; &lt;название месяца&gt; " +
 		"&lt;ЧЧ:ММ&gt;</pre> (например: <pre>22 марта 15:00</pre>)"
-	createEventTitleText = "<b>Введите название события</b>"
+	createEventTitleText    = "<b>Введите название события</b>"
+	CreateEventDescText     = "<b>Введите описание события</b>"
+	CreateEventLocationText = "<b>Введите место события</b>"
+	CreateEventUserText     = "<b>Введите email пользователя, которого хотите добавить</b>"
 
 	createEventCreateText   = "Создать событие"
 	createEventCreatedText  = "Событие успешно создано"
@@ -74,6 +95,29 @@ const (
 	createEventSixHours    = "6 часов"
 	createEventFullDay     = "Весь день"
 
+	CreateEventChangeStartTimeButton = "Изменить время начала"
+	CreateEventChangeStopTimeButton  = "Изменить время окончания"
+	CreateEventAddTitleButton        = "Добавить название"
+	CreateEventChangeTitleButton     = "Изменить название"
+	CreateEventAddDescButton         = "Добавить описание"
+	CreateEventChangeDescButton      = "Изменить описание"
+	CreateEventAddLocationButton     = "Добавить место"
+	CreateEventChangeLocationButton  = "Изменить место"
+	CreateEventAddUser               = "Добавить участников"
+
+	CreateEventGo    = "✅ Я иду"
+	CreateEventNotGo = "❌ Я не иду"
+
+	CreateEventAlreadyOrganize = "Вы являетесь создателем события и учавстуете в нем по умолчанию"
+	CreateEventAlreadyGo       = "Вы уже дали согласие на участие в событии"
+	CreateEventAlreadyNotGo    = "Вы уже дали отказ от участия в событии"
+	CreateEventCannotAdd       = "Мы не смогли изменить ваш статус в событии - подтвердите его с помощью календаря или письма" +
+		" из почты"
+
+	CreateEventFindTimeMessage   = "Найти удобное время для всех в этом чате?"
+	CreateEventFindTimeYesButton = "✅ Да"
+	CreateEventFindTimeNoButton  = "❌ Нет"
+
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
 		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
 	middlewaresGroupAlertBase  = "Вы уверены, что хотите показать "
@@ -85,6 +129,7 @@ const (
 )
 
 const (
+	formatSpan = "2 January"
 	formatDate = "2 January 2006"
 	formatTime = "15:04"
 	locale     = monday.LocaleRuRU
@@ -182,7 +227,6 @@ func SingleEventFullText(event *types.Event) string {
 	}
 
 	if len(event.Attendees) > 1 {
-		fullEventText += eventSplitLine + strconv.Itoa(len(event.Attendees))
 		fullEventText += eventAttendeesHeaderText
 		for _, attendee := range event.Attendees {
 			if attendee.Email == event.Organizer.Email {
@@ -366,4 +410,40 @@ func GetCreateFullDay() string {
 
 func GetCreateEventTitle() string {
 	return createEventTitleText
+}
+
+func GetFindTimeStartText() string {
+	return findTimeStartHeader + eventGetDateMessage
+}
+
+func GetFindTimeStopText(time time.Time) string {
+	return findTimeStopHeader + fmt.Sprintf(findTimeStartTime, monday.Format(time, formatDate, locale)) +
+		"\n" + eventGetDateMessage
+}
+
+func GetFindTimeInfoText(timeFrom, timeTo time.Time) string {
+	return findTimeInfoHeader + fmt.Sprintf(findTimeStartTime, monday.Format(timeFrom, formatDate, locale)) +
+		fmt.Sprintf(findTimeStopTime, monday.Format(timeTo, formatDate, locale))
+}
+
+func GenOptionsForPoll(spans spaniel.Spans) []string {
+	str := make([]string, 0)
+	counter := 0
+	for _, span := range spans {
+		if counter == 9 {
+			return str
+		}
+		str = append(str, fmt.Sprintf(findTimeTextFormat,
+			monday.Format(span.Start(), formatSpan, locale),
+			monday.Format(span.Start(), formatTime, locale),
+			monday.Format(span.End(), formatTime, locale),
+		))
+		counter++
+	}
+
+	return str
+}
+
+func GenFindTimePollHeader(emails []string) string {
+	return findTimePollHeader + strings.Join(emails, ", ")
 }
