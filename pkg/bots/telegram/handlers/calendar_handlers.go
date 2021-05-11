@@ -397,6 +397,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 
 			session.IsCreate = true
 			session.FromTextCreate = true
+			session.FindTimeDone = true
 			session.Event = types.Event{}
 			session.Step = telegram.StepCreateInit
 			session.Event.From = data.EventStart
