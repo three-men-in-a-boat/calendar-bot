@@ -9,10 +9,12 @@ import (
 	"strings"
 )
 
-type UserEntityError error
+type UserEntityError struct {
+	error
+}
 
 var (
-	UserDoesNotExist UserEntityError = errors.New("user does not exist")
+	UserDoesNotExist = UserEntityError{errors.New("user does not exist")}
 )
 
 type UserRepository struct {
