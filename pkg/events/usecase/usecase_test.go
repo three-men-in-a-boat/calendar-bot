@@ -50,7 +50,7 @@ func TestFreeBusySingle(t *testing.T) {
 	}
 	fmt.Printf("freeTimeSplit: %+v\n", freeTimeSplit)
 
-	dayPart := DayPart{
+	dayPart := types.DayPart{
 		Start:    time.Date(year, month, day, 21, 0, 0, 0, loc),
 		Duration: 2 * time.Hour,
 	}
@@ -88,7 +88,7 @@ func TestGetUsersFreeIntervals(t *testing.T) {
 		"5b86108c1a0c76e99ea1b1cf7d41acab61138b2337363830",
 		freeBusy,
 		FreeBusyConfig{
-			DayPart: &DayPart{
+			DayPart: &types.DayPart{
 				Start:    time.Date(year, month, day, 21, 0, 0, 0, loc),
 				Duration: 2 * time.Hour,
 			},

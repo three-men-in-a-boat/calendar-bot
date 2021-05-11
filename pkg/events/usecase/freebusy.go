@@ -6,11 +6,6 @@ import (
 	"time"
 )
 
-type DayPart struct {
-	Start    time.Time
-	Duration time.Duration
-}
-
 // ------------span modifiers----
 
 func StretchOutSpan(span spaniel.Span, d time.Duration) spaniel.Span {
@@ -49,7 +44,7 @@ func SplitSpanBy(span spaniel.Span, splitInterval time.Duration) (spanSplit span
 type SpanFilterFunc func(span spaniel.Span) bool
 
 type FreeBusyConfig struct {
-	DayPart                 *DayPart
+	DayPart                 *types.DayPart
 	StretchBusyIntervalsBy  *time.Duration
 	SplitFreeIntervalsBy    *time.Duration
 	MinFreeIntervalDuration *time.Duration
@@ -71,7 +66,7 @@ func NotInInterval(span, borders spaniel.Span) bool {
 	return borders.Start().After(span.Start()) || borders.End().Before(span.End())
 }
 
-func NotInDayPart(span spaniel.Span, part DayPart) bool {
+func NotInDayPart(span spaniel.Span, part types.DayPart) bool {
 	hour, minute, second := part.Start.Clock()
 	nanosecond := part.Start.Nanosecond()
 
@@ -105,7 +100,7 @@ func FilterSpansWithFunc(spans spaniel.Spans, filter SpanFilterFunc) spaniel.Spa
 }
 
 func FilterSpans(spans spaniel.Spans,
-	mainBordersSpan spaniel.Span, dayPart *DayPart,
+	mainBordersSpan spaniel.Span, dayPart *types.DayPart,
 	minDuration *time.Duration, maxDuration *time.Duration) spaniel.Spans {
 
 	filters := make([]SpanFilterFunc, 0)

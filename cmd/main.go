@@ -4,42 +4,50 @@ import (
 	"database/sql"
 	_ "database/sql"
 	"github.com/asaskevich/govalidator"
-	"github.com/calendar-bot/cmd/config"
-	eHandlers "github.com/calendar-bot/pkg/events/handlers"
+	teleHandlers "github.com/calendar-bot/pkg/bots/telegram/handlers"
+	"github.com/calendar-bot/pkg/config"
 	eRepo "github.com/calendar-bot/pkg/events/repository"
 	eUsecase "github.com/calendar-bot/pkg/events/usecase"
+	"github.com/calendar-bot/pkg/log"
 	"github.com/calendar-bot/pkg/middlewares"
-	"github.com/calendar-bot/pkg/types"
+	"github.com/calendar-bot/pkg/services/db"
+	"github.com/calendar-bot/pkg/services/oauth"
+	redisService "github.com/calendar-bot/pkg/services/redis"
 	uHandlers "github.com/calendar-bot/pkg/users/handlers"
 	uRepo "github.com/calendar-bot/pkg/users/repository"
 	uUsecase "github.com/calendar-bot/pkg/users/usecase"
 	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
-	"github.com/labstack/echo"
+	echoProm "github.com/labstack/echo-contrib/prometheus"
+	"github.com/labstack/echo/v4"
 	_ "github.com/lib/pq"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	tb "gopkg.in/tucnak/telebot.v2"
 )
 
 type RequestHandlers struct {
-	eventHandlers eHandlers.EventHandlers
-	userHandlers  uHandlers.UserHandlers
+	userHandlers             uHandlers.UserHandlers
+	telegramBaseHandlers     teleHandlers.BaseHandlers
+	telegramCalendarHandlers teleHandlers.CalendarHandlers
 }
 
-func newRequestHandler(db *sql.DB, client *redis.Client, conf *config.App) RequestHandlers {
+func newRequestHandler(db *sql.DB, client *redis.Client, botClient *redis.Client, conf *config.AppConfig) RequestHandlers {
+	oauthService := oauth.NewService(&conf.OAuth, client)
 
-	states := types.NewStatesDictionary()
-	userStorage := uRepo.NewUserRepository(db, client)
-	userUseCase := uUsecase.NewUserUseCase(userStorage, conf)
-	userHandlers := uHandlers.NewUserHandlers(userUseCase, states, conf)
+	userStorage := uRepo.NewUserRepository(db)
+	userUseCase := uUsecase.NewUserUseCase(userStorage, &oauthService)
+	userHandlers := uHandlers.NewUserHandlers(userUseCase)
 
 	eventStorage := eRepo.NewEventStorage(db)
 	eventUseCase := eUsecase.NewEventUseCase(eventStorage)
-	eventHandlers := eHandlers.NewEventHandlers(eventUseCase, userUseCase)
+
+	teleBaseHandlers := teleHandlers.NewBaseHandlers(eventUseCase, userUseCase, conf.ParseAddress)
+	teleCalendarHandler := teleHandlers.NewCalendarHandlers(eventUseCase, userUseCase, botClient, conf.ParseAddress)
 
 	return RequestHandlers{
-		eventHandlers: eventHandlers,
-		userHandlers:  userHandlers,
+		userHandlers:             userHandlers,
+		telegramBaseHandlers:     teleBaseHandlers,
+		telegramCalendarHandlers: teleCalendarHandler,
 	}
 }
 
@@ -47,13 +55,13 @@ func init() {
 	// nickeskov: error != nil if no .env file
 	dotenvErr := godotenv.Load()
 
-	if err := config.InitLog(); err != nil {
+	if err := log.InitLog(); err != nil {
 		// nickeskov: in this case this we can do only one thing - start panicking. Or maybe use log.Fatal(...)
 		panic(err)
 	}
 
 	if dotenvErr != nil {
-		zap.S().Info("No .env file found: %v", dotenvErr)
+		zap.S().Infof("No .env file found: %v", dotenvErr)
 	}
 
 	govalidator.SetFieldsRequiredByDefault(true)
@@ -64,32 +72,60 @@ func main() {
 	if err != nil {
 		zap.S().Fatalf("cannot load APP config: %v", err)
 	}
+
+	webhook := &tb.Webhook{
+		Listen:   appConf.BotAddress,
+		Endpoint: &tb.WebhookEndpoint{PublicURL: appConf.BotWebhookUrl},
+	}
+
+	botSettings := tb.Settings{
+		Token:  appConf.BotToken,
+		Poller: webhook,
+	}
+
+	if appConf.Environment == config.AppEnvironmentDev {
+		botSettings.Verbose = true
+	}
+
+	bot, err := tb.NewBot(botSettings)
+	if err != nil {
+		zap.S().Fatalf("failed to start bot, %v", err)
+	}
+
 	server := echo.New()
 
-	db, err := config.ConnectToDB(&appConf.DB)
+	dbConnection, err := db.ConnectToPostgresDB(&appConf.DB)
 	if err != nil {
 		zap.S().Fatalf("failed to connect to db, %v", err)
 	}
 	defer func() {
-		err := db.Close()
+		err := dbConnection.Close()
 		if err != nil {
 			zap.S().Errorf("failed to close db connection, %v", err)
 		}
 	}()
 
-	redisClient, err := config.ConnectToRedis(&appConf.Redis)
+	redisClient, err := redisService.ConnectToRedis(&appConf.Redis)
 	if err != nil {
 		zap.S().Fatalf("failed to connect to redis, %v", err)
 	}
 
-	allHandler := newRequestHandler(db, redisClient, &appConf)
+	botRedisClient, err := redisService.ConnectToRedis(&appConf.BotRedis)
+	if err != nil {
+		zap.S().Fatalf("failed to connect to bot redis, %v", err)
+	}
+
+	allHandler := newRequestHandler(dbConnection, redisClient, botRedisClient, &appConf)
 
 	server.Use(middlewares.LogErrorMiddleware)
 
-	allHandler.eventHandlers.InitHandlers(server)
 	allHandler.userHandlers.InitHandlers(server)
+	allHandler.telegramBaseHandlers.InitHandlers(bot)
+	allHandler.telegramCalendarHandlers.InitHandlers(bot)
 
-	server.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
+	echoProm.NewPrometheus("http", nil).Use(server)
 
-	server.Logger.Fatal(server.Start(appConf.Address))
+	go func() { zap.S().Fatal(server.Start(appConf.Address)) }()
+
+	bot.Start()
 }

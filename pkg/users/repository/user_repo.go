@@ -1,21 +1,12 @@
 package repository
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
+	"github.com/calendar-bot/pkg/customerrors"
 	"github.com/calendar-bot/pkg/types"
-	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
-	"time"
-)
-
-type OAuthError error
-
-var (
-	StateDoesNotExist            OAuthError = errors.New("state does not exist in redis")
-	OAuthAccessTokenDoesNotExist OAuthError = errors.New("OAuth access token does not exist in redis")
-	UserUnauthorized             OAuthError = errors.New("user exist in DB, but not authorized")
+	"strings"
 )
 
 type UserEntityError error
@@ -24,71 +15,20 @@ var (
 	UserDoesNotExist UserEntityError = errors.New("user does not exist")
 )
 
-const (
-	TelegramOAuthPrefix = "telegram_user_id_"
-)
-
 type UserRepository struct {
 	storage *sql.DB
-	redisDB *redis.Client
 }
 
-func NewUserRepository(db *sql.DB, client *redis.Client) UserRepository {
+func NewUserRepository(db *sql.DB) UserRepository {
 	return UserRepository{
 		storage: db,
-		redisDB: client,
 	}
 }
 
-func (us *UserRepository) SetTelegramUserIDByState(state string, telegramID int64, expire time.Duration) error {
-	res := us.redisDB.Set(context.TODO(), state, fmt.Sprintf("%d", telegramID), expire)
-	return res.Err()
-}
-
-func (us *UserRepository) GetTelegramUserIDByState(state string) (int64, error) {
-	res := us.redisDB.Get(context.TODO(), state)
-
-	if res.Err() == redis.Nil {
-		return 0, StateDoesNotExist
-	}
-
-	return res.Int64()
-}
-
-func (us *UserRepository) SetOAuthAccessTokenByTelegramUserID(telegramID int64, oauthToken string, expire time.Duration) error {
-	key := createOAuthRedisKeyForTelegram(telegramID)
-	res := us.redisDB.Set(context.TODO(), key, oauthToken, expire)
-
-	return res.Err()
-}
-
-func (us *UserRepository) GetOAuthAccessTokenByTelegramUserID(telegramID int64) (string, error) {
-	key := createOAuthRedisKeyForTelegram(telegramID)
-	res := us.redisDB.Get(context.TODO(), key)
-
-	if res.Err() == redis.Nil {
-		return "", OAuthAccessTokenDoesNotExist
-	}
-
-	return res.Result()
-}
-
-func (us *UserRepository) DeleteOAuthAccessTokenByTelegramUserID(telegramID int64) error {
-	key := createOAuthRedisKeyForTelegram(telegramID)
-	res := us.redisDB.Del(context.TODO(), key)
-
-	err := res.Err()
-	if err == redis.Nil {
-		return nil
-	}
-
-	return err
-}
-
-// Returns OAuthAccessToken
-// Error types = error, OAuthError, UserEntityError
+// GetOAuthRefreshTokenByTelegramUserID returns OAuthAccessToken
+// Error types = error, UserEntityError
 func (us *UserRepository) GetOAuthRefreshTokenByTelegramUserID(telegramID int64) (string, error) {
-	var refreshToken sql.NullString
+	var refreshToken string
 	err := us.storage.QueryRow(
 		`SELECT u.mail_refresh_token FROM users AS u WHERE u.telegram_user_id = $1`,
 		telegramID,
@@ -101,11 +41,66 @@ func (us *UserRepository) GetOAuthRefreshTokenByTelegramUserID(telegramID int64)
 		return "", UserDoesNotExist
 	case err != nil:
 		return "", errors.Wrapf(err, "failed to get mail refresh token by telegramID=%d", telegramID)
-	case !refreshToken.Valid:
-		return "", UserUnauthorized
 	}
 
-	return refreshToken.String, nil
+	return refreshToken, nil
+}
+
+func (us *UserRepository) GetUserEmailByTelegramUserID(telegramID int64) (string, error) {
+	var email string
+	err := us.storage.QueryRow(
+		`SELECT mail_user_email FROM users WHERE telegram_user_id=$1`,
+		telegramID,
+	).Scan(
+		&email,
+	)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return "", UserDoesNotExist
+	case err != nil:
+		return "", errors.Wrapf(err, "failed to get user email by telegramID=%d", telegramID)
+	}
+
+	return email, nil
+}
+
+func (us *UserRepository) TryGetUsersEmailsByTelegramUserIDs(telegramIDs []int64) (emails []string, err error) {
+	if len(telegramIDs) == 0 {
+		return nil, nil
+	}
+
+	placeholders, err := postgresPlaceholdersForInSQLExpression(len(telegramIDs))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	query := fmt.Sprintf(
+		"SELECT mail_user_email FROM users WHERE telegram_user_id IN (%s)",
+		placeholders,
+	)
+	queryArgs := make([]interface{}, 0, len(telegramIDs))
+	for _, id := range telegramIDs {
+		queryArgs = append(queryArgs, id)
+	}
+
+	rows, err := us.storage.Query(query, queryArgs...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to perform SQL query in TryGetUsersEmailsByTelegramUserIDs")
+	}
+	defer func() {
+		err = customerrors.HandleCloser(err, rows)
+	}()
+
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, errors.Wrap(err, "error while scanning user emails")
+		}
+		emails = append(emails, email)
+	}
+
+	return emails, nil
 }
 
 func (us *UserRepository) CreateUser(user types.TelegramDBUser) error {
@@ -149,6 +144,23 @@ func (us *UserRepository) DeleteUserByTelegramUserID(telegramID int64) error {
 	return nil
 }
 
-func createOAuthRedisKeyForTelegram(telegramID int64) string {
-	return fmt.Sprintf("%s%d", TelegramOAuthPrefix, telegramID)
+func postgresPlaceholdersForInSQLExpression(placeholdersCount int) (string, error) {
+	if placeholdersCount <= 0 {
+		return "", errors.Errorf(
+			"failed generate placeholders for IN SQL expression, placeholdersCount=%d",
+			placeholdersCount,
+		)
+	}
+
+	var builder strings.Builder
+
+	builder.WriteString("$1")
+	for i := 2; i <= placeholdersCount; i++ {
+		if _, err := fmt.Fprintf(&builder, ",$%d", i); err != nil {
+			// nickeskov: it's impossible case...
+			return "", errors.Wrap(err, "failed to write into strings.Builder")
+		}
+	}
+
+	return builder.String(), nil
 }

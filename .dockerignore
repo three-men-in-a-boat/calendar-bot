@@ -24,5 +24,20 @@ vendor/
 
 # Other
 tmp/
+systemd/
 postgresql-schemas/
 ngrok
+README.md
+
+# Git
+.github/
+.git/
+.gitignore
+
+# Go other
+.golangci.yml
+go.sum
+
+# Docker
+Dockerfile
+.dockerignore

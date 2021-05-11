@@ -1,20 +1,10 @@
 package types
 
 import (
-	"fmt"
+	"github.com/calendar-bot/pkg/bots/telegram/utils"
 	"github.com/senseyeio/spaniel"
 	"time"
 )
-
-type StatesDictionary struct {
-	States map[string]string
-}
-
-func NewStatesDictionary() StatesDictionary {
-	return StatesDictionary{
-		States: map[string]string{},
-	}
-}
 
 type Calendar struct {
 	UID   string `json:"uid,omitempty"`
@@ -74,67 +64,13 @@ type EventResponse struct {
 	Data DataEvent `json:"data,omitempty"`
 }
 
-type MailruAPIResponseErr struct {
-	ErrorName        string `json:"error,omitempty"`
-	ErrorCode        int    `json:"error_code,omitempty"`
-	ErrorDescription string `json:"error_description,omitempty"`
-}
-
-func (o *MailruAPIResponseErr) Error() string {
-	if o == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf(
-		"MailruAPIResponseErr: error='%s', error_code=%d, error_description='%s'",
-		o.ErrorName, o.ErrorCode, o.ErrorDescription,
-	)
-}
-
-func (o *MailruAPIResponseErr) IsError() bool {
-	if o == nil {
-		return false
-	}
-	if o.ErrorName != "" {
-		return true
-	}
-	return false
-}
-
-func (o *MailruAPIResponseErr) GetError() *MailruAPIResponseErr {
-	return o
-}
-
 type TelegramDBUser struct {
 	ID               int64
 	MailUserID       string
-	MailUserEmail    string // nickeskov: maybe also remove this field?
+	MailUserEmail    string
 	MailRefreshToken string
 	TelegramUserId   int64
 	CreatedAt        time.Time
-}
-
-// Gender: m - male, f - female
-
-type MailruUserInfo struct {
-	ID        string `json:"id"`
-	Gender    string `json:"gender"`
-	Name      string `json:"name"`
-	Nickname  string `json:"nickname"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Locale    string `json:"locale"`
-	Email     string `json:"email"`
-	Birthday  string `json:"birthday"`
-	Image     string `json:"image"`
-	*MailruAPIResponseErr
-	//ClientID  string
-}
-
-func (m *MailruUserInfo) IsValid() bool {
-	if m == nil {
-		return false
-	}
-	return !m.MailruAPIResponseErr.IsError()
 }
 
 type Location struct {
@@ -216,4 +152,53 @@ func (ft FromTo) End() time.Time {
 
 func (ft FromTo) EndType() spaniel.EndPointType {
 	return spaniel.Open
+}
+
+type DayPart struct {
+	Start    time.Time
+	Duration time.Duration
+}
+
+type BotRedisSession struct {
+	Step             int                  `json:"step"`
+	FromTextCreate   bool                 `json:"from_text_create"`
+	IsDate           bool                 `json:"is_date"`
+	IsCreate         bool                 `json:"is_create"`
+	FindTimeDone     bool                 `json:"find_time_done"`
+	Event            Event                `json:"event"`
+	FreeBusy         FreeBusy             `json:"free_busy"`
+	FindTimeDayPart  *DayPart             `json:"day_part"`
+	FindTimeDuration time.Duration        `json:"find_time_duration"`
+	Users            []int64              `json:"users"`
+	InfoMsg          utils.CustomEditable `json:"info_msg"`
+	PollMsg          utils.CustomEditable `json:"poll_msg"`
+	InlineMsg        utils.CustomEditable `json:"inline_msg"`
+}
+
+type ParseDateReq struct {
+	Timezone string `json:"timezone,omitempty"`
+	Text     string `json:"text"`
+}
+
+type ParseDateResp struct {
+	Date time.Time `json:"date,omitempty"`
+}
+
+type ParseEventResp struct {
+	EventStart time.Time `json:"event_start,omitempty"`
+	EventEnd   time.Time `json:"event_end,omitempty"`
+	EventName  string    `json:"event_name,omitempty"`
+}
+
+type CreateEvent struct {
+	Uid      string   `json:"uid,omitempty"`
+	Calendar Calendar `json:"calendar,omitempty"`
+}
+
+type RespData struct {
+	CreateEvent CreateEvent `json:"createEvent,omitempty"`
+}
+
+type CreateEventResp struct {
+	Data RespData `json:"data,omitempty"`
 }
