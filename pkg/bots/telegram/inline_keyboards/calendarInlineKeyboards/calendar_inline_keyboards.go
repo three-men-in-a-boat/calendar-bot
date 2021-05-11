@@ -199,9 +199,9 @@ func FindTimeLengthButtons() [][]tb.InlineButton {
 				Data:   "4h",
 			},
 			{
-				Text:   "6 часов",
+				Text:   "5 часов",
 				Unique: telegram.FindTimeLength,
-				Data:   "6h",
+				Data:   "5h",
 			},
 		},
 
