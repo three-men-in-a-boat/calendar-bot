@@ -7,6 +7,7 @@ import (
 	"github.com/calendar-bot/pkg/customerrors"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"time"
 )
@@ -32,17 +33,23 @@ func (s *Service) Config() *Config {
 	return s.config
 }
 
-func (s *Service) GenerateOAuthLink(stateValue interface{}, expire time.Duration) (LoginLink, error) {
+func (s *Service) GenerateOAuthLink(stateValue interface{}, expire time.Duration) (loginLink LoginLink, err error) {
+	timer := prometheus.NewTimer(metricGenerateLoginLinkDuration)
+	defer func() {
+		metricGeneratedLoginLinksTotalCount.WithLabelValues(metricStatusFromErr(err)).Inc()
+		timer.ObserveDuration()
+	}()
+
 	stateKey, err := generateStateKey()
 	if err != nil {
 		return LoginLink{}, errors.WithStack(err)
 	}
 
-	if setErr := s.redisDB.Set(context.TODO(), stateKey, stateValue, expire).Err(); setErr != nil {
+	if setErr := s.setStateValueByStateKey(stateKey, stateValue, expire); setErr != nil {
 		return LoginLink{}, errors.Wrapf(setErr, "failed to set stateValue '%v' in redis storage", stateValue)
 	}
 
-	loginLink, err := newLoginLink(s.config, stateKey)
+	loginLink, err = newLoginLink(s.config, stateKey)
 	if err != nil {
 		return LoginLink{}, errors.WithStack(err)
 	}
@@ -53,7 +60,22 @@ func (s *Service) GenerateOAuthLinkWithDefaultExpire(stateValue interface{}) (Lo
 	return s.GenerateOAuthLink(stateValue, s.config.LinkExpireIn)
 }
 
-func (s *Service) ScanStateValueByStateKey(stateKey string, outValue interface{}) error {
+func (s *Service) setStateValueByStateKey(stateKey string, stateValue interface{}, expire time.Duration) (err error) {
+	defer func() {
+		metricStateSetTotalCount.WithLabelValues(metricStatusFromErr(err)).Inc()
+	}()
+
+	if setErr := s.redisDB.Set(context.TODO(), stateKey, stateValue, expire).Err(); setErr != nil {
+		return errors.WithStack(setErr)
+	}
+	return nil
+}
+
+func (s *Service) ScanStateValueByStateKey(stateKey string, outValue interface{}) (err error) {
+	defer func() {
+		metricStateScanTotalCount.WithLabelValues(metricStatusFromErr(err)).Inc()
+	}()
+
 	res := s.redisDB.Get(context.TODO(), stateKey)
 
 	if err := res.Err(); err != nil {
@@ -72,11 +94,19 @@ func (s *Service) ScanStateValueByStateKey(stateKey string, outValue interface{}
 	return nil
 }
 
-func (s *Service) SetAccessTokenByKey(key, accessToken string, expire time.Duration) error {
+func (s *Service) SetAccessTokenByKey(key, accessToken string, expire time.Duration) (err error) {
+	defer func() {
+		metricAccessTokenSetTotalCount.WithLabelValues(metricStatusFromErr(err)).Inc()
+	}()
+
 	return s.redisDB.Set(context.TODO(), key, accessToken, expire).Err()
 }
 
-func (s *Service) GetAccessTokenByKey(key string) (string, error) {
+func (s *Service) GetAccessTokenByKey(key string) (token string, err error) {
+	defer func() {
+		metricAccessTokenGetTotalCount.WithLabelValues(metricStatusFromErr(err)).Inc()
+	}()
+
 	res := s.redisDB.Get(context.TODO(), key)
 
 	if err := res.Err(); err != nil {
@@ -91,7 +121,11 @@ func (s *Service) GetAccessTokenByKey(key string) (string, error) {
 	return res.Val(), nil
 }
 
-func (s *Service) DelOAuthAccessTokenByKey(key string) error {
+func (s *Service) DelOAuthAccessTokenByKey(key string) (err error) {
+	defer func() {
+		metricAccessTokenDeleteTotalCount.WithLabelValues(metricStatusFromErr(err)).Inc()
+	}()
+
 	if err := s.redisDB.Del(context.TODO(), key).Err(); err != nil {
 		switch err {
 		case redis.Nil:
@@ -104,6 +138,12 @@ func (s *Service) DelOAuthAccessTokenByKey(key string) error {
 }
 
 func (s *Service) ObtainTokensFromOAuthHost(authCode string) (response ObtainTokensResponse, err error) {
+	timer := prometheus.NewTimer(metricTokensObtainFromOAuthHostDuration)
+	defer func() {
+		metricTokensObtainFromOAuthHostTotalCount.WithLabelValues(metricStatusFromErr(err)).Inc()
+		timer.ObserveDuration()
+	}()
+
 	form, err := newObtainTokensPostForm(s.config, authCode)
 	if err != nil {
 		return ObtainTokensResponse{}, errors.WithStack(err)
@@ -139,6 +179,12 @@ func (s *Service) ObtainTokensFromOAuthHost(authCode string) (response ObtainTok
 }
 
 func (s *Service) RenewAccessTokenByRefreshToken(refreshToken string) (response RenewAccessTokenResponse, err error) {
+	timer := prometheus.NewTimer(metricRenewAccessTokenDuration)
+	defer func() {
+		metricRenewAccessTokenTotalCount.WithLabelValues(metricStatusFromErr(err)).Inc()
+		timer.ObserveDuration()
+	}()
+
 	form, err := newRenewAccessTokenPostForm(s.config, refreshToken)
 	if err != nil {
 		return RenewAccessTokenResponse{}, errors.WithStack(err)
@@ -174,6 +220,12 @@ func (s *Service) RenewAccessTokenByRefreshToken(refreshToken string) (response 
 }
 
 func (s *Service) GetUserInfo(accessToken string) (response UserInfoResponse, err error) {
+	timer := prometheus.NewTimer(metricUserInfoRequestDuration)
+	defer func() {
+		metricUserInfoRequestsTotalCount.WithLabelValues(metricStatusFromErr(err)).Inc()
+		timer.ObserveDuration()
+	}()
+
 	userInfoLink, err := newUserInfoLink(s.config, accessToken)
 	if err != nil {
 		return UserInfoResponse{}, errors.WithStack(err)

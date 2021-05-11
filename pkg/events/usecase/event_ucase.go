@@ -8,6 +8,7 @@ import (
 	"github.com/calendar-bot/pkg/types"
 	"github.com/fatih/structs"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/senseyeio/spaniel"
 	"go.uber.org/zap"
 	"io/ioutil"
@@ -63,7 +64,13 @@ func closestEvent(events []types.Event) *types.Event {
 	return &min
 }
 
-func getEventsBySpecificDay(t time.Time, accessToken string) (*types.EventsResponse, error) {
+func getEventsBySpecificDay(t time.Time, accessToken string) (events *types.EventsResponse, err error) {
+	timer := prometheus.NewTimer(metricGetEventsBySpecificDayDuration)
+	defer func() {
+		metricGetEventsBySpecificDayTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
 	startDay := getStartDay(t).Format(time.RFC3339)
 	endDay := getEndDay(t).Format(time.RFC3339)
 
@@ -160,7 +167,13 @@ func (uc *EventUseCase) GetEventsToday(accessToken string) (*types.EventsRespons
 	return getEventsBySpecificDay(time.Now(), accessToken)
 }
 
-func (uc *EventUseCase) GetClosestEvent(accessToken string) (*types.Event, error) {
+func (uc *EventUseCase) GetClosestEvent(accessToken string) (event *types.Event, err error) {
+	timer := prometheus.NewTimer(metricGetClosestEventDuration)
+	defer func() {
+		metricGetClosestEventTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
 	eventsResponse, err := uc.GetEventsToday(accessToken)
 	if err != nil {
 		return nil, err
@@ -178,7 +191,13 @@ func (uc *EventUseCase) GetEventsByDate(accessToken string, date time.Time) (*ty
 	return getEventsBySpecificDay(date, accessToken)
 }
 
-func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string, eventID string) (*types.EventResponse, error) {
+func (uc *EventUseCase) GetEventByEventID(accessToken, calendarID, eventID string) (events *types.EventResponse, err error) {
+	timer := prometheus.NewTimer(metricGetEventByEventIDDuration)
+	defer func() {
+		metricGetEventByEventIDTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
 	graphqlRequest := fmt.Sprintf(`
 	{
 		event(eventUID: "%s", calendarUID: "%s") {
@@ -259,7 +278,13 @@ func (uc *EventUseCase) GetEventByEventID(accessToken string, calendarID string,
 	return &eventResponse, nil
 }
 
-func (uc *EventUseCase) GetUsersBusyIntervals(accessToken string, freeBusy types.FreeBusy) (*types.FreeBusyResponse, error) {
+func (uc *EventUseCase) GetUsersBusyIntervals(accessToken string, freeBusy types.FreeBusy) (fb *types.FreeBusyResponse, err error) {
+	timer := prometheus.NewTimer(metricGetUsersBusyIntervalsDuration)
+	defer func() {
+		metricGetUsersBusyIntervalsTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
 	var users string
 	for i, user := range freeBusy.Users {
 		users += "\"" + user + "\""
@@ -317,7 +342,13 @@ func (uc *EventUseCase) GetUsersBusyIntervals(accessToken string, freeBusy types
 }
 
 func (uc *EventUseCase) GetUsersFreeIntervals(accessToken string, freeBusy types.FreeBusy,
-	conf FreeBusyConfig) (spaniel.Spans, error) {
+	conf FreeBusyConfig) (freeIntervals spaniel.Spans, err error) {
+
+	timer := prometheus.NewTimer(metricGetUsersFreeIntervalsDuration)
+	defer func() {
+		metricGetUsersFreeIntervalsTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
 
 	response, err := uc.GetUsersBusyIntervals(accessToken, freeBusy)
 	if err != nil {
@@ -439,7 +470,13 @@ func getJsonFromMap(m map[string]interface{}) string {
 	return response
 }
 
-func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) ([]byte, error) {
+func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) (resp []byte, err error) {
+	timer := prometheus.NewTimer(metricCreateEventDuration)
+	defer func() {
+		metricCreateEventTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
+
 	tmp, err := time.Parse(time.RFC3339, *eventInput.From)
 	if err != nil {
 		return nil, errors.Errorf("failed to parse `from` time, %v", err)
@@ -494,11 +531,23 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 	return res, nil
 }
 
-func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttendee) ([]byte, error) {
-	mutationReq := fmt.Sprintf(`mutation{appendAttendee(uri: {uid: \"%s\", calendar: \"%s\"}, input: {attendee: {email: \"%s\", role: %s}}){email, role, name, status}}`, attendee.EventID, attendee.CalendarID, attendee.Email, attendee.Role)
-	addAtttendeeRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
+func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttendee) (resp []byte, err error) {
+	timer := prometheus.NewTimer(metricAddAttendeeDuration)
+	defer func() {
+		metricAddAttendeeTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
 
-	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(addAtttendeeRequest)))
+	mutationReq := fmt.Sprintf(
+		`mutation{appendAttendee(uri: {uid: \"%s\", calendar: \"%s\"}, input: {attendee: {email: \"%s\", role: %s}}){email, role, name, status}}`,
+		attendee.EventID,
+		attendee.CalendarID,
+		attendee.Email,
+		attendee.Role,
+	)
+	addAttendeeRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
+
+	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(addAttendeeRequest)))
 	if err != nil {
 		return nil, errors.Errorf("failed to create a request: , %v", err)
 	}
@@ -530,9 +579,19 @@ func (uc *EventUseCase) AddAttendee(accessToken string, attendee types.AddAttend
 	return res, nil
 }
 
-func (uc *EventUseCase) ChangeStatus(accessToken string, reactEvent types.ChangeStatus) ([]byte, error) {
+func (uc *EventUseCase) ChangeStatus(accessToken string, reactEvent types.ChangeStatus) (resp []byte, err error) {
+	timer := prometheus.NewTimer(metricChangeStatusDuration)
+	defer func() {
+		metricChangeStatusTotalCount.WithLabelValues(metricStatusFromErr(err))
+		timer.ObserveDuration()
+	}()
 
-	mutationReq := fmt.Sprintf(`mutation{reactEvent(input: {uid: \"%s\", calendar: \"%s\", status: %s}){uid,title, from, to, status}}`, reactEvent.EventID, reactEvent.CalendarID, reactEvent.Status)
+	mutationReq := fmt.Sprintf(
+		`mutation{reactEvent(input: {uid: \"%s\", calendar: \"%s\", status: %s}){uid,title, from, to, status}}`,
+		reactEvent.EventID,
+		reactEvent.CalendarID,
+		reactEvent.Status,
+	)
 	reactEventRequest := fmt.Sprintf(`{"query":"%s"}`, mutationReq)
 
 	request, err := http.NewRequest("POST", "https://calendar.mail.ru/graphql", bytes.NewBuffer([]byte(reactEventRequest)))

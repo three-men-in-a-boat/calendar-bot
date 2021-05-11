@@ -8,7 +8,7 @@ import (
 	uUseCase "github.com/calendar-bot/pkg/users/usecase"
 	"github.com/calendar-bot/pkg/utils/contextutils"
 	"github.com/calendar-bot/pkg/utils/pathutils"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"net/http"
 	"time"
