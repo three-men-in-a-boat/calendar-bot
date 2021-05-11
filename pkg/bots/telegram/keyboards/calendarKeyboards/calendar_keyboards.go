@@ -99,9 +99,6 @@ func GetCreateFastCommand() [][]tb.ReplyButton {
 				Text: "Через неделю в 12:00",
 			},
 			{
-				Text: "Через неделю в 15:00",
-			},
-			{
 				Text: "Через неделю в 18:00",
 			},
 		},
