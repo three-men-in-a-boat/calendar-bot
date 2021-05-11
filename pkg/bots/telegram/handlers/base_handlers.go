@@ -88,13 +88,18 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 }
 
 func (bh *BaseHandlers) HandleHelp(m *tb.Message) {
+	var replyKeyboard [][]tb.ReplyButton = nil
+	if m.Chat.Type == tb.ChatPrivate {
+		replyKeyboard = baseKeyboards.HelpCommandKeyboard()
+	}
 	_, err := bh.handler.bot.Send(m.Chat, baseMessages.HelpInfoText(),
+
 		&tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				OneTimeKeyboard:     true,
 				ResizeReplyKeyboard: true,
-				ReplyKeyboard:       baseKeyboards.HelpCommandKeyboard(),
+				ReplyKeyboard:       replyKeyboard,
 			},
 		})
 
@@ -122,9 +127,9 @@ func (bh *BaseHandlers) HandleStop(m *tb.Message) {
 		bh.handler.SendError(m.Chat, err)
 		customerrors.HandlerError(err)
 	} else {
-		 _, err = bh.handler.bot.Send(m.Chat, "Вы успешно разлогинились")
-		 if err != nil {
-		 	customerrors.HandlerError(err)
-		 }
+		_, err = bh.handler.bot.Send(m.Chat, "Вы успешно разлогинились")
+		if err != nil {
+			customerrors.HandlerError(err)
+		}
 	}
 }

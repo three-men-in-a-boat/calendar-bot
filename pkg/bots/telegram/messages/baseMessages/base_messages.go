@@ -14,7 +14,8 @@ const (
 )
 
 const (
-	helpInfoText = "Это бот для работы с календарем mail.ru. Сейчас доступны следующие команды"
+	helpInfoText = "Это бот для работы с календарем mail.ru. Сейчас доступны следующие команды:\n\n" +
+		"/today\n/next\n/date\n/create\n/about"
 )
 
 const (
