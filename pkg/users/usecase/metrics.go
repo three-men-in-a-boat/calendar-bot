@@ -1,8 +1,6 @@
 package usecase
 
 import (
-	"fmt"
-	"github.com/calendar-bot/pkg/services/oauth"
 	"github.com/calendar-bot/pkg/users/repository"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -144,15 +142,15 @@ func metricStatusFromErr(err error) string {
 		default:
 			return "unknown_user_entity_error"
 		}
-	case oauth.Error:
-		switch err {
-		case oauth.AccessTokenDoesNotExist:
-			return "access_token_does_not_exist"
-		default:
-			return "unknown_oauth_service_err"
-		}
-	case *oauth.APIResponseErr:
-		return fmt.Sprintf("oauth_api_err_%d", err.ErrorCode)
+	//case oauth.Error:
+	//	switch err {
+	//	case oauth.AccessTokenDoesNotExist:
+	//		return "access_token_does_not_exist"
+	//	default:
+	//		return "unknown_oauth_service_err"
+	//	}
+	//case *oauth.APIResponseErr:
+	//	return fmt.Sprintf("oauth_api_err_%d", err.ErrorCode)
 	default:
 		return "unknown_err"
 	}
