@@ -281,7 +281,7 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 		}
 	}
 
-	if m.Chat.Type == tb.ChatGroup && !session.FindTimeDone {
+	if (m.Chat.Type == tb.ChatGroup || m.Chat.Type == tb.ChatSuperGroup) && !session.FindTimeDone {
 		session = &types.BotRedisSession{}
 		err = ch.setSession(session, m.Sender)
 		if err != nil {
