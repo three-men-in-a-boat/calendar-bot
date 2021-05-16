@@ -84,14 +84,14 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 	}
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return
 	}
 
 	events, err := ch.eventUseCase.GetEventsToday(token)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return
 	}
@@ -104,10 +104,10 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 			},
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
-		ch.sendShortEvents(&events.Data.Events, m.Chat, m.Chat)
+		ch.sendShortEvents(&events.Data.Events, m.Chat)
 	} else {
 		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetTodayNotFound(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
@@ -116,7 +116,7 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 			},
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 
@@ -130,14 +130,14 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 	}
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return
 	}
 
 	event, err := ch.eventUseCase.GetClosestEvent(token)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return
 	}
@@ -150,14 +150,14 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 			},
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		var inlineKeyboard [][]tb.InlineButton = nil
 		if m.Chat.Type == tb.ChatPrivate {
 			inlineKeyboard, err = calendarInlineKeyboards.EventShowMoreInlineKeyboard(event, ch.redisDB)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.SingleEventShortText(event), &tb.SendOptions{
@@ -167,7 +167,7 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 			},
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
 		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.NoClosestEvents(), &tb.SendOptions{
@@ -177,7 +177,7 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 			},
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 }
@@ -188,7 +188,7 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 	if ch.GroupMiddleware(m) {
 		return
 	}
-	currSession, err := ch.getSession(m.Sender)
+	currSession, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -196,21 +196,21 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 	if currSession.PollMsg.ChatID != 0 {
 		err = ch.handler.bot.Delete(&currSession.PollMsg)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 
 	if currSession.InlineMsg.ChatID != 0 {
 		_, err = ch.handler.bot.EditReplyMarkup(&currSession.InlineMsg, nil)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 
 	if currSession.InfoMsg.ChatID != 0 {
 		err = ch.handler.bot.Delete(&currSession.InfoMsg)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 
@@ -237,12 +237,12 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 		ReplyTo:     replyTo,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 	}
 	if m.Chat.Type != tb.ChatPrivate {
 		currSession.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 	}
-	err = ch.setSession(currSession, m.Sender)
+	err = ch.setSession(currSession, m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -251,9 +251,9 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 	if !ch.AuthMiddleware(m.Sender, m.Chat) {
 		return
 	}
-	session, err := ch.getSession(m.Sender)
+	session, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return
 	}
@@ -262,14 +262,14 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 		session.FindTimeDone = false
 		err = ch.handler.bot.Delete(&session.PollMsg)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 
 	if session.InlineMsg.ChatID != 0 {
 		_, err = ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 
@@ -277,16 +277,16 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 		session.FindTimeDone = false
 		err = ch.handler.bot.Delete(&session.InfoMsg)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 
-	if m.Chat.Type == tb.ChatGroup && !session.FindTimeDone {
+	if (m.Chat.Type == tb.ChatGroup || m.Chat.Type == tb.ChatSuperGroup) && !session.FindTimeDone {
 		session = &types.BotRedisSession{}
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			ch.handler.SendError(m.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			return
 		}
 
@@ -298,7 +298,7 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 			ReplyTo: m,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		} else {
 			return
 		}
@@ -310,13 +310,13 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return
 	} else {
 		userInfo, err := ch.userUseCase.GetMailruUserInfo(token)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		} else {
 			organizerAttendee := types.AttendeeEvent{
 				Email:  userInfo.Email,
@@ -350,22 +350,22 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 		ReplyTo:     replyTo,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 	}
 	if m.Chat.Type != tb.ChatPrivate {
 		session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 	}
 
-	err = ch.setSession(session, m.Sender)
+	err = ch.setSession(session, m.Sender, m.Chat)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return
 	}
 
 }
 func (ch *CalendarHandlers) HandleText(m *tb.Message) {
-	session, err := ch.getSession(m.Sender)
+	session, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -389,7 +389,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 					},
 				})
 				if err != nil {
-					customerrors.HandlerError(err)
+					customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 				}
 
 				return
@@ -406,13 +406,13 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 
 			token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 				ch.handler.SendError(m.Chat, err)
 				return
 			} else {
 				userInfo, err := ch.userUseCase.GetMailruUserInfo(token)
 				if err != nil {
-					customerrors.HandlerError(err)
+					customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 				} else {
 					organizerAttendee := types.AttendeeEvent{
 						Email:  userInfo.Email,
@@ -436,7 +436,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 				})
 
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 
 			session.InfoMsg = utils.InitCustomEditable(newMsg.MessageSig())
@@ -453,7 +453,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 				})
 
 				if err != nil {
-					customerrors.HandlerError(err)
+					customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 				}
 
 			} else {
@@ -469,7 +469,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 					})
 
 					if err != nil {
-						customerrors.HandlerError(err)
+						customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 					}
 				} else {
 					session.Step = telegram.StepCreateDesc
@@ -483,12 +483,12 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 					})
 
 					if err != nil {
-						customerrors.HandlerError(err)
+						customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 					}
 				}
 			}
 
-			err = ch.setSession(session, m.Sender)
+			err = ch.setSession(session, m.Sender, m.Chat)
 			if err == nil {
 				return
 			}
@@ -498,7 +498,7 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 }
 
 func (ch *CalendarHandlers) HandleDescChange(m *tb.Message) {
-	session, err := ch.getSession(m.Sender)
+	session, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -520,24 +520,24 @@ func (ch *CalendarHandlers) HandleDescChange(m *tb.Message) {
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		if m.Chat.Type != tb.ChatPrivate {
 			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 		}
 
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			ch.handler.SendError(m.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
 		ch.HandleText(m)
 	}
 }
 func (ch *CalendarHandlers) HandleTitleChange(m *tb.Message) {
-	session, err := ch.getSession(m.Sender)
+	session, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -559,24 +559,24 @@ func (ch *CalendarHandlers) HandleTitleChange(m *tb.Message) {
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		if m.Chat.Type != tb.ChatPrivate {
 			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 		}
 
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			ch.handler.SendError(m.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
 		ch.HandleText(m)
 	}
 }
 func (ch *CalendarHandlers) HandleUserChange(m *tb.Message) {
-	session, err := ch.getSession(m.Sender)
+	session, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -599,24 +599,24 @@ func (ch *CalendarHandlers) HandleUserChange(m *tb.Message) {
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		if m.Chat.Type != tb.ChatPrivate {
 			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 		}
 
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			ch.handler.SendError(m.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
 		ch.HandleText(m)
 	}
 }
 func (ch *CalendarHandlers) HandleStartTimeChange(m *tb.Message) {
-	session, err := ch.getSession(m.Sender)
+	session, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -638,24 +638,24 @@ func (ch *CalendarHandlers) HandleStartTimeChange(m *tb.Message) {
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		if m.Chat.Type != tb.ChatPrivate {
 			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 		}
 
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			ch.handler.SendError(m.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
 		ch.HandleText(m)
 	}
 }
 func (ch *CalendarHandlers) HandleStopTimeChange(m *tb.Message) {
-	session, err := ch.getSession(m.Sender)
+	session, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -678,24 +678,24 @@ func (ch *CalendarHandlers) HandleStopTimeChange(m *tb.Message) {
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		if m.Chat.Type != tb.ChatPrivate {
 			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 		}
 
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			ch.handler.SendError(m.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
 		ch.HandleText(m)
 	}
 }
 func (ch *CalendarHandlers) HandleLocationChange(m *tb.Message) {
-	session, err := ch.getSession(m.Sender)
+	session, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -718,24 +718,24 @@ func (ch *CalendarHandlers) HandleLocationChange(m *tb.Message) {
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		if m.Chat.Type != tb.ChatPrivate {
 			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 		}
 
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			ch.handler.SendError(m.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
 		ch.HandleText(m)
 	}
 }
 func (ch *CalendarHandlers) HandleFullDayChange(m *tb.Message) {
-	session, err := ch.getSession(m.Sender)
+	session, err := ch.getSession(m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -746,7 +746,7 @@ func (ch *CalendarHandlers) HandleFullDayChange(m *tb.Message) {
 		if session.InfoMsg.ChatID != 0 {
 			err := ch.handler.bot.Delete(&session.InfoMsg)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
 
@@ -761,15 +761,15 @@ func (ch *CalendarHandlers) HandleFullDayChange(m *tb.Message) {
 			})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		session.InfoMsg = utils.InitCustomEditable(newMsg.MessageSig())
 
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			ch.handler.SendError(m.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
 		ch.HandleText(m)
@@ -782,7 +782,7 @@ func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 			CallbackID: c.ID,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
@@ -796,7 +796,7 @@ func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 		Text:       calendarMessages.CallbackResponseHeader(event),
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventFullText(event),
@@ -807,7 +807,7 @@ func (ch *CalendarHandlers) HandleShowMore(c *tb.Callback) {
 			},
 		})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 }
@@ -817,7 +817,7 @@ func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 			CallbackID: c.ID,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
@@ -830,12 +830,12 @@ func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 		CallbackID: c.ID,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	inlineKeyboard, err := calendarInlineKeyboards.EventShowMoreInlineKeyboard(event, ch.redisDB)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 	_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventShortText(event),
 		&tb.SendOptions{
@@ -845,7 +845,7 @@ func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 			},
 		})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 }
 func (ch *CalendarHandlers) HandleAlertYes(c *tb.Callback) {
@@ -856,7 +856,7 @@ func (ch *CalendarHandlers) HandleAlertYes(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
@@ -865,14 +865,14 @@ func (ch *CalendarHandlers) HandleAlertYes(c *tb.Callback) {
 		CallbackID: c.ID,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	c.Message.Sender = c.Message.ReplyTo.Sender
 
 	err = ch.handler.bot.Delete(c.Message)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	switch c.Data {
@@ -893,7 +893,7 @@ func (ch *CalendarHandlers) HandleAlertNo(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
@@ -902,11 +902,11 @@ func (ch *CalendarHandlers) HandleAlertNo(c *tb.Callback) {
 		CallbackID: c.ID,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 	err = ch.handler.bot.Delete(c.Message)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 }
 func (ch *CalendarHandlers) HandleCancelCreateEvent(c *tb.Callback) {
@@ -918,12 +918,12 @@ func (ch *CalendarHandlers) HandleCancelCreateEvent(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
 
-	session, err := ch.getSession(c.Sender)
+	session, err := ch.getSession(c.Sender, c.Message.Chat)
 	if err != nil {
 		return
 	}
@@ -931,7 +931,7 @@ func (ch *CalendarHandlers) HandleCancelCreateEvent(c *tb.Callback) {
 	if session.InlineMsg.ChatID != 0 {
 		_, err := ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 	}
 
@@ -940,7 +940,7 @@ func (ch *CalendarHandlers) HandleCancelCreateEvent(c *tb.Callback) {
 		Text:       calendarMessages.GetCreateCanceledText(),
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 	session.IsCreate = false
 	session.IsDate = false
@@ -951,13 +951,13 @@ func (ch *CalendarHandlers) HandleCancelCreateEvent(c *tb.Callback) {
 	if session.InfoMsg.ChatID != 0 {
 		err := ch.handler.bot.Delete(&session.InfoMsg)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 	}
 
 	session.InfoMsg = utils.InitCustomEditable("", 0)
 
-	err = ch.setSession(session, c.Sender)
+	err = ch.setSession(session, c.Sender, c.Message.Chat)
 	if err != nil {
 		return
 	}
@@ -970,7 +970,7 @@ func (ch *CalendarHandlers) HandleCancelCreateEvent(c *tb.Callback) {
 	})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 }
 func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
@@ -981,12 +981,12 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
 
-	session, err := ch.getSession(c.Sender)
+	session, err := ch.getSession(c.Sender, c.Message.Chat)
 	if err != nil {
 		return
 	}
@@ -994,7 +994,7 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(c.Sender.ID))
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
@@ -1005,7 +1005,7 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
@@ -1020,7 +1020,7 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 		Text:       calendarMessages.GetEventCreatedText(),
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	session.Event.Calendar = respInfo.Data.CreateEvent.Calendar
@@ -1034,14 +1034,14 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 		})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	var groupButtons [][]tb.InlineButton = nil
-	if c.Message.Chat.Type == tb.ChatGroup {
+	if c.Message.Chat.Type == tb.ChatGroup || c.Message.Chat.Type == tb.ChatSuperGroup {
 		groupButtons, err = calendarInlineKeyboards.GroupChatButtons(&session.Event, ch.redisDB, c.Sender.ID)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 	}
 
@@ -1055,7 +1055,7 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 		})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	session.IsCreate = false
@@ -1067,21 +1067,21 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 	if session.InfoMsg.ChatID != 0 {
 		err = ch.handler.bot.Delete(&session.InfoMsg)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 	}
 
 	if session.InlineMsg.ChatID != 0 {
 		_, err = ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 	}
 
 	session.InfoMsg = utils.InitCustomEditable("", 0)
 	session.InlineMsg = utils.InitCustomEditable("", 0)
 
-	err = ch.setSession(session, c.Sender)
+	err = ch.setSession(session, c.Sender, c.Message.Chat)
 	if err != nil {
 		return
 	}
@@ -1100,15 +1100,15 @@ func (ch *CalendarHandlers) HandleGroupFindTimeYes(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
 
-	session, err := ch.getSession(c.Sender)
+	session, err := ch.getSession(c.Sender, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
@@ -1117,7 +1117,7 @@ func (ch *CalendarHandlers) HandleGroupFindTimeYes(c *tb.Callback) {
 
 	err = ch.handler.bot.Delete(c.Message)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	msg, err := ch.handler.bot.Send(c.Message.Chat, calendarMessages.GetFindTimeStartText(), &tb.SendOptions{
@@ -1128,15 +1128,15 @@ func (ch *CalendarHandlers) HandleGroupFindTimeYes(c *tb.Callback) {
 		ReplyTo: c.Message.ReplyTo,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 
-	err = ch.setSession(session, c.Sender)
+	err = ch.setSession(session, c.Sender, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 }
@@ -1148,23 +1148,23 @@ func (ch *CalendarHandlers) HandleGroupFindTimeNo(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
 
-	session, err := ch.getSession(c.Sender)
+	session, err := ch.getSession(c.Sender, c.Message.Chat)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		ch.handler.SendError(c.Message.Chat, err)
 		return
 	}
 
 	session.FindTimeDone = true
-	err = ch.setSession(session, c.Sender)
+	err = ch.setSession(session, c.Sender, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
@@ -1172,12 +1172,12 @@ func (ch *CalendarHandlers) HandleGroupFindTimeNo(c *tb.Callback) {
 		CallbackID: c.ID,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	err = ch.handler.bot.Delete(c.Message)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	ch.HandleCreate(c.Message.ReplyTo)
@@ -1190,7 +1190,7 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
@@ -1199,13 +1199,13 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 		CallbackID: c.ID,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
-	session, err := ch.getSession(c.Sender)
+	session, err := ch.getSession(c.Sender, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	if c.Data == calendarMessages.GetCreateCancelText() {
@@ -1220,13 +1220,13 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 		if session.InfoMsg.ChatID != 0 {
 			err := ch.handler.bot.Delete(&session.InfoMsg)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 			}
 		}
 
 		session.InfoMsg = utils.InitCustomEditable("", 0)
 
-		err = ch.setSession(session, c.Sender)
+		err = ch.setSession(session, c.Sender, c.Message.Chat)
 		if err != nil {
 			return
 		}
@@ -1239,27 +1239,27 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 
 		err = ch.handler.bot.Delete(c.Message)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
 
 	if c.Data == "All day" {
 		session.FindTimeDayPart = nil
-		err = ch.setSession(session, c.Sender)
+		err = ch.setSession(session, c.Sender, c.Message.Chat)
 		if err != nil {
 			ch.handler.SendError(c.Message.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 
 		err = ch.handler.bot.Delete(c.Message)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 
 		_, err = ch.handler.bot.Send(c.Message.Chat, calendarMessages.FindTimeChooseLengthHeader,
@@ -1271,7 +1271,7 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 				ReplyTo: c.Message.ReplyTo,
 			})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 
 		return
@@ -1280,7 +1280,7 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 	t, err := time.Parse(time.RFC3339, c.Data)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
@@ -1291,16 +1291,16 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 		Duration: d,
 	}
 
-	err = ch.setSession(session, c.Sender)
+	err = ch.setSession(session, c.Sender, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
 	err = ch.handler.bot.Delete(c.Message)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	_, err = ch.handler.bot.Send(c.Message.Chat, calendarMessages.FindTimeChooseLengthHeader,
@@ -1312,7 +1312,7 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 			ReplyTo: c.Message.ReplyTo,
 		})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 }
 func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
@@ -1323,7 +1323,7 @@ func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
@@ -1332,13 +1332,13 @@ func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
 		CallbackID: c.ID,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
-	session, err := ch.getSession(c.Sender)
+	session, err := ch.getSession(c.Sender, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	if c.Data == calendarMessages.GetCreateCancelText() {
@@ -1347,13 +1347,13 @@ func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
 		if session.InfoMsg.ChatID != 0 {
 			err := ch.handler.bot.Delete(&session.InfoMsg)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 			}
 		}
 
 		session.InfoMsg = utils.InitCustomEditable("", 0)
 
-		err = ch.setSession(session, c.Sender)
+		err = ch.setSession(session, c.Sender, c.Message.Chat)
 		if err != nil {
 			return
 		}
@@ -1366,12 +1366,12 @@ func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 
 		err = ch.handler.bot.Delete(c.Message)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
@@ -1380,15 +1380,15 @@ func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
 
 	session.FindTimeDuration = d
 
-	err = ch.setSession(session, c.Sender)
+	err = ch.setSession(session, c.Sender, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	err = ch.handler.bot.Delete(c.Message)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	ch.sendOrUpdateVote(session, c.Message.Chat, c.Sender, c.Sender, c.Message.ReplyTo)
@@ -1398,14 +1398,14 @@ func (ch *CalendarHandlers) FindTimeAdd(c *tb.Callback) {
 	userId, err := strconv.Atoi(c.Data)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
-	session, err := ch.getSession(&tb.User{ID: userId})
+	session, err := ch.getSession(&tb.User{ID: userId}, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
@@ -1416,7 +1416,7 @@ func (ch *CalendarHandlers) FindTimeAdd(c *tb.Callback) {
 				Text:       calendarMessages.FindTimeExist,
 			})
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 			}
 			return
 		}
@@ -1432,56 +1432,56 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
 
-	session, err := ch.getSession(c.Sender)
+	session, err := ch.getSession(c.Sender, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
 		CallbackID: c.ID,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	if c.Data == calendarMessages.GetCreateCancelText() {
 		if session.PollMsg.ChatID != 0 {
 			err = ch.handler.bot.Delete(&session.PollMsg)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 			}
 		}
 
 		if session.InlineMsg.ChatID != 0 {
 			_, err = ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 			}
 		}
 
 		if session.InfoMsg.ChatID != 0 {
 			err = ch.handler.bot.Delete(&session.InfoMsg)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 			}
 		}
 
 		session = &types.BotRedisSession{}
-		err = ch.setSession(session, c.Sender)
+		err = ch.setSession(session, c.Sender, c.Message.Chat)
 		if err != nil {
 			ch.handler.SendError(c.Message.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 
 		_, err = ch.handler.bot.Send(c.Message.Chat, calendarMessages.GetCreateCanceledText())
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 
 		return
@@ -1507,19 +1507,19 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 
 	err = ch.handler.bot.Delete(&session.PollMsg)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(c.Sender.ID))
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	userInfo, err := ch.userUseCase.GetMailruUserInfo(token)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	session.FindTimeDone = true
@@ -1544,29 +1544,30 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 		})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	session.InfoMsg = utils.InitCustomEditable(newMsg.MessageSig())
 
 	session.Step = telegram.StepCreateTitle
 
-	_, err = ch.handler.bot.Send(c.Message.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
+	msg, err := ch.handler.bot.Send(c.Message.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
 		ParseMode: tb.ModeHTML,
 		ReplyMarkup: &tb.ReplyMarkup{
-			ReplyKeyboard:   calendarKeyboards.GetCreateOptionButtons(session),
-			OneTimeKeyboard: true,
+			InlineKeyboard: calendarInlineKeyboards.GetCreateOptionButtons(session),
 		},
 	})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
-	err = ch.setSession(session, c.Sender)
+	session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
+
+	err = ch.setSession(session, c.Sender, c.Message.Chat)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 }
 func (ch *CalendarHandlers) HandleGroupText(c *tb.Callback) {
@@ -1577,19 +1578,19 @@ func (ch *CalendarHandlers) HandleGroupText(c *tb.Callback) {
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
 
 	err := ch.handler.bot.Respond(c, &tb.CallbackResponse{CallbackID: c.ID})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	_, err = ch.handler.bot.EditReplyMarkup(c.Message, nil)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	c.Message.ReplyTo.Text = c.Data
@@ -1614,14 +1615,14 @@ func (ch *CalendarHandlers) HandleGroupText(c *tb.Callback) {
 	}
 }
 
-func (ch *CalendarHandlers) getSession(user *tb.User) (*types.BotRedisSession, error) {
-	resp, err := ch.redisDB.Get(context.TODO(), strconv.Itoa(user.ID)).Result()
+func (ch *CalendarHandlers) getSession(user *tb.User, chat *tb.Chat) (*types.BotRedisSession, error) {
+	resp, err := ch.redisDB.Get(context.TODO(),strconv.Itoa(int(chat.ID)) + strconv.Itoa(user.ID)).Result()
 	if err != nil {
 		newSession := &types.BotRedisSession{}
-		err = ch.setSession(newSession, user)
+		err = ch.setSession(newSession, user, chat)
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &chat.ID, nil)
 			_, err = ch.handler.bot.Send(user, calendarMessages.RedisSessionNotFound(), &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
 				ReplyMarkup: &tb.ReplyMarkup{
@@ -1629,7 +1630,7 @@ func (ch *CalendarHandlers) getSession(user *tb.User) (*types.BotRedisSession, e
 				},
 			})
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &chat.ID, nil)
 			}
 			return nil, err
 		}
@@ -1640,7 +1641,7 @@ func (ch *CalendarHandlers) getSession(user *tb.User) (*types.BotRedisSession, e
 	session := &types.BotRedisSession{}
 	err = json.Unmarshal([]byte(resp), session)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &chat.ID, nil)
 		_, err := ch.handler.bot.Send(user, calendarMessages.RedisSessionNotFound(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
@@ -1648,30 +1649,30 @@ func (ch *CalendarHandlers) getSession(user *tb.User) (*types.BotRedisSession, e
 			},
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err,&chat.ID, nil)
 		}
 		return nil, err
 	}
 
 	return session, nil
 }
-func (ch *CalendarHandlers) setSession(session *types.BotRedisSession, user *tb.User) error {
+func (ch *CalendarHandlers) setSession(session *types.BotRedisSession, user *tb.User, chat *tb.Chat) error {
 	b, err := json.Marshal(session)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err,&chat.ID, nil)
 		ch.handler.SendError(user, err)
 		return err
 	}
-	err = ch.redisDB.Set(context.TODO(), strconv.Itoa(user.ID), b, 0).Err()
+	err = ch.redisDB.Set(context.TODO(), strconv.Itoa(int(chat.ID)) + strconv.Itoa(user.ID), b, 0).Err()
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err,&chat.ID, nil)
 		ch.handler.SendError(user, err)
 		return err
 	}
 
 	return nil
 }
-func (ch *CalendarHandlers) sendShortEvents(events *types.Events, user tb.Recipient, chat *tb.Chat) {
+func (ch *CalendarHandlers) sendShortEvents(events *types.Events, chat *tb.Chat) {
 	for _, event := range *events {
 		var err error
 		var keyboard [][]tb.InlineButton = nil
@@ -1689,21 +1690,21 @@ func (ch *CalendarHandlers) sendShortEvents(events *types.Events, user tb.Recipi
 			},
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err,&chat.ID, nil)
 		}
 	}
 }
 func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback, senderID int) *types.Event {
 	calUid, err := ch.redisDB.Get(context.TODO(), c.Data).Result()
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
 			CallbackID: c.ID,
 			Text:       calendarMessages.RedisNotFoundMessage(),
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return nil
 	}
@@ -1711,27 +1712,27 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback, senderID int
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(senderID))
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		ch.handler.SendAuthError(c.Message.Chat, err)
 
 		err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
 			CallbackID: c.ID,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return nil
 	}
 	resp, err := ch.eventUseCase.GetEventByEventID(token, calUid, c.Data)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		ch.handler.SendError(c.Message.Chat, err)
 
 		err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
 			CallbackID: c.ID,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return nil
 	}
@@ -1745,21 +1746,21 @@ func (ch *CalendarHandlers) handleCreateText(m *tb.Message, session *types.BotRe
 		if session.InfoMsg.ChatID != 0 {
 			err := ch.handler.bot.Delete(&session.InfoMsg)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
 
 		if session.InlineMsg.ChatID != 0 {
 			_, err := ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
 
 		session.InfoMsg = utils.InitCustomEditable("", 0)
 		session.InlineMsg = utils.InitCustomEditable("", 0)
 
-		err := ch.setSession(session, m.Sender)
+		err := ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			return
 		}
@@ -1772,7 +1773,7 @@ func (ch *CalendarHandlers) handleCreateText(m *tb.Message, session *types.BotRe
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		return
@@ -1789,7 +1790,7 @@ Step:
 		if parsedDate.Date.IsZero() {
 			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateNotParsed())
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 			return
 		}
@@ -1857,7 +1858,7 @@ Step:
 		if parsedDate.Date.IsZero() {
 			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateNotParsed())
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 			return
 		}
@@ -1867,7 +1868,7 @@ Step:
 				ParseMode: tb.ModeHTML,
 			})
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 			return
 		}
@@ -1898,7 +1899,7 @@ Step:
 	if session.InfoMsg.ChatID != 0 {
 		err := ch.handler.bot.Delete(&session.InfoMsg)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 
@@ -1915,12 +1916,12 @@ Step:
 		})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 	}
 
 	session.InfoMsg = utils.InitCustomEditable(newMsg.MessageSig())
 
-	err = ch.setSession(session, m.Sender)
+	err = ch.setSession(session, m.Sender, m.Chat)
 	if err != nil {
 		return
 	}
@@ -1948,12 +1949,12 @@ Step:
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		if m.Chat.Type != tb.ChatPrivate {
 			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
-			err = ch.setSession(session, m.Sender)
+			err = ch.setSession(session, m.Sender,m.Chat)
 			if err != nil {
 				return
 			}
@@ -1986,14 +1987,14 @@ Step:
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		if m.Chat.Type != tb.ChatPrivate {
 			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 		}
 
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			return
 		}
@@ -2024,14 +2025,14 @@ Step:
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		if m.Chat.Type != tb.ChatPrivate {
 			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 		}
 
-		err = ch.setSession(session, m.Sender)
+		err = ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			return
 		}
@@ -2047,21 +2048,21 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 		if session.InfoMsg.ChatID != 0 {
 			err := ch.handler.bot.Delete(&session.InfoMsg)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
 
 		if session.InlineMsg.ChatID != 0 {
 			_, err := ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
 
 		session.InfoMsg = utils.InitCustomEditable("", 0)
 		session.InlineMsg = utils.InitCustomEditable("", 0)
 
-		err := ch.setSession(session, m.Sender)
+		err := ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			return
 		}
@@ -2074,7 +2075,7 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		return
@@ -2092,7 +2093,7 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 	if resp.Date.IsZero() {
 		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateNotParsed())
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 		return
 	}
@@ -2101,10 +2102,10 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 		t := resp.Date
 		session.FreeBusy.From = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 
-		err := ch.setSession(session, m.Sender)
+		err := ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			ch.handler.SendError(m.Chat, err)
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			return
 		}
 
@@ -2117,7 +2118,7 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 				ReplyTo: m,
 			})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 		return
 	}
@@ -2128,16 +2129,21 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 				ParseMode: tb.ModeHTML,
 			})
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		} else {
 			t := resp.Date
-			session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, t.Location())
+			if t.Sub(session.FreeBusy.From).Hours() > 346 {
+				t = session.FreeBusy.From
+				session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day() + 14, 23, 59, 59, 0, t.Location())
+			} else {
+				session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, t.Location())
+			}
 
-			err := ch.setSession(session, m.Sender)
+			err := ch.setSession(session, m.Sender, m.Chat)
 			if err != nil {
 				ch.handler.SendError(m.Chat, err)
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 				return
 			}
 
@@ -2150,7 +2156,7 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 					},
 				})
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 
 			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.FindTimeChooseDayPartHeader,
@@ -2162,7 +2168,7 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 					ReplyTo: m,
 				})
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
 	}
@@ -2171,7 +2177,7 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedisSession) {
 	if calendarMessages.GetCancelDateReplyButton() == m.Text {
 		session = &types.BotRedisSession{}
-		err := ch.setSession(session, m.Sender)
+		err := ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			return
 		}
@@ -2184,7 +2190,7 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 		})
 
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 		return
@@ -2197,20 +2203,20 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 
 	if !parseDate.Date.IsZero() {
 		session.IsDate = false
-		err := ch.setSession(session, m.Sender)
+		err := ch.setSession(session, m.Sender, m.Chat)
 		if err != nil {
 			return
 		}
 
 		token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			ch.handler.SendError(m.Chat, err)
 			return
 		}
 		events, err := ch.eventUseCase.GetEventsByDate(token, parseDate.Date)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			ch.handler.SendError(m.Chat, err)
 			return
 		}
@@ -2222,9 +2228,9 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 				},
 			})
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
-			ch.sendShortEvents(&events.Data.Events, m.Sender, m.Chat)
+			ch.sendShortEvents(&events.Data.Events, m.Chat)
 		} else {
 			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateEventsNotFound(), &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
@@ -2234,7 +2240,7 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 			})
 
 			if err != nil {
-				customerrors.HandlerError(err)
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
 
@@ -2243,7 +2249,7 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 			ParseMode: tb.ModeHTML,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 }
@@ -2253,7 +2259,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 			CallbackID: c.ID,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
@@ -2262,7 +2268,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 	c.Data = data[0]
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 	event := ch.getEventByIdForCallback(c, userId)
 	if event == nil {
@@ -2272,21 +2278,21 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 	eventToken, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(userId))
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(c.Sender.ID))
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
 	userInfo, err := ch.userUseCase.GetMailruUserInfo(token)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
@@ -2296,7 +2302,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 			Text:       calendarMessages.CreateEventAlreadyOrganize,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 		return
 	}
@@ -2315,7 +2321,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 					Text:       text,
 				})
 				if err != nil {
-					customerrors.HandlerError(err)
+					customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 				}
 			} else {
 				if attendee.Status == telegram.StatusDeclined {
@@ -2328,7 +2334,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 
 					if err != nil {
 						ch.handler.SendError(c.Message.Chat, err)
-						customerrors.HandlerError(err)
+						customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 					}
 				}
 
@@ -2338,7 +2344,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 						CallbackID: c.ID,
 					})
 					if err != nil {
-						customerrors.HandlerError(err)
+						customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 					}
 					return
 				}
@@ -2348,7 +2354,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 				})
 
 				if err != nil {
-					customerrors.HandlerError(err)
+					customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 				}
 
 				event.Attendees[idx].Status = status
@@ -2357,7 +2363,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 
 				if err != nil {
 					ch.handler.SendError(c.Message.Chat, err)
-					customerrors.HandlerError(err)
+					customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 					return
 				}
 
@@ -2369,7 +2375,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 				})
 
 				if err != nil {
-					customerrors.HandlerError(err)
+					customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 				}
 
 				return
@@ -2388,7 +2394,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	err = ch.ChangeStatusCallback(c, token, event, status)
@@ -2400,7 +2406,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 		CallbackID: c.ID,
 	})
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	event.Attendees = append(event.Attendees, types.AttendeeEvent{
@@ -2414,7 +2420,7 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return
 	}
 
@@ -2426,14 +2432,14 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 	})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 }
 func (ch *CalendarHandlers) ParseDate(m *tb.Message) *types.ParseDateResp {
 	reqData := &types.ParseDateReq{Timezone: "Europe/Moscow", Text: m.Text}
 	b, err := json.Marshal(reqData)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return nil
 	}
@@ -2441,7 +2447,7 @@ func (ch *CalendarHandlers) ParseDate(m *tb.Message) *types.ParseDateResp {
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPut, ch.handler.parseAddress+"/parse/date", bytes.NewBuffer(b))
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return nil
 	}
@@ -2449,7 +2455,7 @@ func (ch *CalendarHandlers) ParseDate(m *tb.Message) *types.ParseDateResp {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return nil
 	}
@@ -2457,20 +2463,20 @@ func (ch *CalendarHandlers) ParseDate(m *tb.Message) *types.ParseDateResp {
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		ch.handler.SendError(m.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 	}
 
 	parseDate := &types.ParseDateResp{}
 	err = json.Unmarshal(body, parseDate)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return nil
 	}
@@ -2481,7 +2487,7 @@ func (ch *CalendarHandlers) ParseEvent(m *tb.Message) *types.ParseEventResp {
 	reqData := &types.ParseDateReq{Timezone: "Europe/Moscow", Text: m.Text}
 	b, err := json.Marshal(reqData)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return nil
 	}
@@ -2489,7 +2495,7 @@ func (ch *CalendarHandlers) ParseEvent(m *tb.Message) *types.ParseEventResp {
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPut, ch.handler.parseAddress+"/parse/event", bytes.NewBuffer(b))
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return nil
 	}
@@ -2497,7 +2503,7 @@ func (ch *CalendarHandlers) ParseEvent(m *tb.Message) *types.ParseEventResp {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return nil
 	}
@@ -2505,7 +2511,7 @@ func (ch *CalendarHandlers) ParseEvent(m *tb.Message) *types.ParseEventResp {
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}(resp.Body)
 
@@ -2513,13 +2519,13 @@ func (ch *CalendarHandlers) ParseEvent(m *tb.Message) *types.ParseEventResp {
 
 	if err != nil {
 		ch.handler.SendError(m.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 	}
 
 	parseDate := &types.ParseEventResp{}
 	err = json.Unmarshal(body, parseDate)
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		ch.handler.SendError(m.Chat, err)
 		return nil
 	}
@@ -2533,7 +2539,7 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 	emails, err := ch.userUseCase.TryGetUsersEmailsByTelegramUserIDs(session.Users)
 	if err != nil {
 		ch.handler.SendError(c, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
 		return
 	}
 
@@ -2542,7 +2548,7 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(userInit.ID))
 	if err != nil {
 		ch.handler.SendError(c, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
 		return
 	}
 
@@ -2556,14 +2562,14 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 
 	if err != nil {
 		ch.handler.SendError(c, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
 		return
 	}
 
 	if len(spans) < 1 {
 		_, err = ch.handler.bot.Send(c, calendarMessages.FindTimeNotFound)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
 		}
 		return
 	}
@@ -2580,7 +2586,7 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 	if session.PollMsg.ChatID != 0 {
 		err = ch.handler.bot.Delete(&session.PollMsg)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
 		}
 	}
 
@@ -2593,22 +2599,22 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 	})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
 	}
 
 	session.PollMsg = utils.InitCustomEditable(pollMsg.MessageSig())
 
-	err = ch.setSession(session, userInit)
+	err = ch.setSession(session, userInit, c)
 	if err != nil {
 		ch.handler.SendError(c, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
 	}
 }
 
 func (ch *CalendarHandlers) AuthMiddleware(u *tb.User, c *tb.Chat) bool {
 	isAuth, err := ch.userUseCase.IsUserAuthenticatedByTelegramUserID(int64(u.ID))
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.ID, nil)
 		return false
 	}
 
@@ -2620,7 +2626,7 @@ func (ch *CalendarHandlers) AuthMiddleware(u *tb.User, c *tb.Chat) bool {
 			},
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.ID, nil)
 		}
 	}
 
@@ -2639,7 +2645,7 @@ func (ch *CalendarHandlers) GroupMiddleware(m *tb.Message) bool {
 			},
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 		return true
 	}
@@ -2653,21 +2659,18 @@ func (ch *CalendarHandlers) ChangeStatusCallback(c *tb.Callback, token string, e
 	}
 	userCalId, err := ch.redisDB.Get(context.TODO(), userInfo.Email+event.Uid).Result()
 	if err != nil {
-		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
-		return err
-	}
-	events, err := ch.eventUseCase.GetEventsByDate(token, event.From)
-	if err != nil {
-		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
-		return err
-	}
+		events, err := ch.eventUseCase.GetEventsByDate(token, event.From)
+		if err != nil {
+			ch.handler.SendError(c.Message.Chat, err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+			return err
+		}
 
-	if events != nil {
-		for _, userEvent := range events.Data.Events {
-			if userEvent.Uid == event.Uid {
-				userCalId = userEvent.Calendar.UID
+		if events != nil {
+			for _, userEvent := range events.Data.Events {
+				if userEvent.Uid == event.Uid {
+					userCalId = userEvent.Calendar.UID
+				}
 			}
 		}
 	}
@@ -2679,7 +2682,7 @@ func (ch *CalendarHandlers) ChangeStatusCallback(c *tb.Callback, token string, e
 			ShowAlert:  true,
 		})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
 
 		return errors.New("Calendar UID not found")
@@ -2688,7 +2691,7 @@ func (ch *CalendarHandlers) ChangeStatusCallback(c *tb.Callback, token string, e
 	err = ch.redisDB.Set(context.TODO(), userInfo.Email+event.Uid, userCalId, 0).Err()
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
 	_, err = ch.eventUseCase.ChangeStatus(token, types.ChangeStatus{
@@ -2698,7 +2701,7 @@ func (ch *CalendarHandlers) ChangeStatusCallback(c *tb.Callback, token string, e
 	})
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		return err
 	}
 

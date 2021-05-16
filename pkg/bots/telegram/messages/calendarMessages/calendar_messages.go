@@ -108,7 +108,7 @@ const (
 	CreateEventGo    = "✅ Я иду"
 	CreateEventNotGo = "❌ Я не иду"
 
-	CreateEventAlreadyOrganize = "Вы являетесь создателем события и учавстуете в нем по умолчанию"
+	CreateEventAlreadyOrganize = "Вы являетесь создателем события и участуете в нем по умолчанию"
 	CreateEventAlreadyGo       = "Вы уже дали согласие на участие в событии"
 	CreateEventAlreadyNotGo    = "Вы уже дали отказ от участия в событии"
 	CreateEventCannotAdd       = "Мы не смогли изменить ваш статус в событии - подтвердите его с помощью календаря или письма" +

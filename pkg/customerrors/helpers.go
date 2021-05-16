@@ -17,6 +17,12 @@ func HandleCloser(outerErr error, closer io.Closer) error {
 	return outerErr
 }
 
-func HandlerError(err error) {
+func HandlerError(err error, chatId *int64, msgId *int) {
+	if chatId != nil {
+		zap.S().Error("Chat ", chatId)
+	}
+	if msgId != nil {
+		zap.S().Error("Message ", msgId)
+	}
 	zap.S().Error(err)
 }
