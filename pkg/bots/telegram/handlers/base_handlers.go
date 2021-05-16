@@ -32,7 +32,7 @@ func (bh *BaseHandlers) InitHandlers(bot *tb.Bot) {
 func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 	isAuth, err := bh.userUseCase.IsUserAuthenticatedByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		bh.handler.SendError(m.Chat, err)
 		return
 	}
@@ -40,7 +40,7 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 	if !isAuth {
 		link, err := bh.userUseCase.GenOauthLinkForTelegramID(int64(m.Sender.ID))
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			bh.handler.SendError(m.Chat, err)
 			return
 		}
@@ -54,20 +54,20 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 				},
 			})
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
 	} else {
 		token, err := bh.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(m.Sender.ID))
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			bh.handler.SendError(m.Chat, err)
 			return
 		}
 
 		info, err := bh.userUseCase.GetMailruUserInfo(token)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			bh.handler.SendError(m.Chat, err)
 			return
 		}
@@ -82,7 +82,7 @@ func (bh *BaseHandlers) HandleStart(m *tb.Message) {
 			},
 		)
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 }
@@ -104,7 +104,7 @@ func (bh *BaseHandlers) HandleHelp(m *tb.Message) {
 		})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 	}
 }
 
@@ -117,7 +117,7 @@ func (bh *BaseHandlers) HandleAbout(m *tb.Message) {
 	})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 	}
 }
 
@@ -125,11 +125,11 @@ func (bh *BaseHandlers) HandleStop(m *tb.Message) {
 	err := bh.userUseCase.DeleteLocalAuthenticatedUserByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
 		bh.handler.SendError(m.Chat, err)
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 	} else {
 		_, err = bh.handler.bot.Send(m.Chat, "Вы успешно разлогинились")
 		if err != nil {
-			customerrors.HandlerError(err)
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	}
 }

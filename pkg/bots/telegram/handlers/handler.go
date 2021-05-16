@@ -22,7 +22,7 @@ func (h *Handler) SendError(sender tb.Recipient, outerErr error) {
 		})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, nil, nil)
 	}
 }
 
@@ -36,6 +36,6 @@ func (h *Handler) SendAuthError(sender tb.Recipient, outerErr error) {
 		})
 
 	if err != nil {
-		customerrors.HandlerError(err)
+		customerrors.HandlerError(err, nil, nil)
 	}
 }
