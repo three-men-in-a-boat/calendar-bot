@@ -2653,21 +2653,18 @@ func (ch *CalendarHandlers) ChangeStatusCallback(c *tb.Callback, token string, e
 	}
 	userCalId, err := ch.redisDB.Get(context.TODO(), userInfo.Email+event.Uid).Result()
 	if err != nil {
-		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
-		return err
-	}
-	events, err := ch.eventUseCase.GetEventsByDate(token, event.From)
-	if err != nil {
-		ch.handler.SendError(c.Message.Chat, err)
-		customerrors.HandlerError(err)
-		return err
-	}
+		events, err := ch.eventUseCase.GetEventsByDate(token, event.From)
+		if err != nil {
+			ch.handler.SendError(c.Message.Chat, err)
+			customerrors.HandlerError(err)
+			return err
+		}
 
-	if events != nil {
-		for _, userEvent := range events.Data.Events {
-			if userEvent.Uid == event.Uid {
-				userCalId = userEvent.Calendar.UID
+		if events != nil {
+			for _, userEvent := range events.Data.Events {
+				if userEvent.Uid == event.Uid {
+					userCalId = userEvent.Calendar.UID
+				}
 			}
 		}
 	}
