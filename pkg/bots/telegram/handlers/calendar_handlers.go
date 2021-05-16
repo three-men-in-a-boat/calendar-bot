@@ -1554,8 +1554,7 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 	_, err = ch.handler.bot.Send(c.Message.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
 		ParseMode: tb.ModeHTML,
 		ReplyMarkup: &tb.ReplyMarkup{
-			ReplyKeyboard:   calendarKeyboards.GetCreateOptionButtons(session),
-			OneTimeKeyboard: true,
+			InlineKeyboard:   calendarInlineKeyboards.GetCreateOptionButtons(session),
 		},
 	})
 
