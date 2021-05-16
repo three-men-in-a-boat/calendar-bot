@@ -258,6 +258,11 @@ func GetDateFastCommand(cancelText bool) [][]tb.InlineButton {
 		},
 		{
 			{
+				Text:   "Через три дня",
+				Unique: unique,
+				Data:   "Через три дня",
+			},
+			{
 				Text:   "Через неделю",
 				Unique: unique,
 				Data:   "Через неделю",
@@ -266,11 +271,6 @@ func GetDateFastCommand(cancelText bool) [][]tb.InlineButton {
 				Text:   "Через две недели",
 				Unique: unique,
 				Data:   "Через две недели",
-			},
-			{
-				Text:   "Через месяц",
-				Unique: unique,
-				Data:   "Через месяц",
 			},
 		},
 	}

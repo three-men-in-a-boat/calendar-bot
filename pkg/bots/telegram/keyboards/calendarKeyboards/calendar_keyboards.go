@@ -22,13 +22,13 @@ func GetDateFastCommand(cancelText bool) [][]tb.ReplyButton {
 		},
 		{
 			{
+				Text: "Через три дня",
+			},
+			{
 				Text: "Через неделю",
 			},
 			{
 				Text: "Через две недели",
-			},
-			{
-				Text: "Через месяц",
 			},
 		},
 	}

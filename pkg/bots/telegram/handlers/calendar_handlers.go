@@ -1554,7 +1554,7 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 	_, err = ch.handler.bot.Send(c.Message.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
 		ParseMode: tb.ModeHTML,
 		ReplyMarkup: &tb.ReplyMarkup{
-			InlineKeyboard:   calendarInlineKeyboards.GetCreateOptionButtons(session),
+			InlineKeyboard: calendarInlineKeyboards.GetCreateOptionButtons(session),
 		},
 	})
 
@@ -2131,7 +2131,12 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 			}
 		} else {
 			t := resp.Date
-			session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, t.Location())
+			if t.Sub(session.FreeBusy.From).Hours() > 346 {
+				t = session.FreeBusy.From
+				session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day() + 14, 23, 59, 59, 0, t.Location())
+			} else {
+				session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, t.Location())
+			}
 
 			err := ch.setSession(session, m.Sender)
 			if err != nil {
