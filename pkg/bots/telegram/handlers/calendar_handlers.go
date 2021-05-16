@@ -281,7 +281,7 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 		}
 	}
 
-	if m.Chat.Type == tb.ChatGroup && !session.FindTimeDone {
+	if (m.Chat.Type == tb.ChatGroup || m.Chat.Type == tb.ChatSuperGroup) && !session.FindTimeDone {
 		session = &types.BotRedisSession{}
 		err = ch.setSession(session, m.Sender)
 		if err != nil {
@@ -1038,7 +1038,7 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 	}
 
 	var groupButtons [][]tb.InlineButton = nil
-	if c.Message.Chat.Type == tb.ChatGroup {
+	if c.Message.Chat.Type == tb.ChatGroup || c.Message.Chat.Type == tb.ChatSuperGroup {
 		groupButtons, err = calendarInlineKeyboards.GroupChatButtons(&session.Event, ch.redisDB, c.Sender.ID)
 		if err != nil {
 			customerrors.HandlerError(err)
