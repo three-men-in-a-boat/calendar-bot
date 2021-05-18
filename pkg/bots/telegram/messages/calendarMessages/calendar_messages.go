@@ -30,7 +30,7 @@ const (
 
 	eventTodayTitle = "<b>Ваши события на сегодня</b>"
 	eventDateTitle  = "<b>Ваши события за %s</b>"
-	eventNextTitle  = "<b>Ваше следуюшее событие</b>"
+	eventNextTitle  = "<b>Ваше следующее событие</b>"
 
 	eventGetDateHeader          = "<b>Получение событий за определенную дату: </b>\n\n"
 	findTimeStartHeader         = "<b>Выберите дату начала для поиска времени: </b>\n\n"
@@ -104,6 +104,11 @@ const (
 	CreateEventAddLocationButton     = "Добавить место"
 	CreateEventChangeLocationButton  = "Изменить место"
 	CreateEventAddUser               = "Добавить участников"
+
+	ShowTodayTasks = "покажи задачи на сегодня"
+	ShowTodayPhrase = "покажи события на сегодня"
+	ShowNextTask = "покажи следующее событие"
+	ShowNextPhrase = "покажи ближайшее события"
 
 	CreateEventGo    = "✅ Я иду"
 	CreateEventNotGo = "❌ Я не иду"
