@@ -73,6 +73,7 @@ func (uuc *UserUseCase) GetOrRefreshOAuthAccessTokenByTelegramUserID(telegramID 
 	return oAuthToken, nil
 }
 
+// TODO(nickeskov): add timezone
 func (uuc *UserUseCase) TelegramCreateAuthenticatedUser(tgUserID int64, mailAuthCode string) (err error) {
 	timer := prometheus.NewTimer(metricTelegramCreateAuthenticatedUserDuration)
 	defer func() {
@@ -101,10 +102,11 @@ func (uuc *UserUseCase) TelegramCreateAuthenticatedUser(tgUserID int64, mailAuth
 	}
 
 	user := types.TelegramDBUser{
-		MailUserID:       userInfo.ID,
-		MailUserEmail:    userInfo.Email,
-		MailRefreshToken: tokenResp.RefreshToken,
-		TelegramUserId:   tgUserID,
+		MailUserID:           userInfo.ID,
+		MailUserEmail:        userInfo.Email,
+		MailRefreshToken:     tokenResp.RefreshToken,
+		TelegramUserId:       tgUserID,
+		TelegramUserTimezone: nil,
 	}
 
 	if err := uuc.userRepository.CreateUser(user); err != nil {
@@ -129,6 +131,32 @@ func (uuc *UserUseCase) GetMailruUserInfo(accessToken string) (oauth.UserInfoRes
 		return oauth.UserInfoResponse{}, errors.Wrap(err, "GetMailruUserInfo")
 	}
 	return response, nil
+}
+
+func (uuc *UserUseCase) GetTelegramUserTimezoneByTelegramUserID(telegramID int64) (*string, error) {
+	tz, err := uuc.userRepository.GetTelegramUserTimezoneByTelegramUserID(telegramID)
+	if err != nil {
+		switch err.(type) {
+		case repository.UserEntityError:
+			return nil, err
+		default:
+			return nil, errors.Wrap(err, "GetTelegramUserTimezoneByTelegramUserID")
+		}
+	}
+	return tz, nil
+}
+
+func (uuc *UserUseCase) UpdateTelegramUserTimezoneByTelegramUserID(telegramID int64, timezone *string) error {
+	err := uuc.userRepository.UpdateTelegramUserTimezoneByTelegramUserID(telegramID, timezone)
+	if err != nil {
+		switch err.(type) {
+		case repository.UserEntityError:
+			return err
+		default:
+			return errors.Wrap(err, "UpdateTelegramUserTimezoneByTelegramUserID")
+		}
+	}
+	return nil
 }
 
 func (uuc *UserUseCase) GetUserEmailByTelegramUserID(telegramID int64) (email string, err error) {
