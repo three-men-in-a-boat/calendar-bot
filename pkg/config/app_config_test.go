@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"os"
 	"testing"
+	"time"
 )
 
 type appConfigTestSuite struct {
@@ -51,6 +52,9 @@ func (s *appConfigTestSuite) generateFakeAppConfig() AppConfig {
 	config := AppConfig{}
 	require.NoError(s.T(), faker.FakeData(&config))
 
+	config.BotDefaultUserTimezone = defaultBotUserTimezoneValue
+	config.OAuth.LinkExpireIn = 15 * time.Minute
+
 	config.BotRedis = redis.NewBotConfig(
 		config.Redis.Address,
 		config.Redis.Password,
@@ -62,6 +66,32 @@ func (s *appConfigTestSuite) generateFakeAppConfig() AppConfig {
 		config.Redis.DB,
 	)
 	return config
+}
+
+func (s *appConfigTestSuite) TestAppConfigInvalidTimezone() {
+	expected := s.generateFakeAppConfig()
+	expected.BotDefaultUserTimezone = "invalid-timezone"
+
+	envs := expected.ToEnv()
+	s.setEnvs(envs)
+	defer s.unsetEnvs(envs)
+
+	_, err := LoadAppConfig()
+	assert.Error(s.T(), err)
+}
+
+func (s *appConfigTestSuite) TestAppConfigEmptyTimezone() {
+	expected := s.generateFakeAppConfig()
+	expected.BotDefaultUserTimezone = ""
+
+	envs := expected.ToEnv()
+	s.setEnvs(envs)
+	defer s.unsetEnvs(envs)
+
+	actual, err := LoadAppConfig()
+	assert.NoError(s.T(), err)
+
+	assert.Equal(s.T(), actual.BotDefaultUserTimezone, defaultBotUserTimezoneValue)
 }
 
 func (s *appConfigTestSuite) TestAppConfigAppEnvironmentValueRandom() {

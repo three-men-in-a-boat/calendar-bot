@@ -7,6 +7,7 @@ import (
 	"github.com/calendar-bot/pkg/services/redis"
 	"github.com/pkg/errors"
 	"os"
+	"time"
 )
 
 const (
@@ -16,9 +17,10 @@ const (
 )
 
 const (
-	EnvBotAddress    = "BOT_ADDRESS"
-	EnvBotToken      = "BOT_TOKEN"
-	EnvBotWebhookUrl = "BOT_WEBHOOK_URL"
+	EnvBotAddress             = "BOT_ADDRESS"
+	EnvBotToken               = "BOT_TOKEN"
+	EnvBotWebhookUrl          = "BOT_WEBHOOK_URL"
+	EnvBotDefaultUserTimezone = "BOT_DEFAULT_USER_TIMEZONE"
 )
 
 const (
@@ -26,18 +28,23 @@ const (
 	AppEnvironmentProd string = "prod"
 )
 
+const (
+	defaultBotUserTimezoneValue = "Europe/Moscow"
+)
+
 type AppConfig struct {
-	Address       string `validate:"optional,dialstring"`
-	Environment   string `validate:"optional,in(dev|prod)"`
-	BotAddress    string `validate:"optional"`
-	BotToken      string
-	BotWebhookUrl string
-	DB            db.Config
-	ParseAddress  string
-	Redis         redis.Config
-	BotRedis      redis.Config
-	OAuth         oauth.Config
-	Log           log.Config
+	Address                string `validate:"optional,dialstring"`
+	Environment            string `validate:"optional,in(dev|prod)"`
+	BotAddress             string `validate:"optional"`
+	BotToken               string
+	BotWebhookUrl          string
+	BotDefaultUserTimezone string
+	DB                     db.Config
+	ParseAddress           string
+	Redis                  redis.Config
+	BotRedis               redis.Config
+	OAuth                  oauth.Config
+	Log                    log.Config
 }
 
 func LoadAppConfig() (AppConfig, error) {
@@ -48,6 +55,7 @@ func LoadAppConfig() (AppConfig, error) {
 	botAddress := os.Getenv(EnvBotAddress)
 	botToken := os.Getenv(EnvBotToken)
 	botWebhookUrl := os.Getenv(EnvBotWebhookUrl)
+	botDefaultUserTimezone := os.Getenv(EnvBotDefaultUserTimezone)
 
 	if address == "" {
 		address = ":8080"
@@ -55,6 +63,15 @@ func LoadAppConfig() (AppConfig, error) {
 
 	if botAddress == "" {
 		address = ":2000"
+	}
+	if botDefaultUserTimezone == "" {
+		botDefaultUserTimezone = defaultBotUserTimezoneValue
+	}
+
+	if _, err := time.LoadLocation(botDefaultUserTimezone); err != nil {
+		return AppConfig{},
+			errors.WithMessagef(
+				err, "failed to load timezone %q from local timezones DB", botDefaultUserTimezone)
 	}
 
 	switch environment {
@@ -87,17 +104,18 @@ func LoadAppConfig() (AppConfig, error) {
 	// TODO(nickeskov): validate struct
 
 	return AppConfig{
-		Address:       address,
-		BotAddress:    botAddress,
-		BotToken:      botToken,
-		BotWebhookUrl: botWebhookUrl,
-		Environment:   environment,
-		DB:            dbConfig,
-		ParseAddress:  parseAddress,
-		Redis:         redisConfig,
-		BotRedis:      botRedisConfig,
-		OAuth:         oauthConfig,
-		Log:           log.LoadLogConfig(),
+		Address:                address,
+		BotAddress:             botAddress,
+		BotToken:               botToken,
+		BotWebhookUrl:          botWebhookUrl,
+		BotDefaultUserTimezone: botDefaultUserTimezone,
+		Environment:            environment,
+		DB:                     dbConfig,
+		ParseAddress:           parseAddress,
+		Redis:                  redisConfig,
+		BotRedis:               botRedisConfig,
+		OAuth:                  oauthConfig,
+		Log:                    log.LoadLogConfig(),
 	}, nil
 }
 
@@ -130,6 +148,7 @@ func (app *AppConfig) ToEnv() map[string]string {
 	ret[EnvBotAddress] = app.BotAddress
 	ret[EnvBotToken] = app.BotToken
 	ret[EnvBotWebhookUrl] = app.BotWebhookUrl
+	ret[EnvBotDefaultUserTimezone] = app.BotDefaultUserTimezone
 
 	return ret
 }
