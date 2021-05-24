@@ -625,3 +625,47 @@ func (uc *EventUseCase) ChangeStatus(accessToken string, reactEvent types.Change
 
 	return res, nil
 }
+
+type CallLink struct {
+	Id  string `json:"id,omitempty"`
+	Url string `json:"url,omitempty"`
+}
+
+func (uc *EventUseCase) MailCallLink(accessToken string) (string, error){
+	request, err := http.NewRequest("POST", "https://corsapi.imgsmail.ru/calls/api/v1/room", nil)
+	if err != nil {
+		return "", errors.Errorf("failed to create a request: , %v", err)
+	}
+
+	var bearerToken = "Bearer " + accessToken
+	request.Header.Add(
+		"Authorization",
+		bearerToken,
+	)
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(request)
+	if err != nil {
+		return "", errors.Errorf("The HTTP request failed with error %v", err)
+	}
+	defer func() {
+		err = response.Body.Close()
+		if err != nil {
+			fmt.Printf("failed to close body of response of func getEvents, %v", err)
+		}
+	}()
+
+	res, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", errors.Errorf("failed to read body %v", err)
+	}
+
+	callLink := CallLink{}
+
+	err = json.Unmarshal(res, &callLink)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to unmarshal call link")
+	}
+	return callLink.Url, nil
+}
