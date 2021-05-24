@@ -106,18 +106,20 @@ func (us *UserRepository) TryGetUsersEmailsByTelegramUserIDs(telegramIDs []int64
 }
 
 func (us *UserRepository) CreateUser(user types.TelegramDBUser) error {
-
 	_, err := us.storage.Exec(`
 			INSERT INTO users(
 							  mail_user_id,
 							  mail_user_email,
 			                  mail_refresh_token,
-							  telegram_user_id)
-			VALUES ($1, $2, $3, $4)`,
+							  telegram_user_id,
+			                  telegram_user_timezone
+							  )
+			VALUES ($1, $2, $3, $4, $5)`,
 		user.MailUserID,
 		user.MailUserEmail,
 		user.MailRefreshToken,
 		user.TelegramUserId,
+		user.TelegramUserTimezone,
 	)
 
 	if err != nil {
@@ -127,8 +129,58 @@ func (us *UserRepository) CreateUser(user types.TelegramDBUser) error {
 	return nil
 }
 
-func (us *UserRepository) DeleteUserByTelegramUserID(telegramID int64) error {
+func (us *UserRepository) GetTelegramUserTimezoneByTelegramUserID(telegramID int64) (*string, error) {
+	var tz sql.NullString
+	err := us.storage.QueryRow(
+		`UPDATE users SET telegram_user_timezone = $2 WHERE telegram_user_id = $1 RETURNING telegram_user_id`,
+		telegramID,
+	).Scan(
+		&telegramID,
+	)
 
+	switch {
+	case err == sql.ErrNoRows:
+		return nil, UserDoesNotExist
+	case err != nil:
+		return nil,
+			errors.Wrapf(err, "cannot get telegram_user_timezone user with telegramUserID=%d", telegramID)
+	}
+
+	if !tz.Valid {
+		return nil, nil
+	}
+	timezone := tz.String
+	return &timezone, nil
+}
+
+func (us *UserRepository) UpdateTelegramUserTimezoneByTelegramUserID(telegramID int64, timezone *string) error {
+	var tz sql.NullString
+	if timezone != nil {
+		tz = sql.NullString{
+			String: *timezone,
+			Valid:  true,
+		}
+	}
+
+	err := us.storage.QueryRow(
+		`UPDATE users SET telegram_user_timezone = $2 WHERE telegram_user_id = $1 RETURNING telegram_user_id`,
+		telegramID,
+		tz,
+	).Scan(
+		&telegramID,
+	)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return UserDoesNotExist
+	case err != nil:
+		return errors.Wrapf(err, "cannot update telegram_user_timezone user with telegramUserID=%d", telegramID)
+	}
+
+	return nil
+}
+
+func (us *UserRepository) DeleteUserByTelegramUserID(telegramID int64) error {
 	err := us.storage.QueryRow(
 		`DELETE FROM users WHERE telegram_user_id=$1 RETURNING telegram_user_id`,
 		telegramID,

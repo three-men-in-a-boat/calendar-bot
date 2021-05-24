@@ -65,12 +65,13 @@ type EventResponse struct {
 }
 
 type TelegramDBUser struct {
-	ID               int64
-	MailUserID       string
-	MailUserEmail    string
-	MailRefreshToken string
-	TelegramUserId   int64
-	CreatedAt        time.Time
+	ID                   int64
+	MailUserID           string
+	MailUserEmail        string
+	MailRefreshToken     string
+	TelegramUserId       int64
+	TelegramUserTimezone *string
+	CreatedAt            time.Time
 }
 
 type Location struct {

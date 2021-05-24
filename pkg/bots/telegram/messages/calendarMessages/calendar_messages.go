@@ -105,10 +105,10 @@ const (
 	CreateEventChangeLocationButton  = "Изменить место"
 	CreateEventAddUser               = "Добавить участников"
 
-	ShowTodayTasks = "покажи задачи на сегодня"
+	ShowTodayTasks  = "покажи задачи на сегодня"
 	ShowTodayPhrase = "покажи события на сегодня"
-	ShowNextTask = "покажи следующее событие"
-	ShowNextPhrase = "покажи ближайшее события"
+	ShowNextTask    = "покажи следующее событие"
+	ShowNextPhrase  = "покажи ближайшее события"
 
 	CreateEventGo    = "✅ Я иду"
 	CreateEventNotGo = "❌ Я не иду"
