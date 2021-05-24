@@ -631,7 +631,7 @@ type CallLink struct {
 	Url string `json:"url,omitempty"`
 }
 
-func (uc *EventUseCase) MailCallLink(accessToken string) (string, error){
+func (uc *EventUseCase) MailCallLink(accessToken string) (string, error) {
 	request, err := http.NewRequest("POST", "https://corsapi.imgsmail.ru/calls/api/v1/room", nil)
 	if err != nil {
 		return "", errors.Errorf("failed to create a request: , %v", err)
