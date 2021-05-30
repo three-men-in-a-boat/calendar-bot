@@ -1072,6 +1072,64 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 
 	session.Event.Calendar = respInfo.Data.CreateEvent.Calendar
 
+	if len(session.Users) > 1 {
+		for _, userId := range session.Users {
+			if int64(c.Sender.ID) == userId {
+				continue
+			}
+			userToken, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(userId)
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+				continue
+			}
+
+			userInfo, err := ch.userUseCase.GetMailruUserInfo(userToken)
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+				continue
+			}
+
+			events, err := ch.eventUseCase.GetEventsByDate(userToken, session.Event.From)
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+				continue
+			}
+
+			userCalId := ""
+
+			if events != nil {
+				for _, userEvent := range events.Data.Events {
+					if userEvent.Uid == *inpEvent.Uid {
+						userCalId = userEvent.Calendar.UID
+					}
+				}
+			}
+
+			if userCalId == "" {
+				continue
+			}
+
+			_, err = ch.eventUseCase.ChangeStatus(userToken, types.ChangeStatus{
+				EventID:    *inpEvent.Uid,
+				CalendarID: userCalId,
+				Status:     telegram.StatusAccepted,
+			})
+
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+				continue
+			}
+
+			for idx, attendee := range session.Event.Attendees {
+				if attendee.Email == userInfo.Email {
+					session.Event.Attendees[idx].Name = userInfo.Name
+					session.Event.Attendees[idx].Status = telegram.StatusAccepted
+					break
+				}
+			}
+		}
+	}
+
 	_, err = ch.handler.bot.Send(c.Message.Chat,
 		calendarMessages.GetCreatedEventHeader(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
@@ -1578,6 +1636,18 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 		Name:   userInfo.Name,
 		Role:   telegram.RoleRequired,
 		Status: telegram.StatusAccepted,
+	}
+	users, err := ch.userUseCase.TryGetUsersEmailsByTelegramUserIDs(session.Users)
+	if err != nil {
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+	} else {
+		for _, user := range users {
+			session.Event.Attendees = append(session.Event.Attendees, types.AttendeeEvent{
+				Email:  user,
+				Role:   telegram.RoleRequired,
+				Status: telegram.StatusNeedsAction,
+			})
+		}
 	}
 
 	newMsg, err := ch.handler.bot.Send(c.Message.Chat,
