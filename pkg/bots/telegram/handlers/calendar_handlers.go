@@ -1662,7 +1662,7 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 			session.Event.Attendees = append(session.Event.Attendees, types.AttendeeEvent{
 				Email:  user,
 				Role:   telegram.RoleRequired,
-				Status: telegram.StatusNeedsAction,
+				Status: telegram.StatusAccepted,
 			})
 		}
 	}
