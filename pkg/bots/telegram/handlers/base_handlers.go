@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/calendar-bot/pkg/bots/telegram/inline_keyboards/baseInlineKeyboards"
 	"github.com/calendar-bot/pkg/bots/telegram/keyboards/baseKeyboards"
+	"github.com/calendar-bot/pkg/bots/telegram/messages"
 	"github.com/calendar-bot/pkg/bots/telegram/messages/baseMessages"
 	"github.com/calendar-bot/pkg/customerrors"
 	eUseCase "github.com/calendar-bot/pkg/events/usecase"
@@ -30,6 +31,13 @@ func (bh *BaseHandlers) InitHandlers(bot *tb.Bot) {
 }
 
 func (bh *BaseHandlers) HandleStart(m *tb.Message) {
+	if m.Chat.Type != tb.ChatPrivate {
+		_, err := bh.handler.bot.Send(m.Chat, messages.ErrorCommandIsNotAllowedInGroupChat)
+		if err != nil {
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+		}
+		return
+	}
 	isAuth, err := bh.userUseCase.IsUserAuthenticatedByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
 		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
@@ -122,10 +130,20 @@ func (bh *BaseHandlers) HandleAbout(m *tb.Message) {
 }
 
 func (bh *BaseHandlers) HandleStop(m *tb.Message) {
+	if m.Chat.Type != tb.ChatPrivate {
+		_, err := bh.handler.bot.Send(m.Chat, messages.ErrorCommandIsNotAllowedInGroupChat)
+		if err != nil {
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+		}
+		return
+	}
 	err := bh.userUseCase.DeleteLocalAuthenticatedUserByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
-		bh.handler.SendError(m.Chat, err)
-		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+		_, err = bh.handler.bot.Send(m.Chat, "Вы не авторизованны в боте. Для авторизации воспользуйтесь" +
+			" командой /start")
+		if err != nil {
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+		}
 	} else {
 		_, err = bh.handler.bot.Send(m.Chat, "Вы успешно разлогинились")
 		if err != nil {

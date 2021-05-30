@@ -96,8 +96,13 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 		return
 	}
 
+	title := calendarMessages.GetTodayTitle()
+	if m.Chat.Type != tb.ChatPrivate {
+		title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
+	}
+
 	if events != nil {
-		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetTodayTitle(), &tb.SendOptions{
+		_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -109,7 +114,11 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 
 		ch.sendShortEvents(&events.Data.Events, m.Chat)
 	} else {
-		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetTodayNotFound(), &tb.SendOptions{
+		title := calendarMessages.GetTodayNotFound()
+		if m.Chat.Type != tb.ChatPrivate {
+			title += calendarMessages.AddName(m.Sender.FirstName + " " + m.Sender.LastName)
+		}
+		_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -143,7 +152,11 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 	}
 
 	if event != nil {
-		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetNextTitle(), &tb.SendOptions{
+		title := calendarMessages.GetNextTitle()
+		if m.Chat.Type != tb.ChatPrivate {
+			title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
+		}
+		_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -170,7 +183,11 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
-		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.NoClosestEvents(), &tb.SendOptions{
+		title := calendarMessages.NoClosestEvents()
+		if m.Chat.Type != tb.ChatPrivate {
+			title += calendarMessages.AddName(m.Sender.FirstName + " " + m.Sender.LastName)
+		}
+		_, err = ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -777,6 +794,40 @@ func (ch *CalendarHandlers) HandleFullDayChange(m *tb.Message) {
 			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
+		if session.Event.Title == "" {
+			replyMarkup := tb.ReplyMarkup{}
+			var replyTo *tb.Message = nil
+			if m.Chat.Type != tb.ChatPrivate {
+				replyMarkup = tb.ReplyMarkup{
+					InlineKeyboard: calendarInlineKeyboards.GetCreateOptionButtons(session),
+				}
+				replyTo = m
+			} else {
+				replyMarkup = tb.ReplyMarkup{
+					ReplyKeyboard:   calendarKeyboards.GetCreateOptionButtons(session),
+					OneTimeKeyboard: true,
+				}
+			}
+
+			msg, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
+				ParseMode:   tb.ModeHTML,
+				ReplyMarkup: &replyMarkup,
+				ReplyTo:     replyTo,
+			})
+
+			if err != nil {
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+			}
+
+			if m.Chat.Type != tb.ChatPrivate {
+				session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
+				err = ch.setSession(session, m.Sender, m.Chat)
+				if err != nil {
+					return
+				}
+			}
+		}
+
 		session.InfoMsg = utils.InitCustomEditable(newMsg.MessageSig())
 
 		err = ch.setSession(session, m.Sender, m.Chat)
@@ -1038,6 +1089,64 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 
 	session.Event.Calendar = respInfo.Data.CreateEvent.Calendar
 
+	if len(session.Users) > 1 {
+		for _, userId := range session.Users {
+			if int64(c.Sender.ID) == userId {
+				continue
+			}
+			userToken, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(userId)
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+				continue
+			}
+
+			userInfo, err := ch.userUseCase.GetMailruUserInfo(userToken)
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+				continue
+			}
+
+			events, err := ch.eventUseCase.GetEventsByDate(userToken, session.Event.From)
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+				continue
+			}
+
+			userCalId := ""
+
+			if events != nil {
+				for _, userEvent := range events.Data.Events {
+					if userEvent.Uid == *inpEvent.Uid {
+						userCalId = userEvent.Calendar.UID
+					}
+				}
+			}
+
+			if userCalId == "" {
+				continue
+			}
+
+			_, err = ch.eventUseCase.ChangeStatus(userToken, types.ChangeStatus{
+				EventID:    *inpEvent.Uid,
+				CalendarID: userCalId,
+				Status:     telegram.StatusAccepted,
+			})
+
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+				continue
+			}
+
+			for idx, attendee := range session.Event.Attendees {
+				if attendee.Email == userInfo.Email {
+					session.Event.Attendees[idx].Name = userInfo.Name
+					session.Event.Attendees[idx].Status = telegram.StatusAccepted
+					break
+				}
+			}
+		}
+	}
+
 	_, err = ch.handler.bot.Send(c.Message.Chat,
 		calendarMessages.GetCreatedEventHeader(), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
@@ -1297,7 +1406,7 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 		return
 	}
 
-	d, _ := time.ParseDuration("6h")
+	d, _ := time.ParseDuration("7h")
 
 	session.FindTimeDayPart = &types.DayPart{
 		Start:    t,
@@ -1545,6 +1654,18 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 		Role:   telegram.RoleRequired,
 		Status: telegram.StatusAccepted,
 	}
+	users, err := ch.userUseCase.TryGetUsersEmailsByTelegramUserIDs(session.Users)
+	if err != nil {
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+	} else {
+		for _, user := range users {
+			session.Event.Attendees = append(session.Event.Attendees, types.AttendeeEvent{
+				Email:  user,
+				Role:   telegram.RoleRequired,
+				Status: telegram.StatusNeedsAction,
+			})
+		}
+	}
 
 	newMsg, err := ch.handler.bot.Send(c.Message.Chat,
 		calendarMessages.GetCreateEventHeader()+calendarMessages.SingleEventFullText(&session.Event),
@@ -1687,6 +1808,9 @@ func (ch *CalendarHandlers) setSession(session *types.BotRedisSession, user *tb.
 }
 func (ch *CalendarHandlers) sendShortEvents(events *types.Events, chat *tb.Chat) {
 	for _, event := range *events {
+		if event.FullDay && event.From.Day() == time.Now().Day()-1 && event.To.Day() == time.Now().Day() {
+			continue
+		}
 		var err error
 		var keyboard [][]tb.InlineButton = nil
 		if chat.Type == tb.ChatPrivate {
@@ -2149,6 +2273,10 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 			if t.Sub(session.FreeBusy.From).Hours() > 346 {
 				t = session.FreeBusy.From
 				session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day()+14, 23, 59, 59, 0, t.Location())
+				_, err := ch.handler.bot.Send(m.Chat, calendarMessages.FindTimePeriodIsTooLong)
+				if err != nil {
+					customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+				}
 			} else {
 				session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, t.Location())
 			}
@@ -2234,7 +2362,12 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 			return
 		}
 		if events != nil {
-			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateTitle(parseDate.Date), &tb.SendOptions{
+			title := calendarMessages.GetDateTitle(parseDate.Date)
+			if m.Chat.Type != tb.ChatPrivate {
+				title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
+			}
+
+			_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
 				ReplyMarkup: &tb.ReplyMarkup{
 					ReplyKeyboardRemove: true,
@@ -2245,7 +2378,11 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 			}
 			ch.sendShortEvents(&events.Data.Events, m.Chat)
 		} else {
-			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateEventsNotFound(), &tb.SendOptions{
+			title := calendarMessages.GetDateEventsNotFound()
+			if m.Chat.Type != tb.ChatPrivate {
+				title += calendarMessages.AddName(m.Sender.FirstName + " " + m.Sender.LastName)
+			}
+			_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
 				ReplyMarkup: &tb.ReplyMarkup{
 					ReplyKeyboardRemove: true,
@@ -2632,7 +2769,12 @@ func (ch *CalendarHandlers) AuthMiddleware(u *tb.User, c *tb.Chat) bool {
 	}
 
 	if !isAuth {
-		_, err = ch.handler.bot.Send(c, calendarMessages.GetUserNotAuth(), &tb.SendOptions{
+		msg := ""
+		if c.Type != tb.ChatPrivate {
+			msg += calendarMessages.AddNameStartBold(u.FirstName + " " + u.LastName)
+		}
+		msg += calendarMessages.GetUserNotAuth()
+		_, err = ch.handler.bot.Send(c, msg, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,

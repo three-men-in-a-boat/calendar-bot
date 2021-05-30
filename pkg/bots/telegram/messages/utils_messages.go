@@ -13,6 +13,7 @@ const (
 
 	errorAuthDev  = "Ошибка авторизации: %s"
 	errorAuthProd = "Похоже, что вы не авторизованы - войдите в аккаунт mail.ru с помощью команды /start"
+	ErrorCommandIsNotAllowedInGroupChat = "Эта команда не доступна в групповом чате. Перейдите в личный чат с ботом"
 )
 
 func MessageUnexpectedError(err string) string {
