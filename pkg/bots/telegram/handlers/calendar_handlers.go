@@ -777,6 +777,40 @@ func (ch *CalendarHandlers) HandleFullDayChange(m *tb.Message) {
 			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 
+		if session.Event.Title == "" {
+			replyMarkup := tb.ReplyMarkup{}
+			var replyTo *tb.Message = nil
+			if m.Chat.Type != tb.ChatPrivate {
+				replyMarkup = tb.ReplyMarkup{
+					InlineKeyboard: calendarInlineKeyboards.GetCreateOptionButtons(session),
+				}
+				replyTo = m
+			} else {
+				replyMarkup = tb.ReplyMarkup{
+					ReplyKeyboard:   calendarKeyboards.GetCreateOptionButtons(session),
+					OneTimeKeyboard: true,
+				}
+			}
+
+			msg, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
+				ParseMode:   tb.ModeHTML,
+				ReplyMarkup: &replyMarkup,
+				ReplyTo:     replyTo,
+			})
+
+			if err != nil {
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+			}
+
+			if m.Chat.Type != tb.ChatPrivate {
+				session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
+				err = ch.setSession(session, m.Sender, m.Chat)
+				if err != nil {
+					return
+				}
+			}
+		}
+
 		session.InfoMsg = utils.InitCustomEditable(newMsg.MessageSig())
 
 		err = ch.setSession(session, m.Sender, m.Chat)
