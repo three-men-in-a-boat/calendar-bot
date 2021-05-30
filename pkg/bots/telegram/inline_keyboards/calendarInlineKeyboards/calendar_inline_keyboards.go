@@ -120,24 +120,28 @@ func FindTimeDayPartButtons(t time.Time) [][]tb.InlineButton {
 	return [][]tb.InlineButton{
 		{
 			{
-				Text:   "Утром",
+				Text:   "Утром (6:00 - 13:00)",
 				Unique: telegram.FindTimeDayPart,
 				Data:   time.Date(t.Year(), t.Month(), t.Day(), 6, 0, 0, 0, t.Location()).Format(time.RFC3339),
 			},
+		},
+		{
 			{
-				Text:   "Днем",
+				Text:   "Днем (12:00 - 19:00)",
 				Unique: telegram.FindTimeDayPart,
 				Data:   time.Date(t.Year(), t.Month(), t.Day(), 12, 0, 0, 0, t.Location()).Format(time.RFC3339),
 			},
 		},
 		{
 			{
-				Text:   "Вечером",
+				Text:   "Вечером (17:00 - 0:00)",
 				Unique: telegram.FindTimeDayPart,
-				Data:   time.Date(t.Year(), t.Month(), t.Day(), 18, 0, 0, 0, t.Location()).Format(time.RFC3339),
+				Data:   time.Date(t.Year(), t.Month(), t.Day(), 17, 0, 0, 0, t.Location()).Format(time.RFC3339),
 			},
+		},
+		{
 			{
-				Text:   "Ночью",
+				Text:   "Ночью (0:00 - 7:00)",
 				Unique: telegram.FindTimeDayPart,
 				Data:   time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Format(time.RFC3339),
 			},
@@ -263,14 +267,14 @@ func GetDateFastCommand(cancelText bool) [][]tb.InlineButton {
 				Data:   "Через три дня",
 			},
 			{
-				Text:   "Через неделю",
+				Text:   "Через четыре дня",
 				Unique: unique,
-				Data:   "Через неделю",
+				Data:   "Через четыре дня",
 			},
 			{
-				Text:   "Через две недели",
+				Text:   "Через пять дней",
 				Unique: unique,
-				Data:   "Через две недели",
+				Data:   "Через пять дней",
 			},
 		},
 	}

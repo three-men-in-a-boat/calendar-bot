@@ -1389,7 +1389,7 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 		return
 	}
 
-	d, _ := time.ParseDuration("6h")
+	d, _ := time.ParseDuration("7h")
 
 	session.FindTimeDayPart = &types.DayPart{
 		Start:    t,
