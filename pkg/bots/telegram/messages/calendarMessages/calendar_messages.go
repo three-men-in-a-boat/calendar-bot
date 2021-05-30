@@ -50,9 +50,9 @@ const (
 
 	findTimePollHeader = "Выберите время. Если хотите, чтобы ваш календарь учитывался - нажмите на кнопку " +
 		"\"Участвую\"\n\nНа данный момент учитываются календари: "
-	FindTimeAdd      = "✅ Участвую"
-	FindTimeExist    = "Вы уже участвуете"
-	FindTimeNotFound = "К сожалению мы не нашли свободного времени для всех участников с учетом данных параметров"
+	FindTimeAdd             = "✅ Участвую"
+	FindTimeExist           = "Вы уже участвуете"
+	FindTimeNotFound        = "К сожалению мы не нашли свободного времени для всех участников с учетом данных параметров"
 	FindTimePeriodIsTooLong = "Выбранный период для поиска слишком большой, сокращаем до максимального возможного"
 
 	eventDateNotParsed      = "Мы не смогли распознать дату, попробуйте еще раз"
@@ -449,4 +449,8 @@ func GenOptionsForPoll(spans spaniel.Spans) []string {
 
 func GenFindTimePollHeader(emails []string) string {
 	return findTimePollHeader + strings.Join(emails, ", ")
+}
+
+func AddName(name string) string {
+	return "<b>, " + name + "</b>"
 }
