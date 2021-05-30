@@ -139,7 +139,7 @@ func (bh *BaseHandlers) HandleStop(m *tb.Message) {
 	}
 	err := bh.userUseCase.DeleteLocalAuthenticatedUserByTelegramUserID(int64(m.Sender.ID))
 	if err != nil {
-		_, err = bh.handler.bot.Send(m.Chat, "Вы не авторизованны в боте. Для авторизации воспользуйтесь" +
+		_, err = bh.handler.bot.Send(m.Chat, "Вы не авторизованны в боте. Для авторизации воспользуйтесь"+
 			" командой /start")
 		if err != nil {
 			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
