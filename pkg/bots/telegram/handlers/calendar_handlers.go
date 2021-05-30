@@ -96,8 +96,13 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 		return
 	}
 
+	title := calendarMessages.GetTodayTitle()
+	if m.Chat.Type != tb.ChatPrivate {
+		title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
+	}
+
 	if events != nil {
-		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetTodayTitle(), &tb.SendOptions{
+		_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -109,7 +114,11 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 
 		ch.sendShortEvents(&events.Data.Events, m.Chat)
 	} else {
-		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetTodayNotFound(), &tb.SendOptions{
+		title := calendarMessages.GetTodayNotFound()
+		if m.Chat.Type != tb.ChatPrivate {
+			title += calendarMessages.AddName(m.Sender.FirstName + " " + m.Sender.LastName)
+		}
+		_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -143,7 +152,11 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 	}
 
 	if event != nil {
-		_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetNextTitle(), &tb.SendOptions{
+		title := calendarMessages.GetNextTitle()
+		if m.Chat.Type != tb.ChatPrivate {
+			title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
+		}
+		_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -170,7 +183,11 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
 	} else {
-		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.NoClosestEvents(), &tb.SendOptions{
+		title := calendarMessages.NoClosestEvents()
+		if m.Chat.Type != tb.ChatPrivate {
+			title += calendarMessages.AddName(m.Sender.FirstName + " " + m.Sender.LastName)
+		}
+		_, err = ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,
@@ -2345,7 +2362,12 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 			return
 		}
 		if events != nil {
-			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateTitle(parseDate.Date), &tb.SendOptions{
+			title := calendarMessages.GetDateTitle(parseDate.Date)
+			if m.Chat.Type != tb.ChatPrivate {
+				title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
+			}
+
+			_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
 				ReplyMarkup: &tb.ReplyMarkup{
 					ReplyKeyboardRemove: true,
@@ -2356,7 +2378,11 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 			}
 			ch.sendShortEvents(&events.Data.Events, m.Chat)
 		} else {
-			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetDateEventsNotFound(), &tb.SendOptions{
+			title := calendarMessages.GetDateEventsNotFound()
+			if m.Chat.Type != tb.ChatPrivate {
+				title += calendarMessages.AddName(m.Sender.FirstName + " " + m.Sender.LastName)
+			}
+			_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
 				ReplyMarkup: &tb.ReplyMarkup{
 					ReplyKeyboardRemove: true,
@@ -2743,7 +2769,12 @@ func (ch *CalendarHandlers) AuthMiddleware(u *tb.User, c *tb.Chat) bool {
 	}
 
 	if !isAuth {
-		_, err = ch.handler.bot.Send(c, calendarMessages.GetUserNotAuth(), &tb.SendOptions{
+		msg := ""
+		if c.Type != tb.ChatPrivate {
+			msg += calendarMessages.AddNameStartBold(u.FirstName + " " + u.LastName)
+		}
+		msg += calendarMessages.GetUserNotAuth()
+		_, err = ch.handler.bot.Send(c, msg, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				ReplyKeyboardRemove: true,

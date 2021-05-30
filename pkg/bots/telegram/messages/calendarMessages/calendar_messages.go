@@ -451,6 +451,14 @@ func GenFindTimePollHeader(emails []string) string {
 	return findTimePollHeader + strings.Join(emails, ", ")
 }
 
-func AddName(name string) string {
+func AddNameBold(name string) string {
 	return "<b>, " + name + "</b>"
+}
+
+func AddName(name string) string {
+	return ", " + name
+}
+
+func AddNameStartBold(name string) string {
+	return "<b>" + name + ": </b>"
 }
