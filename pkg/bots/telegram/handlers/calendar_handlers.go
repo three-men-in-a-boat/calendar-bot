@@ -1791,6 +1791,9 @@ func (ch *CalendarHandlers) setSession(session *types.BotRedisSession, user *tb.
 }
 func (ch *CalendarHandlers) sendShortEvents(events *types.Events, chat *tb.Chat) {
 	for _, event := range *events {
+		if event.FullDay && event.From.Day() == time.Now().Day()-1 && event.To.Day() == time.Now().Day() {
+			continue
+		}
 		var err error
 		var keyboard [][]tb.InlineButton = nil
 		if chat.Type == tb.ChatPrivate {
