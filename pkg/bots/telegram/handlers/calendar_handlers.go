@@ -2253,6 +2253,10 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 			if t.Sub(session.FreeBusy.From).Hours() > 346 {
 				t = session.FreeBusy.From
 				session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day()+14, 23, 59, 59, 0, t.Location())
+				_, err := ch.handler.bot.Send(m.Chat, calendarMessages.FindTimePeriodIsTooLong)
+				if err != nil {
+					customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+				}
 			} else {
 				session.FreeBusy.To = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, t.Location())
 			}
