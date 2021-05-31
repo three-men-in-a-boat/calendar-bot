@@ -14,6 +14,7 @@ const (
 	FindTimeDayPart   = "FTDP"
 	FindTimeLength    = "FTL"
 	FindTimeAdd       = "FTA"
+	FindTimeFind      = "FTF"
 	FindTimeCreate    = "FTC"
 
 	HandleGroupText = "HGT"

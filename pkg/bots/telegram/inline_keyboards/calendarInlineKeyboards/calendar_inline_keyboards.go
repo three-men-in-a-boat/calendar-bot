@@ -219,24 +219,38 @@ func FindTimeLengthButtons() [][]tb.InlineButton {
 	}
 }
 
-func FindTimePollButtons(sender int) [][]tb.InlineButton {
-	return [][]tb.InlineButton{{
+func FindTimePollButtons() [][]tb.InlineButton {
+	return [][]tb.InlineButton{
 		{
-			Text:   calendarMessages.FindTimeAdd,
-			Unique: telegram.FindTimeAdd,
-			Data:   strconv.Itoa(sender),
+			{
+				Text:   calendarMessages.GetCreateEventCreateText(),
+				Unique: telegram.FindTimeCreate,
+			},
+			{
+				Text:   calendarMessages.GetCreateCancelText(),
+				Unique: telegram.FindTimeCreate,
+				Data:   calendarMessages.GetCreateCancelText(),
+			},
 		},
-	}, {
+	}
+}
+
+func FindTimeAddUser(sender int) [][]tb.InlineButton {
+	return [][]tb.InlineButton{
 		{
-			Text:   calendarMessages.GetCreateEventCreateText(),
-			Unique: telegram.FindTimeCreate,
+			{
+				Text:   calendarMessages.FindTimeFind,
+				Unique: telegram.FindTimeFind,
+				Data:   strconv.Itoa(sender),
+			},
 		},
 		{
-			Text:   calendarMessages.GetCreateCancelText(),
-			Unique: telegram.FindTimeCreate,
-			Data:   calendarMessages.GetCreateCancelText(),
+			{
+				Text:   calendarMessages.FindTimeAdd,
+				Unique: telegram.FindTimeAdd,
+				Data:   strconv.Itoa(sender),
+			},
 		},
-	},
 	}
 }
 
