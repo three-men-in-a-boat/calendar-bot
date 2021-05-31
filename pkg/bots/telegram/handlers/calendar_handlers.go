@@ -73,6 +73,7 @@ func (ch *CalendarHandlers) InitHandlers(bot *tb.Bot) {
 	bot.Handle("\f"+telegram.FindTimeCreate, ch.FindTimeCreate)
 	bot.Handle("\f"+telegram.HandleGroupText, ch.HandleGroupText)
 	bot.Handle("\f"+telegram.FindTimeFind, ch.HandleFindTimeFind)
+	bot.Handle("\f"+telegram.FindTimeBack, ch.HandleFindTimeBack)
 	bot.Handle(tb.OnText, ch.HandleText)
 }
 
@@ -1575,6 +1576,46 @@ func (ch *CalendarHandlers) HandleFindTimeFind(c *tb.Callback) {
 	}
 	ch.sendOrUpdateVote(session, c.Message.Chat, c.Sender, c.Message.ReplyTo.Sender, c.Message.ReplyTo, true)
 }
+func (ch *CalendarHandlers) HandleFindTimeBack(c *tb.Callback) {
+	if c.Sender.ID != c.Message.ReplyTo.Sender.ID {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+			Text:       calendarMessages.GetUserNotAllow(),
+			ShowAlert:  true,
+		})
+		if err != nil {
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+		}
+		return
+	}
+
+	session, err := ch.getSession(c.Sender, c.Message.Chat)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+		return
+	}
+
+	if session.PollMsg.ChatID != 0 {
+		err = ch.handler.bot.Delete(&session.PollMsg)
+		if err != nil {
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+		}
+	}
+
+	session.PollMsg.ChatID = 0
+	session.PollMsg.MessageID = ""
+	session.FreeBusy = types.FreeBusy{}
+
+	err = ch.setSession(session, c.Sender, c.Message.Chat)
+	if err != nil {
+		ch.handler.SendError(c.Message.Chat, err)
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+		return
+	}
+
+	ch.HandleGroupFindTimeYes(c)
+}
 func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 	if c.Sender.ID != c.Message.ReplyTo.Sender.ID {
 		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
@@ -2726,10 +2767,10 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 
 	if !sendPoll {
 
-		if session.PollMsg.ChatID != 0 {
+		if session.PollMsg.ChatID == 0 {
 			msg, err := ch.handler.bot.Send(c, calendarMessages.GenFindTimePollHeader(emails), &tb.SendOptions{
 				ParseMode: tb.ModeHTML,
-				ReplyTo: msgToReply,
+				ReplyTo:   msgToReply,
 				ReplyMarkup: &tb.ReplyMarkup{
 					InlineKeyboard: calendarInlineKeyboards.FindTimeAddUser(userInit.ID),
 				},
@@ -2754,7 +2795,7 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 
 		_, err = ch.handler.bot.Edit(&session.PollMsg, calendarMessages.GenFindTimePollHeader(emails), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
-			ReplyTo: msgToReply,
+			ReplyTo:   msgToReply,
 			ReplyMarkup: &tb.ReplyMarkup{
 				InlineKeyboard: calendarInlineKeyboards.FindTimeAddUser(userInit.ID),
 			},
@@ -2766,13 +2807,6 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 		}
 
 		return
-	}
-
-	if session.PollMsg.ChatID != 0 {
-		err = ch.handler.bot.Delete(&session.PollMsg)
-		if err != nil {
-			customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
-		}
 	}
 
 	token, err := ch.userUseCase.GetOrRefreshOAuthAccessTokenByTelegramUserID(int64(userInit.ID))
@@ -2802,6 +2836,13 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 			customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
 		}
 		return
+	}
+
+	if session.PollMsg.ChatID != 0 {
+		err = ch.handler.bot.Delete(&session.PollMsg)
+		if err != nil {
+			customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
+		}
 	}
 
 	poll := tb.Poll{

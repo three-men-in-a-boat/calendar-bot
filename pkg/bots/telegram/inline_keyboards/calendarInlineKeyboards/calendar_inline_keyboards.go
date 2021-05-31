@@ -223,6 +223,12 @@ func FindTimePollButtons() [][]tb.InlineButton {
 	return [][]tb.InlineButton{
 		{
 			{
+				Text:   calendarMessages.FindTimeBack,
+				Unique: telegram.FindTimeBack,
+			},
+		},
+		{
+			{
 				Text:   calendarMessages.GetCreateEventCreateText(),
 				Unique: telegram.FindTimeCreate,
 			},
@@ -242,6 +248,12 @@ func FindTimeAddUser(sender int) [][]tb.InlineButton {
 				Text:   calendarMessages.FindTimeFind,
 				Unique: telegram.FindTimeFind,
 				Data:   strconv.Itoa(sender),
+			},
+		},
+		{
+			{
+				Text:   calendarMessages.FindTimeBack,
+				Unique: telegram.FindTimeBack,
 			},
 		},
 		{
