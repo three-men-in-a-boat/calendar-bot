@@ -98,12 +98,23 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 		return
 	}
 
+	i := 0
+	for _, event := range events.Data.Events {
+		if !event.FullDay || event.From.Day() != time.Now().Day()-1 || event.To.Day() != time.Now().Day() {
+			events.Data.Events[i] = event
+			i++
+		}
+	}
+
+	events.Data.Events = events.Data.Events[:i]
+
+
 	title := calendarMessages.GetTodayTitle()
 	if m.Chat.Type != tb.ChatPrivate {
 		title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
 	}
 
-	if events != nil {
+	if events != nil || len(events.Data.Events) > 0 {
 		_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
@@ -1878,9 +1889,6 @@ func (ch *CalendarHandlers) setSession(session *types.BotRedisSession, user *tb.
 }
 func (ch *CalendarHandlers) sendShortEvents(events *types.Events, chat *tb.Chat) {
 	for _, event := range *events {
-		if event.FullDay && event.From.Day() == time.Now().Day()-1 && event.To.Day() == time.Now().Day() {
-			continue
-		}
 		var err error
 		var keyboard [][]tb.InlineButton = nil
 		if chat.Type == tb.ChatPrivate {
@@ -2431,7 +2439,18 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 			ch.handler.SendError(m.Chat, err)
 			return
 		}
-		if events != nil {
+
+		i := 0
+		for _, event := range events.Data.Events {
+			if !event.FullDay || event.From.Day() != time.Now().Day()-1 || event.To.Day() != time.Now().Day() {
+				events.Data.Events[i] = event
+				i++
+			}
+		}
+
+		events.Data.Events = events.Data.Events[:i]
+
+		if events != nil || len(events.Data.Events) > 0 {
 			title := calendarMessages.GetDateTitle(parseDate.Date)
 			if m.Chat.Type != tb.ChatPrivate {
 				title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
