@@ -109,6 +109,8 @@ func GroupFindTimeButtons() [][]tb.InlineButton {
 			Text:   calendarMessages.CreateEventFindTimeYesButton,
 			Unique: telegram.GroupFindTimeYes,
 		},
+	},
+	{
 		{
 			Text:   calendarMessages.CreateEventFindTimeNoButton,
 			Unique: telegram.GroupFindTimeNo,
