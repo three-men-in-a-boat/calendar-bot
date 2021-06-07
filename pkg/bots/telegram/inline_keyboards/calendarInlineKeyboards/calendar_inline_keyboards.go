@@ -110,12 +110,13 @@ func GroupFindTimeButtons() [][]tb.InlineButton {
 			Unique: telegram.GroupFindTimeYes,
 		},
 	},
-	{
 		{
-			Text:   calendarMessages.CreateEventFindTimeNoButton,
-			Unique: telegram.GroupFindTimeNo,
+			{
+				Text:   calendarMessages.CreateEventFindTimeNoButton,
+				Unique: telegram.GroupFindTimeNo,
+			},
 		},
-	}}
+	}
 }
 
 func FindTimeDayPartButtons(t time.Time) [][]tb.InlineButton {

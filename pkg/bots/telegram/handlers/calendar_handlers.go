@@ -98,15 +98,16 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 		return
 	}
 
-	i := 0
-	for _, event := range events.Data.Events {
-		if !event.FullDay || event.From.Day() != time.Now().Day()-1 || event.To.Day() != time.Now().Day() {
-			events.Data.Events[i] = event
-			i++
+	if events != nil {
+		i := 0
+		for _, event := range events.Data.Events {
+			if !event.FullDay || event.From.Day() != time.Now().Day()-1 || event.To.Day() != time.Now().Day() {
+				events.Data.Events[i] = event
+				i++
+			}
 		}
+		events.Data.Events = events.Data.Events[:i]
 	}
-
-	events.Data.Events = events.Data.Events[:i]
 
 	title := calendarMessages.GetTodayTitle()
 	if m.Chat.Type != tb.ChatPrivate {
@@ -2445,15 +2446,17 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 			return
 		}
 
-		i := 0
-		for _, event := range events.Data.Events {
-			if !event.FullDay || event.From.Day() != time.Now().Day()-1 || event.To.Day() != time.Now().Day() {
-				events.Data.Events[i] = event
-				i++
+		if events != nil {
+			i := 0
+			for _, event := range events.Data.Events {
+				if !event.FullDay || event.From.Day() != time.Now().Day()-1 || event.To.Day() != time.Now().Day() {
+					events.Data.Events[i] = event
+					i++
+				}
 			}
-		}
 
-		events.Data.Events = events.Data.Events[:i]
+			events.Data.Events = events.Data.Events[:i]
+		}
 
 		if events != nil || len(events.Data.Events) > 0 {
 			title := calendarMessages.GetDateTitle(parseDate.Date)
