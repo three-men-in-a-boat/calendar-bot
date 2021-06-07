@@ -108,7 +108,6 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 
 	events.Data.Events = events.Data.Events[:i]
 
-
 	title := calendarMessages.GetTodayTitle()
 	if m.Chat.Type != tb.ChatPrivate {
 		title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
@@ -1419,7 +1418,13 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 		return
 	}
 
-	d, _ := time.ParseDuration("7h")
+	var d time.Duration
+
+	if t.Hour() == 9 {
+		d, _ = time.ParseDuration("9h")
+	} else {
+		d, _ = time.ParseDuration("7h")
+	}
 
 	session.FindTimeDayPart = &types.DayPart{
 		Start:    t,

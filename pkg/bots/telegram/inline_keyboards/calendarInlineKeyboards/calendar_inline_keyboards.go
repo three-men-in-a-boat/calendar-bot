@@ -141,9 +141,9 @@ func FindTimeDayPartButtons(t time.Time) [][]tb.InlineButton {
 		},
 		{
 			{
-				Text:   "Ночью (0:00 - 7:00)",
+				Text:   "В рабочее время (9:00 - 18:00)",
 				Unique: telegram.FindTimeDayPart,
-				Data:   time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Format(time.RFC3339),
+				Data:   time.Date(t.Year(), t.Month(), t.Day(), 9, 0, 0, 0, t.Location()).Format(time.RFC3339),
 			},
 		},
 		{
