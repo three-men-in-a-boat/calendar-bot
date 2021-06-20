@@ -414,8 +414,6 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 	}
 
 	if session.IsDate {
-		// Удаляет текст Сегодня, Завтра из даты
-		m.Text = strings.Split(m.Text, ",")[0]
 		ch.handleDateText(m, session)
 	} else if session.IsCreate && session.FindTimeDone {
 		ch.handleCreateText(m, session)
@@ -2688,6 +2686,8 @@ func (ch *CalendarHandlers) handleGroup(c *tb.Callback, status string) {
 	}
 }
 func (ch *CalendarHandlers) ParseDate(m *tb.Message) *types.ParseDateResp {
+	// Удаляет текст Сегодня, Завтра из даты
+	m.Text = strings.Split(m.Text, ",")[0]
 	reqData := &types.ParseDateReq{Timezone: "Europe/Moscow", Text: m.Text}
 	b, err := json.Marshal(reqData)
 	if err != nil {
