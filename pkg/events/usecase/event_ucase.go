@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/arran4/golang-ical"
 	"github.com/calendar-bot/pkg/events/repository"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/fatih/structs"
@@ -18,7 +19,6 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
-	"github.com/arran4/golang-ical"
 )
 
 type EventUseCase struct {
@@ -474,7 +474,9 @@ func getJsonFromMap(m map[string]interface{}) string {
 
 func createICS(input types.EventInput, from time.Time, to time.Time) error {
 	cal := ics.NewCalendar()
-	cal.SetName(*input.Calendar)
+	if input.Calendar != nil {
+		cal.SetName(*input.Calendar)
+	}
 
 	cal.SetMethod(ics.MethodPublish)
 	event := cal.AddEvent(*input.Uid)
@@ -498,7 +500,7 @@ func createICS(input types.EventInput, from time.Time, to time.Time) error {
 	icsContent := cal.Serialize()
 
 	filename := *input.Uid
-	f, err := os.Create(filename)
+	f, err := os.Create(filename + ".ics")
 	if err != nil {
 		return err
 	}
