@@ -6,6 +6,7 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram/messages/calendarMessages"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/go-redis/redis/v8"
+	"github.com/goodsign/monday"
 	tb "gopkg.in/tucnak/telebot.v2"
 	"strconv"
 	"strings"
@@ -270,40 +271,46 @@ func FindTimeAddUser(sender int) [][]tb.InlineButton {
 }
 
 func GetDateFastCommand(cancelText bool) [][]tb.InlineButton {
+	const (
+		formatDate = "2 January"
+		locale     = monday.LocaleRuRU
+	)
+
 	unique := telegram.HandleGroupText
+	now := time.Now()
 	ret := [][]tb.InlineButton{
 		{
 			{
-				Text:   "Сегодня",
+				Text:   monday.Format(now, formatDate, locale) + ", Сегодня",
 				Unique: unique,
-				Data:   "Сегодня",
+				Data:   monday.Format(now, formatDate, locale) + ", Сегодня",
 			},
 			{
-				Text:   "Завтра",
+				Text:   monday.Format(now.AddDate(0,0,1), formatDate, locale) + ", Завтра",
 				Unique: unique,
-				Data:   "Завтра",
+				Data:   monday.Format(now.AddDate(0,0,1), formatDate, locale) + ", Завтра",
 			},
 			{
-				Text:   "Через два дня",
+				Text:   monday.Format(now.AddDate(0,0,2), formatDate, locale),
 				Unique: unique,
-				Data:   "Через два дня",
+				Data:   monday.Format(now.AddDate(0,0,2), formatDate, locale),
 			},
 		},
 		{
 			{
-				Text:   "Через три дня",
+				Text:   monday.Format(now.AddDate(0,0,3), formatDate, locale),
 				Unique: unique,
-				Data:   "Через три дня",
+				Data:   monday.Format(now.AddDate(0,0,3), formatDate, locale),
 			},
 			{
-				Text:   "Через четыре дня",
+				Text:   monday.Format(now.AddDate(0,0,4), formatDate, locale),
 				Unique: unique,
-				Data:   "Через четыре дня",
+				Data:   monday.Format(now.AddDate(0,0,4), formatDate, locale),
 			},
 			{
-				Text:   "Через пять дней",
+				Text:   monday.Format(now.AddDate(0,0,5), formatDate, locale),
 				Unique: unique,
-				Data:   "Через пять дней",
+				Data:   monday.Format(now.AddDate(0,0,5), formatDate, locale),
 			},
 		},
 	}

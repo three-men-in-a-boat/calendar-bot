@@ -4,31 +4,41 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram"
 	"github.com/calendar-bot/pkg/bots/telegram/messages/calendarMessages"
 	"github.com/calendar-bot/pkg/types"
+	"github.com/goodsign/monday"
 	tb "gopkg.in/tucnak/telebot.v2"
+	"time"
 )
 
 func GetDateFastCommand(cancelText bool) [][]tb.ReplyButton {
+
+	const (
+		formatDate = "2 January"
+		locale     = monday.LocaleRuRU
+	)
+
+	now := time.Now()
+
 	ret := [][]tb.ReplyButton{
 		{
 			{
-				Text: "Сегодня",
+				Text: monday.Format(now, formatDate, locale) + ", Сегодня",
 			},
 			{
-				Text: "Завтра",
+				Text: monday.Format(now.AddDate(0,0,1), formatDate, locale) + ", Завтра",
 			},
 			{
-				Text: "Через два дня",
+				Text: monday.Format(now.AddDate(0,0,2), formatDate, locale),
 			},
 		},
 		{
 			{
-				Text: "Через три дня",
+				Text: monday.Format(now.AddDate(0,0,3), formatDate, locale),
 			},
 			{
-				Text: "Через неделю",
+				Text: monday.Format(now.AddDate(0,0,4), formatDate, locale),
 			},
 			{
-				Text: "Через две недели",
+				Text: monday.Format(now.AddDate(0,0,5), formatDate, locale),
 			},
 		},
 	}

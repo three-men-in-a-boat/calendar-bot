@@ -414,6 +414,8 @@ func (ch *CalendarHandlers) HandleText(m *tb.Message) {
 	}
 
 	if session.IsDate {
+		// Удаляет текст Сегодня, Завтра из даты
+		m.Text = strings.Split(m.Text, ",")[0]
 		ch.handleDateText(m, session)
 	} else if session.IsCreate && session.FindTimeDone {
 		ch.handleCreateText(m, session)
