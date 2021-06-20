@@ -24,21 +24,21 @@ func GetDateFastCommand(cancelText bool) [][]tb.ReplyButton {
 				Text: monday.Format(now, formatDate, locale) + ", Сегодня",
 			},
 			{
-				Text: monday.Format(now.AddDate(0,0,1), formatDate, locale) + ", Завтра",
+				Text: monday.Format(now.AddDate(0, 0, 1), formatDate, locale) + ", Завтра",
 			},
 			{
-				Text: monday.Format(now.AddDate(0,0,2), formatDate, locale),
+				Text: monday.Format(now.AddDate(0, 0, 2), formatDate, locale),
 			},
 		},
 		{
 			{
-				Text: monday.Format(now.AddDate(0,0,3), formatDate, locale),
+				Text: monday.Format(now.AddDate(0, 0, 3), formatDate, locale),
 			},
 			{
-				Text: monday.Format(now.AddDate(0,0,4), formatDate, locale),
+				Text: monday.Format(now.AddDate(0, 0, 4), formatDate, locale),
 			},
 			{
-				Text: monday.Format(now.AddDate(0,0,5), formatDate, locale),
+				Text: monday.Format(now.AddDate(0, 0, 5), formatDate, locale),
 			},
 		},
 	}
