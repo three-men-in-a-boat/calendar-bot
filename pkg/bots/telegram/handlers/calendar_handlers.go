@@ -2109,11 +2109,14 @@ Step:
 		session.Event.Description = m.Text
 		break Step
 	case telegram.StepCreateUser:
-		session.Event.Attendees = append(session.Event.Attendees, types.AttendeeEvent{
-			Email:  m.Text,
-			Role:   telegram.RoleRequired,
-			Status: telegram.StatusNeedsAction,
-		})
+		attendeesEmails := strings.Split(m.Text, ",")
+		for _, email := range attendeesEmails {
+			session.Event.Attendees = append(session.Event.Attendees, types.AttendeeEvent{
+				Email:  strings.Trim(email, " "),
+				Role:   telegram.RoleRequired,
+				Status: telegram.StatusNeedsAction,
+			})
+		}
 	case telegram.StepCreateLocation:
 		session.Event.Location.Description = m.Text
 		break Step

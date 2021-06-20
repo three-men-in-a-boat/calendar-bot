@@ -83,7 +83,8 @@ const (
 	createEventTitleText    = "<b>Введите название события</b>"
 	CreateEventDescText     = "<b>Введите описание события</b>"
 	CreateEventLocationText = "<b>Введите место события</b>"
-	CreateEventUserText     = "<b>Введите email пользователя, которого хотите добавить</b>"
+	CreateEventUserText     = "<b>Введите email пользователя, которого хотите добавить. Можно ввести несколько" +
+		" через запятую</b>"
 
 	createEventCreateText   = "Создать событие"
 	createEventCreatedText  = "Событие успешно создано"
