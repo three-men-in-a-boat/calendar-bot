@@ -93,7 +93,8 @@ func getEventsBySpecificDay(t time.Time, accessToken string) (events *types.Even
  			},
 			calendar {
  				uid,
- 				title
+ 				title,
+				type
 			},
  			attendees{
 				email,
