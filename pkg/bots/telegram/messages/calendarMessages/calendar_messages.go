@@ -17,7 +17,7 @@ const (
 	eventTimeFullDay               = "<u>Когда:</u>\n\n⏰ %s %s, <u>Весь день</u>\n"
 	eventDateStart                 = "<u>Когда:</u>\n\n⏰ <b>Начало:</b> %s %s\n"
 	eventPlaceText                 = "\n<u>Где:</u>\n\n📍 %s\n"
-	eventOrganizerText             = "Создатель - <b>%s</b> (%s)\n"
+	eventOrganizerText             = "\nСоздатель - <b>%s</b> (%s)\n"
 	eventSplitLine                 = "---------------\n"
 	eventCalendarText              = "🗓 Календарь <b>%s</b>"
 	eventAttendeesHeaderText       = "<u><i>Участники:</i></u>\n\n"
