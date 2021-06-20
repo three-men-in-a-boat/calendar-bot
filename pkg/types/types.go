@@ -9,6 +9,7 @@ import (
 type Calendar struct {
 	UID   string `json:"uid,omitempty"`
 	Title string `json:"title,omitempty"`
+	Type  string `json:"type,omitempty"`
 }
 
 type AttendeeEvent struct {
