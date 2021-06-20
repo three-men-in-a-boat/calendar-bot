@@ -13,10 +13,12 @@ import (
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
+	"github.com/arran4/golang-ical"
 )
 
 type EventUseCase struct {
@@ -443,11 +445,11 @@ func getJsonFromMap(m map[string]interface{}) string {
 			if value == nil {
 				continue
 			}
-			lol := getJsonFromMap(*value)
-			response += fmt.Sprintf("%s:{%s},", key, lol)
+			v := getJsonFromMap(*value)
+			response += fmt.Sprintf("%s:{%s},", key, v)
 		case map[string]interface{}:
-			lol := getJsonFromMap(value)
-			response += fmt.Sprintf("%s:{%s},", key, lol)
+			v := getJsonFromMap(value)
+			response += fmt.Sprintf("%s:{%s},", key, v)
 		case *types.Attendees:
 			if value == nil {
 				continue
@@ -470,6 +472,52 @@ func getJsonFromMap(m map[string]interface{}) string {
 	return response
 }
 
+func createICS(input types.EventInput, from time.Time, to time.Time) error {
+	cal := ics.NewCalendar()
+	cal.SetName(*input.Calendar)
+
+	cal.SetMethod(ics.MethodPublish)
+	event := cal.AddEvent(*input.Uid)
+	if input.Title != nil {
+		event.SetSummary(*input.Title)
+	}
+	if input.Description != nil {
+		event.SetDescription(*input.Description)
+	}
+	if input.Location != nil {
+		event.SetLocation(input.Location.Description)
+	}
+	if input.Attendees != nil {
+		for _, v := range *input.Attendees {
+			event.AddAttendee(v.Email)
+		}
+	}
+	event.SetStartAt(from)
+	event.SetEndAt(to)
+
+	icsContent := cal.Serialize()
+
+	filename := *input.Uid
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	_, err = f.WriteString(icsContent)
+	if err != nil {
+		errClose := f.Close()
+		if errClose != nil {
+			return errors.Errorf("%v and failed to close file %s because %v", err, filename, errClose)
+		}
+		return err
+	}
+	err = f.Close()
+	if err != nil {
+		return errors.Errorf("failed to close file %s because %v", filename, err)
+	}
+
+	return nil
+}
+
 func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) (resp []byte, err error) {
 	timer := prometheus.NewTimer(metricCreateEventDuration)
 	defer func() {
@@ -477,18 +525,18 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 		timer.ObserveDuration()
 	}()
 
-	tmp, err := time.Parse(time.RFC3339, *eventInput.From)
+	fromTime, err := time.Parse(time.RFC3339, *eventInput.From)
 	if err != nil {
 		return nil, errors.Errorf("failed to parse `from` time, %v", err)
 	}
-	from := getNewTime(tmp).Format(time.RFC3339)
+	from := getNewTime(fromTime).Format(time.RFC3339)
 	eventInput.From = &from
 
-	tmp, err = time.Parse(time.RFC3339, *eventInput.To)
+	toTime, err := time.Parse(time.RFC3339, *eventInput.To)
 	if err != nil {
 		return nil, errors.Errorf("failed to parse `to` time, %v", err)
 	}
-	to := getNewTime(tmp).Format(time.RFC3339)
+	to := getNewTime(toTime).Format(time.RFC3339)
 	eventInput.To = &to
 
 	m := structs.Map(eventInput)
@@ -528,6 +576,13 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 	if err != nil {
 		return nil, errors.Errorf("failed to read body %v", err)
 	}
+
+	err = createICS(eventInput, fromTime, toTime)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
 	return res, nil
 }
 
