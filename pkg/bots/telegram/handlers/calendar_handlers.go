@@ -231,7 +231,7 @@ func (ch *CalendarHandlers) HandleDate(m *tb.Message) {
 	}
 
 	if currSession.InlineMsg.ChatID != 0 {
-		_, err = ch.handler.bot.EditReplyMarkup(&currSession.InlineMsg, nil)
+		err = ch.handler.bot.Delete(&currSession.InlineMsg)
 		if err != nil {
 			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
@@ -297,7 +297,7 @@ func (ch *CalendarHandlers) HandleCreate(m *tb.Message) {
 	}
 
 	if session.InlineMsg.ChatID != 0 {
-		_, err = ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
+		err = ch.handler.bot.Delete(&session.InlineMsg)
 		if err != nil {
 			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 		}
@@ -1006,10 +1006,12 @@ func (ch *CalendarHandlers) HandleCancelCreateEvent(c *tb.Callback) {
 	}
 
 	if session.InlineMsg.ChatID != 0 {
-		_, err := ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
+		err = ch.handler.bot.Delete(&session.InlineMsg)
 		if err != nil {
 			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
+
+		session.InlineMsg = utils.InitCustomEditable("", 0)
 	}
 
 	err = ch.handler.bot.Respond(c, &tb.CallbackResponse{
@@ -1207,7 +1209,7 @@ func (ch *CalendarHandlers) HandleCreateEvent(c *tb.Callback) {
 	}
 
 	if session.InlineMsg.ChatID != 0 {
-		_, err = ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
+		err = ch.handler.bot.Delete(&session.InlineMsg)
 		if err != nil {
 			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 		}
@@ -1668,7 +1670,7 @@ func (ch *CalendarHandlers) FindTimeCreate(c *tb.Callback) {
 		}
 
 		if session.InlineMsg.ChatID != 0 {
-			_, err = ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
+			err = ch.handler.bot.Delete(&session.InlineMsg)
 			if err != nil {
 				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 			}
@@ -1809,7 +1811,7 @@ func (ch *CalendarHandlers) HandleGroupText(c *tb.Callback) {
 		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
 
-	_, err = ch.handler.bot.EditReplyMarkup(c.Message, nil)
+	err = ch.handler.bot.Delete(c.Message)
 	if err != nil {
 		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
@@ -1972,7 +1974,7 @@ func (ch *CalendarHandlers) handleCreateText(m *tb.Message, session *types.BotRe
 		}
 
 		if session.InlineMsg.ChatID != 0 {
-			_, err := ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
+			err := ch.handler.bot.Delete(&session.InlineMsg)
 			if err != nil {
 				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
@@ -2129,6 +2131,10 @@ Step:
 
 	e := session.Event
 
+	if m.Chat.Type != tb.ChatPrivate {
+		ch.updateInlineMsg(m, session)
+	}
+
 	newMsg, err := ch.handler.bot.Send(m.Chat,
 		calendarMessages.GetCreateEventHeader()+calendarMessages.SingleEventFullText(&session.Event),
 		&tb.SendOptions{
@@ -2190,32 +2196,19 @@ Step:
 	if e.Title == "" && e.Description == "" && e.Location.Description == "" && len(e.Attendees) < 2 && session.Step == telegram.StepCreateTitle {
 		session.FromTextCreate = false
 
-		replyMarkup := tb.ReplyMarkup{}
-		var replyTo *tb.Message = nil
-		if m.Chat.Type != tb.ChatPrivate {
-			replyMarkup = tb.ReplyMarkup{
-				InlineKeyboard: calendarInlineKeyboards.GetCreateOptionButtons(session),
+		if m.Chat.Type == tb.ChatPrivate {
+			_, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
+				ParseMode: tb.ModeHTML,
+				ReplyMarkup: &tb.ReplyMarkup{
+					ReplyKeyboard:   calendarKeyboards.GetCreateOptionButtons(session),
+					OneTimeKeyboard: true,
+				},
+			})
+
+			if err != nil {
+				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
-			replyTo = m
-		} else {
-			replyMarkup = tb.ReplyMarkup{
-				ReplyKeyboard:   calendarKeyboards.GetCreateOptionButtons(session),
-				OneTimeKeyboard: true,
-			}
-		}
 
-		msg, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetCreateEventTitle(), &tb.SendOptions{
-			ParseMode:   tb.ModeHTML,
-			ReplyMarkup: &replyMarkup,
-			ReplyTo:     replyTo,
-		})
-
-		if err != nil {
-			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
-		}
-
-		if m.Chat.Type != tb.ChatPrivate {
-			session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
 		}
 
 		err = ch.setSession(session, m.Sender, m.Chat)
@@ -2277,7 +2270,7 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 		}
 
 		if session.InlineMsg.ChatID != 0 {
-			_, err := ch.handler.bot.EditReplyMarkup(&session.InlineMsg, nil)
+			err := ch.handler.bot.Delete(&session.InlineMsg)
 			if err != nil {
 				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
@@ -3057,4 +3050,51 @@ func EventToEventInput(event types.Event) types.EventInput {
 	}
 
 	return ret
+}
+func (ch CalendarHandlers) updateInlineMsg(m *tb.Message, session *types.BotRedisSession) {
+	var replyMarkup *tb.ReplyMarkup = nil
+	var replyTo *tb.Message = nil
+	text := "Выберите шаг:"
+	if m.Chat.Type != tb.ChatPrivate {
+		replyMarkup = &tb.ReplyMarkup{
+			InlineKeyboard: calendarInlineKeyboards.GetCreateOptionButtons(session),
+		}
+		replyTo = m
+	}
+
+	switch session.Step {
+	case telegram.StepCreateDesc:
+		text = calendarMessages.CreateEventDescText
+	case telegram.StepCreateTitle:
+		text = calendarMessages.GetCreateEventTitle()
+	case telegram.StepCreateTo:
+		return
+	case telegram.StepCreateFrom:
+		return
+	case telegram.StepCreateLocation:
+		text = calendarMessages.CreateEventLocationText
+	case telegram.StepCreateUser:
+		text = calendarMessages.CreateEventUserText
+	}
+
+	if session.InlineMsg.ChatID != 0 {
+		err := ch.handler.bot.Delete(&session.InlineMsg)
+		if err != nil {
+			customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+		}
+	}
+
+	msg, err := ch.handler.bot.Send(m.Chat, text, &tb.SendOptions{
+		ParseMode:   tb.ModeHTML,
+		ReplyMarkup: replyMarkup,
+		ReplyTo:     replyTo,
+	})
+
+	if err != nil {
+		customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+	}
+
+	if m.Chat.Type != tb.ChatPrivate {
+		session.InlineMsg = utils.InitCustomEditable(msg.MessageSig())
+	}
 }
