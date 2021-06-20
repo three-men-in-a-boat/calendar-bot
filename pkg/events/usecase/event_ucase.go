@@ -472,14 +472,15 @@ func getJsonFromMap(m map[string]interface{}) string {
 	return response
 }
 
-func deleteIcs(filename string) error {
-	err := os.Remove(filename + ".ics")
-
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// TODO needs to be used
+//func deleteIcs(filename string) error {
+//	err := os.Remove(filename + ".ics")
+//
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
 
 func createICS(input types.EventInput, from time.Time, to time.Time) error {
 	cal := ics.NewCalendar()
