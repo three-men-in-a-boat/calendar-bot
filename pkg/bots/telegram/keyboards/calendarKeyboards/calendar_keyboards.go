@@ -153,7 +153,7 @@ func GetCreateDuration() [][]tb.ReplyButton {
 }
 
 func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.ReplyButton {
-	btns := make([][]tb.ReplyButton, 4)
+	btns := make([][]tb.ReplyButton, 5)
 	for i := range btns {
 		btns[i] = make([]tb.ReplyButton, 2)
 	}
@@ -222,6 +222,10 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.ReplyButton {
 		btns[idx/2][idx%2] = tb.ReplyButton{
 			Text: calendarMessages.GetCreateFullDay(),
 		}
+	}
+
+	btns[4][0] = tb.ReplyButton{
+		Text: calendarMessages.GetCreateCancelText(),
 	}
 
 	return btns

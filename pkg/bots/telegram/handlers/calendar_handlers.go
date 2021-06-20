@@ -1361,7 +1361,15 @@ func (ch *CalendarHandlers) HandleFindTimeDayPart(c *tb.Callback) {
 			}
 		}
 
+		if session.InlineMsg.ChatID != 0 {
+			err := ch.handler.bot.Delete(&session.InlineMsg)
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+			}
+		}
+
 		session.InfoMsg = utils.InitCustomEditable("", 0)
+		session.InlineMsg = utils.InitCustomEditable("", 0)
 
 		err = ch.setSession(session, c.Sender, c.Message.Chat)
 		if err != nil {
@@ -1494,7 +1502,15 @@ func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
 			}
 		}
 
+		if session.InlineMsg.ChatID != 0 {
+			err := ch.handler.bot.Delete(&session.InlineMsg)
+			if err != nil {
+				customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+			}
+		}
+
 		session.InfoMsg = utils.InitCustomEditable("", 0)
+		session.InlineMsg = utils.InitCustomEditable("", 0)
 
 		err = ch.setSession(session, c.Sender, c.Message.Chat)
 		if err != nil {
@@ -1964,8 +1980,6 @@ func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback, senderID int
 }
 func (ch *CalendarHandlers) handleCreateText(m *tb.Message, session *types.BotRedisSession) {
 	if calendarMessages.GetCreateCancelText() == m.Text {
-		session = &types.BotRedisSession{}
-
 		if session.InfoMsg.ChatID != 0 {
 			err := ch.handler.bot.Delete(&session.InfoMsg)
 			if err != nil {
@@ -1979,6 +1993,8 @@ func (ch *CalendarHandlers) handleCreateText(m *tb.Message, session *types.BotRe
 				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
+
+		session = &types.BotRedisSession{}
 
 		session.InfoMsg = utils.InitCustomEditable("", 0)
 		session.InlineMsg = utils.InitCustomEditable("", 0)
@@ -2260,8 +2276,6 @@ Step:
 }
 func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.BotRedisSession) {
 	if calendarMessages.GetCreateCancelText() == m.Text {
-		session = &types.BotRedisSession{}
-
 		if session.InfoMsg.ChatID != 0 {
 			err := ch.handler.bot.Delete(&session.InfoMsg)
 			if err != nil {
@@ -2275,6 +2289,8 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
+
+		session = &types.BotRedisSession{}
 
 		session.InfoMsg = utils.InitCustomEditable("", 0)
 		session.InlineMsg = utils.InitCustomEditable("", 0)

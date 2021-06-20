@@ -480,7 +480,7 @@ func GetCreateDuration() [][]tb.InlineButton {
 }
 
 func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton {
-	btns := make([][]tb.InlineButton, 4)
+	btns := make([][]tb.InlineButton, 5)
 	for i := range btns {
 		btns[i] = make([]tb.InlineButton, 2)
 	}
@@ -570,6 +570,12 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton 
 			Unique: unique,
 			Data:   calendarMessages.GetCreateFullDay(),
 		}
+	}
+
+	btns[4][0] = tb.InlineButton{
+		Text: calendarMessages.GetCreateCancelText(),
+		Unique: unique,
+		Data: calendarMessages.GetCreateCancelText(),
 	}
 
 	return btns
