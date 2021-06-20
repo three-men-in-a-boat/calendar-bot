@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/arran4/golang-ical"
 	"github.com/calendar-bot/pkg/events/repository"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/fatih/structs"
@@ -14,7 +13,6 @@ import (
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -473,7 +471,7 @@ func getJsonFromMap(m map[string]interface{}) string {
 }
 
 // TODO needs to be used
-//func deleteIcs(filename string) error {
+//func (uc *EventUseCase) DeleteIcs(filename string) error {
 //	err := os.Remove(filename + ".ics")
 //
 //	if err != nil {
@@ -482,53 +480,62 @@ func getJsonFromMap(m map[string]interface{}) string {
 //	return nil
 //}
 
-func createICS(input types.EventInput, from time.Time, to time.Time) error {
-	cal := ics.NewCalendar()
-	if input.Calendar != nil {
-		cal.SetName(*input.Calendar)
-	}
+//func (uc *EventUseCase) CreateICS(input types.EventInput) error {
+//	from, err := time.Parse(time.RFC3339, *input.From)
+//	if err != nil {
+//		return errors.Errorf("failed to parse `from` time, %v", err)
+//	}
+//	to, err := time.Parse(time.RFC3339, *input.To)
+//	if err != nil {
+//		return errors.Errorf("failed to parse `to` time, %v", err)
+//	}
 
-	cal.SetMethod(ics.MethodPublish)
-	event := cal.AddEvent(*input.Uid)
-	if input.Title != nil {
-		event.SetSummary(*input.Title)
-	}
-	if input.Description != nil {
-		event.SetDescription(*input.Description)
-	}
-	if input.Location != nil {
-		event.SetLocation(input.Location.Description)
-	}
-	if input.Attendees != nil {
-		for _, v := range *input.Attendees {
-			event.AddAttendee(v.Email)
-		}
-	}
-	event.SetStartAt(from)
-	event.SetEndAt(to)
-
-	icsContent := cal.Serialize()
-
-	filename := *input.Uid
-	f, err := os.Create(filename + ".ics")
-	if err != nil {
-		return err
-	}
-	_, err = f.WriteString(icsContent)
-	if err != nil {
-		errClose := f.Close()
-		if errClose != nil {
-			return errors.Errorf("%v and failed to close file %s because %v", err, filename, errClose)
-		}
-		return err
-	}
-	err = f.Close()
-	if err != nil {
-		return errors.Errorf("failed to close file %s because %v", filename, err)
-	}
-
-	return nil
-}
+//	cal := ics.NewCalendar()
+//	if input.Calendar != nil {
+//		cal.SetName(*input.Calendar)
+//	}
+//
+//	cal.SetMethod(ics.MethodPublish)
+//	event := cal.AddEvent(*input.Uid)
+//	if input.Title != nil {
+//		event.SetSummary(*input.Title)
+//	}
+//	if input.Description != nil {
+//		event.SetDescription(*input.Description)
+//	}
+//	if input.Location != nil {
+//		event.SetLocation(input.Location.Description)
+//	}
+//	if input.Attendees != nil {
+//		for _, v := range *input.Attendees {
+//			event.AddAttendee(v.Email)
+//		}
+//	}
+//	event.SetStartAt(from)
+//	event.SetEndAt(to)
+//
+//	icsContent := cal.Serialize()
+//
+//	filename := *input.Uid
+//	f, err := os.Create(filename + ".ics")
+//	if err != nil {
+//		return err
+//	}
+//	_, err = f.WriteString(icsContent)
+//	if err != nil {
+//		errClose := f.Close()
+//		if errClose != nil {
+//			return errors.Errorf("%v and failed to close file %s because %v", err, filename, errClose)
+//		}
+//		return err
+//	}
+//	err = f.Close()
+//	if err != nil {
+//		return errors.Errorf("failed to close file %s because %v", filename, err)
+//	}
+//
+//	return nil
+//}
 
 func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventInput) (resp []byte, err error) {
 	timer := prometheus.NewTimer(metricCreateEventDuration)
@@ -587,12 +594,6 @@ func (uc *EventUseCase) CreateEvent(accessToken string, eventInput types.EventIn
 	res, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, errors.Errorf("failed to read body %v", err)
-	}
-
-	err = createICS(eventInput, fromTime, toTime)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
 	}
 
 	return res, nil
