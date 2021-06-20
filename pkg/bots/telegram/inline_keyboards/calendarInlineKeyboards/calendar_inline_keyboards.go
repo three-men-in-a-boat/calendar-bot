@@ -573,9 +573,9 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton 
 	}
 
 	btns[4][0] = tb.InlineButton{
-		Text: calendarMessages.GetCreateCancelText(),
+		Text:   calendarMessages.GetCreateCancelText(),
 		Unique: unique,
-		Data: calendarMessages.GetCreateCancelText(),
+		Data:   calendarMessages.GetCreateCancelText(),
 	}
 
 	return btns
