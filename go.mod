@@ -3,7 +3,6 @@ module github.com/calendar-bot
 go 1.15
 
 require (
-	github.com/arran4/golang-ical v0.0.0-20210601225245-48fd351b08e7
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/bxcodec/faker/v3 v3.6.0
 	github.com/fatih/structs v1.1.0

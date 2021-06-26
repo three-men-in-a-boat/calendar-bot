@@ -3,7 +3,6 @@ package config
 import (
 	"github.com/bxcodec/faker/v3"
 	"github.com/calendar-bot/pkg/services/redis"
-	"github.com/calendar-bot/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -11,6 +10,10 @@ import (
 	"testing"
 	"time"
 )
+
+type enver interface {
+	ToEnv() map[string]string
+}
 
 type appConfigTestSuite struct {
 	suite.Suite
@@ -22,8 +25,8 @@ func TestInit(t *testing.T) {
 }
 
 func (s *appConfigTestSuite) testConfigurationLoader(
-	expected utils.Enver,
-	configLoader func() utils.Enver) {
+	expected enver,
+	configLoader func() enver) {
 
 	envs := expected.ToEnv()
 	s.setEnvs(envs)
@@ -113,7 +116,7 @@ func (s *appConfigTestSuite) TestAppConfigAppEnvironmentValueProd() {
 
 	expected.Environment = AppEnvironmentProd
 
-	s.testConfigurationLoader(&expected, func() utils.Enver {
+	s.testConfigurationLoader(&expected, func() enver {
 		actual, err := LoadAppConfig()
 		require.NoError(s.T(), err)
 		return &actual
@@ -125,7 +128,7 @@ func (s *appConfigTestSuite) TestAppConfigAppEnvironmentValueDev() {
 
 	expected.Environment = AppEnvironmentDev
 
-	s.testConfigurationLoader(&expected, func() utils.Enver {
+	s.testConfigurationLoader(&expected, func() enver {
 		actual, err := LoadAppConfig()
 		require.NoError(s.T(), err)
 		return &actual
