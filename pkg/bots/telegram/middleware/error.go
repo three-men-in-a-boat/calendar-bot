@@ -41,8 +41,11 @@ func NewErrorHandler(logger *zap.SugaredLogger) ErrorHandler {
 	}
 }
 
+func (eh ErrorHandler) Logger() *zap.SugaredLogger {
+	return eh.logger
+}
+
 func (eh ErrorHandler) HandleMsg(message *telebot.Message, err error) {
-	// TODO(nickeskov): add chatID, msgID and eh.logger
 	tge := tgError{
 		inner:         err,
 		additionalMsg: "error from message handler",
@@ -51,7 +54,7 @@ func (eh ErrorHandler) HandleMsg(message *telebot.Message, err error) {
 	if message.Chat != nil {
 		tge.chatID = &message.Chat.ID
 	}
-	eh.LogErr(&tge)
+	eh.logErr(&tge)
 }
 
 func (eh ErrorHandler) HandleCallback(callback *telebot.Callback, err error) {
@@ -67,10 +70,10 @@ func (eh ErrorHandler) HandleCallback(callback *telebot.Callback, err error) {
 			tge.chatID = &msg.Chat.ID
 		}
 	}
-	eh.LogErr(&tge)
+	eh.logErr(&tge)
 }
 
-func (eh ErrorHandler) LogErr(err error) {
+func (eh ErrorHandler) logErr(err error) {
 	eh.logger.Error(err)
 }
 
