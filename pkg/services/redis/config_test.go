@@ -2,7 +2,6 @@ package redis
 
 import (
 	"github.com/bxcodec/faker/v3"
-	"github.com/calendar-bot/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,6 +10,10 @@ import (
 	"strconv"
 	"testing"
 )
+
+type enver interface {
+	ToEnv() map[string]string
+}
 
 type redisConfigTestSuite struct {
 	suite.Suite
@@ -22,8 +25,8 @@ func TestInit(t *testing.T) {
 }
 
 func (s *redisConfigTestSuite) testConfigurationLoader(
-	expected utils.Enver,
-	configLoader func() utils.Enver) {
+	expected enver,
+	configLoader func() enver) {
 
 	envs := expected.ToEnv()
 	s.setEnvs(envs)
@@ -54,7 +57,7 @@ func (s *redisConfigTestSuite) TestRedisConfig() {
 
 	expected = NewConfig(expected.Address, expected.Password, expected.DB)
 
-	s.testConfigurationLoader(&expected, func() utils.Enver {
+	s.testConfigurationLoader(&expected, func() enver {
 		actual, err := LoadRedisConfig()
 		require.NoError(s.T(), err)
 		return &actual

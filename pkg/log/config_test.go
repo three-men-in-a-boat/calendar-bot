@@ -2,13 +2,16 @@ package log
 
 import (
 	"github.com/bxcodec/faker/v3"
-	"github.com/calendar-bot/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"os"
 	"testing"
 )
+
+type enver interface {
+	ToEnv() map[string]string
+}
 
 type logConfigTestSuite struct {
 	suite.Suite
@@ -20,8 +23,8 @@ func TestInit(t *testing.T) {
 }
 
 func (s *logConfigTestSuite) testConfigurationLoader(
-	expected utils.Enver,
-	configLoader func() utils.Enver) {
+	expected enver,
+	configLoader func() enver) {
 
 	envs := expected.ToEnv()
 	s.setEnvs(envs)
@@ -50,7 +53,7 @@ func (s *logConfigTestSuite) TestLogConfig() {
 	expected := &Config{}
 	require.NoError(s.T(), faker.FakeData(expected))
 
-	s.testConfigurationLoader(expected, func() utils.Enver {
+	s.testConfigurationLoader(expected, func() enver {
 		actual := LoadLogConfig()
 		return &actual
 	})
