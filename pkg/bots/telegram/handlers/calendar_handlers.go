@@ -116,7 +116,7 @@ func (ch *CalendarHandlers) HandleToday(m *tb.Message) {
 		title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
 	}
 
-	if events != nil || len(events.Data.Events) > 0 {
+	if events != nil && len(events.Data.Events) > 0 {
 		_, err := ch.handler.bot.Send(m.Chat, title, &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
@@ -2514,7 +2514,7 @@ func (ch *CalendarHandlers) handleDateText(m *tb.Message, session *types.BotRedi
 			events.Data.Events = events.Data.Events[:i]
 		}
 
-		if events != nil || len(events.Data.Events) > 0 {
+		if events != nil && len(events.Data.Events) > 0 {
 			title := calendarMessages.GetDateTitle(parseDate.Date)
 			if m.Chat.Type != tb.ChatPrivate {
 				title += calendarMessages.AddNameBold(m.Sender.FirstName + " " + m.Sender.LastName)
