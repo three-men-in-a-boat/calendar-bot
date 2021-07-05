@@ -19,7 +19,7 @@ const (
 	eventPlaceText                 = "\n<u>Где:</u>\n\n📍 %s\n"
 	eventOrganizerText             = "\nСоздатель - <b>%s</b> (%s)\n"
 	eventSplitLine                 = "---------------\n"
-	eventCalendarText              = "🗓 Календарь <b>%s</b>"
+	EventCalendarText              = "🗓 Календарь <b>%s</b>"
 	eventAttendeesHeaderText       = "<u><i>Участники:</i></u>\n\n"
 	eventAttendeeText              = "%s (%s) "
 	eventAttendeeStatusAccepted    = "✅\n"
@@ -176,7 +176,7 @@ func parseDateFullDay(event *types.Event) []interface{} {
 	return []interface{}{fromDate, toDate}
 }
 
-func SingleEventShortText(event *types.Event) string {
+func SingleEventShortText(event *types.Event, isCalendarSend bool) string {
 	shortEventText := ""
 	title := event.Title
 	if title == "" {
@@ -188,9 +188,11 @@ func SingleEventShortText(event *types.Event) string {
 	} else {
 		shortEventText += fmt.Sprintf(eventTimeFullDay, parseDateFullDay(event)...)
 	}
-	shortEventText += eventSplitLine
-	shortEventText += fmt.Sprintf(eventCalendarText, event.Calendar.Title)
 
+	if isCalendarSend {
+		shortEventText += eventSplitLine
+		shortEventText += fmt.Sprintf(EventCalendarText, event.Calendar.Title)
+	}
 	return shortEventText
 }
 
@@ -261,7 +263,7 @@ func SingleEventFullText(event *types.Event) string {
 
 	if event.Calendar.Title != "" {
 		fullEventText += eventSplitLine
-		fullEventText += fmt.Sprintf(eventCalendarText, event.Calendar.Title)
+		fullEventText += fmt.Sprintf(EventCalendarText, event.Calendar.Title)
 	}
 
 	return fullEventText

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/calendar-bot/pkg/bots/telegram"
 	"github.com/calendar-bot/pkg/bots/telegram/inline_keyboards/calendarInlineKeyboards"
 	"github.com/calendar-bot/pkg/bots/telegram/keyboards/calendarKeyboards"
@@ -21,6 +22,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -186,7 +188,7 @@ func (ch *CalendarHandlers) HandleNext(m *tb.Message) {
 				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
 			}
 		}
-		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.SingleEventShortText(event), &tb.SendOptions{
+		_, err = ch.handler.bot.Send(m.Chat, calendarMessages.SingleEventShortText(event, true), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				InlineKeyboard: inlineKeyboard,
@@ -914,7 +916,7 @@ func (ch *CalendarHandlers) HandleShowLess(c *tb.Callback) {
 	if err != nil {
 		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
 	}
-	_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventShortText(event),
+	_, err = ch.handler.bot.Edit(c.Message, calendarMessages.SingleEventShortText(event, false),
 		&tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
@@ -1912,6 +1914,8 @@ func (ch *CalendarHandlers) setSession(session *types.BotRedisSession, user *tb.
 	return nil
 }
 func (ch *CalendarHandlers) sendShortEvents(events *types.Events, chat *tb.Chat) {
+	*events = ch.sortEvents(*events)
+	prevCalendarName := ""
 	for _, event := range *events {
 		var err error
 		var keyboard [][]tb.InlineButton = nil
@@ -1922,7 +1926,18 @@ func (ch *CalendarHandlers) sendShortEvents(events *types.Events, chat *tb.Chat)
 					event.Calendar.UID, event.Uid, err)
 			}
 		}
-		_, err = ch.handler.bot.Send(chat, calendarMessages.SingleEventShortText(&event), &tb.SendOptions{
+		if event.Calendar.Title != prevCalendarName {
+			_, err = ch.handler.bot.Send(
+				chat,
+				fmt.Sprintf(calendarMessages.EventCalendarText, event.Calendar.Title),
+				&tb.SendOptions{ParseMode: tb.ModeHTML},
+			)
+			if err != nil {
+				customerrors.HandlerError(err, &chat.ID, nil)
+			}
+			prevCalendarName = event.Calendar.Title
+		}
+		_, err = ch.handler.bot.Send(chat, calendarMessages.SingleEventShortText(&event, false), &tb.SendOptions{
 			ParseMode: tb.ModeHTML,
 			ReplyMarkup: &tb.ReplyMarkup{
 				InlineKeyboard: keyboard,
@@ -1932,6 +1947,35 @@ func (ch *CalendarHandlers) sendShortEvents(events *types.Events, chat *tb.Chat)
 			customerrors.HandlerError(err, &chat.ID, nil)
 		}
 	}
+}
+func (ch *CalendarHandlers) sortEvents(events types.Events) types.Events {
+	var personalEvents types.Events
+	var publicEvents types.Events
+	var holidayEvents types.Events
+
+	sort.SliceStable(events, func(i, j int) bool {
+		return events[i].Calendar.Title < events[j].Calendar.Title
+	})
+
+	for _, event := range events {
+		switch event.Calendar.Type {
+		case telegram.CalendarTypePersonal:
+			personalEvents = append(personalEvents, event)
+			break
+		case telegram.CalendarTypeHoliday:
+			holidayEvents = append(holidayEvents, event)
+			break
+		default:
+			publicEvents = append(publicEvents, event)
+		}
+	}
+
+	var output types.Events
+	output = append(output, personalEvents...)
+	output = append(output, publicEvents...)
+	output = append(output, holidayEvents...)
+
+	return output
 }
 func (ch *CalendarHandlers) getEventByIdForCallback(c *tb.Callback, senderID int) *types.Event {
 	calUid, err := ch.redisDB.Get(context.TODO(), c.Data).Result()
