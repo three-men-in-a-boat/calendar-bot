@@ -1994,10 +1994,8 @@ func (ch *CalendarHandlers) sortEvents(events types.Events) types.Events {
 		switch event.Calendar.Type {
 		case telegram.CalendarTypePersonal:
 			personalEvents = append(personalEvents, event)
-			break
 		case telegram.CalendarTypeHoliday:
 			holidayEvents = append(holidayEvents, event)
-			break
 		default:
 			publicEvents = append(publicEvents, event)
 		}
