@@ -128,7 +128,7 @@ const (
 	CreateEventFindTimeNoButton  = "⏰ Создать на конкретное время"
 
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
-		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
+		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start в личном чате с ботом"
 	middlewaresGroupAlertBase  = "Вы уверены, что хотите показать "
 	middlewaresGroupAlertToday = "<b>ВСЕМ</b> свои события на сегодня?"
 	middlewaresGroupAlertNext  = "<b>ВСЕМ</b> своё следующее событие на сегодня?"

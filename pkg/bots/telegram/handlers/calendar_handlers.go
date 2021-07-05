@@ -1556,6 +1556,16 @@ func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
 }
 func (ch *CalendarHandlers) FindTimeAdd(c *tb.Callback) {
 
+	if !ch.AuthMiddleware(c.Sender, c.Message.Chat) {
+		err := ch.handler.bot.Respond(c, &tb.CallbackResponse{
+			CallbackID: c.ID,
+		})
+		if err != nil {
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+		}
+		return
+	}
+
 	userId, err := strconv.Atoi(c.Data)
 	if err != nil {
 		ch.handler.SendError(c.Message.Chat, err)
