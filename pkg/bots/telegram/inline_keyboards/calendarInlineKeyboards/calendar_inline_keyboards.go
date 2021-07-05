@@ -172,44 +172,44 @@ func FindTimeLengthButtons() [][]tb.InlineButton {
 			{
 				Text:   "30 мин",
 				Unique: telegram.FindTimeLength,
-				Data:   "30m",
+				Data:   "30m|30 мин",
 			},
 			{
 				Text:   "1 час",
 				Unique: telegram.FindTimeLength,
-				Data:   "1h",
+				Data:   "1h|1 час",
 			},
 			{
 				Text:   "1,5 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "1h30m",
+				Data:   "1h30m|1,5 часа",
 			},
 			{
 				Text:   "2 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "2h",
+				Data:   "2h|2 часа",
 			},
 		},
 		{
 			{
 				Text:   "2,5 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "2h30m",
+				Data:   "2h30m|2,5 часа",
 			},
 			{
 				Text:   "3 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "3h",
+				Data:   "3h|3 часа",
 			},
 			{
 				Text:   "4 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "4h",
+				Data:   "4h|4 часа",
 			},
 			{
 				Text:   "5 часов",
 				Unique: telegram.FindTimeLength,
-				Data:   "5h",
+				Data:   "5h|5 часов",
 			},
 		},
 

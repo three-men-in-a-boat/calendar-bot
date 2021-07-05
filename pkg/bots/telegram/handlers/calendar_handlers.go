@@ -1537,7 +1537,9 @@ func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
 		return
 	}
 
-	d, _ := time.ParseDuration(c.Data)
+	data := strings.Split(c.Data, "|")
+
+	d, _ := time.ParseDuration(data[0])
 
 	session.FindTimeDuration = d
 
@@ -1550,6 +1552,27 @@ func (ch *CalendarHandlers) HandleFindTimeLength(c *tb.Callback) {
 	err = ch.handler.bot.Delete(c.Message)
 	if err != nil {
 		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+	}
+
+	err = ch.handler.bot.Delete(&session.FindTimeInfoMsg)
+	if err != nil {
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+	}
+
+	msg, err := ch.handler.bot.Send(c.Message.Chat, calendarMessages.GetFindTimeInfoTextWithRange(
+		session.FreeBusy.From, session.FreeBusy.To, data[1]), &tb.SendOptions{
+		ParseMode: tb.ModeHTML,
+	})
+
+	if err != nil {
+		customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+	} else {
+		session.FindTimeInfoMsg = utils.InitCustomEditable(msg.MessageSig())
+		err = ch.setSession(session, c.Sender, c.Message.Chat)
+		if err != nil {
+			ch.handler.SendError(c.Message.Chat, err)
+			customerrors.HandlerError(err, &c.Message.Chat.ID, &c.Message.ID)
+		}
 	}
 
 	ch.sendOrUpdateVote(session, c.Message.Chat, c.Sender, c.Sender, c.Message.ReplyTo, false)
@@ -2438,7 +2461,7 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 				return
 			}
 
-			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.GetFindTimeInfoText(session.FreeBusy.From,
+			msg, err := ch.handler.bot.Send(m.Chat, calendarMessages.GetFindTimeInfoText(session.FreeBusy.From,
 				session.FreeBusy.To),
 				&tb.SendOptions{
 					ParseMode: tb.ModeHTML,
@@ -2448,6 +2471,13 @@ func (ch *CalendarHandlers) handleFindTimeText(m *tb.Message, session *types.Bot
 				})
 			if err != nil {
 				customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+			} else {
+				session.FindTimeInfoMsg = utils.InitCustomEditable(msg.MessageSig())
+				err = ch.setSession(session, m.Sender, m.Chat)
+				if err != nil {
+					ch.handler.SendError(m.Chat, err)
+					customerrors.HandlerError(err, &m.Chat.ID, &m.ID)
+				}
 			}
 
 			_, err = ch.handler.bot.Send(m.Chat, calendarMessages.FindTimeChooseDayPartHeader,

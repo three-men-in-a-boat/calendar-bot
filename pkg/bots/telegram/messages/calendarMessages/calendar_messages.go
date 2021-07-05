@@ -38,6 +38,7 @@ const (
 	findTimeInfoHeader          = "<b>Поиск будет производиться этом временном промежутке </b>\n\n"
 	findTimeStartTime           = "<b>Начало поиска: </b> %s\n"
 	findTimeStopTime            = "<b>Окончание поиска: </b> %s"
+	findTimeDuration            = "<b>Продолжительность события: </b> %s"
 	findTimeTextFormat          = "%s с %s до %s"
 	FindTimeChooseDayPartHeader = "<b>Выберите период дня для события</b>\n\n"
 	FindTimeChooseLengthHeader  = "<b>Выберите продолжительность события</b>\n\n"
@@ -432,6 +433,13 @@ func GetFindTimeStopText(time time.Time) string {
 func GetFindTimeInfoText(timeFrom, timeTo time.Time) string {
 	return findTimeInfoHeader + fmt.Sprintf(findTimeStartTime, monday.Format(timeFrom, formatDate, locale)) +
 		fmt.Sprintf(findTimeStopTime, monday.Format(timeTo, formatDate, locale))
+}
+
+func GetFindTimeInfoTextWithRange(timeFrom, timeTo time.Time, dur string) string {
+	return findTimeInfoHeader + fmt.Sprintf(findTimeStartTime, monday.Format(timeFrom, formatDate, locale)) +
+		fmt.Sprintf(findTimeStopTime, monday.Format(timeTo, formatDate, locale)) + "\n" +
+		fmt.Sprintf(findTimeDuration, dur)
+
 }
 
 func GenOptionsForPoll(spans spaniel.Spans) []string {
