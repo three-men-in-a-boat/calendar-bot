@@ -2839,18 +2839,18 @@ func (ch *CalendarHandlers) ParseEvent(m *tb.Message) *types.ParseEventResp {
 }
 func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *tb.Chat, userAdd *tb.User, userInit *tb.User, msgToReply *tb.Message, sendPoll bool) {
 
-	session.Users = append(session.Users, int64(userAdd.ID))
-
-	emails, err := ch.userUseCase.TryGetUsersEmailsByTelegramUserIDs(session.Users)
-	if err != nil {
-		ch.handler.SendError(c, err)
-		customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
-		return
-	}
-
-	session.FreeBusy.Users = emails
-
 	if !sendPoll {
+
+		session.Users = append(session.Users, int64(userAdd.ID))
+
+		emails, err := ch.userUseCase.TryGetUsersEmailsByTelegramUserIDs(session.Users)
+		if err != nil {
+			ch.handler.SendError(c, err)
+			customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
+			return
+		}
+
+		session.FreeBusy.Users = emails
 
 		if session.PollMsg.ChatID == 0 {
 			msg, err := ch.handler.bot.Send(c, calendarMessages.GenFindTimePollHeader(emails), &tb.SendOptions{
@@ -2891,6 +2891,12 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 			return
 		}
 
+		err = ch.setSession(session, userInit, c)
+		if err != nil {
+			ch.handler.SendError(c, err)
+			customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
+		}
+
 		return
 	}
 
@@ -2928,6 +2934,13 @@ func (ch *CalendarHandlers) sendOrUpdateVote(session *types.BotRedisSession, c *
 		if err != nil {
 			customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
 		}
+	}
+
+	emails, err := ch.userUseCase.TryGetUsersEmailsByTelegramUserIDs(session.Users)
+	if err != nil {
+		ch.handler.SendError(c, err)
+		customerrors.HandlerError(err, &c.ID, &msgToReply.ID)
+		return
 	}
 
 	poll := tb.Poll{
