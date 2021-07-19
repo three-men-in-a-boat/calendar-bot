@@ -27,6 +27,9 @@ const (
 	CalendarInternalEmail = "calendar@internal"
 	MailRuDomain          = "mail.ru"
 	MailRuCalendarName    = "Календарь Mail"
+
+	CalendarTypePersonal = "PERSONAL"
+	CalendarTypeHoliday  = "HOLIDAYS"
 )
 
 const (

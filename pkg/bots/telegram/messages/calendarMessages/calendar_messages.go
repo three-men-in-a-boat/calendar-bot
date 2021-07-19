@@ -13,13 +13,13 @@ import (
 const (
 	eventNameText                  = "<b>%s</b>\n\n"
 	eventNoTitleText               = "Без названия"
-	eventTimeText                  = "⏰ %s, <u>%s</u> - %s<u>%s</u>\n"
-	eventTimeFullDay               = "⏰ %s %s, <u>Весь день</u>\n"
-	eventDateStart                 = "⏰ <b>Начало:</b> %s %s\n"
-	eventPlaceText                 = "📍 %s\n"
-	eventOrganizerText             = "Создатель - <b>%s</b> (%s)\n"
+	eventTimeText                  = "<u>Когда:</u>\n\n⏰ %s, <u>%s</u> - %s<u>%s</u>\n"
+	eventTimeFullDay               = "<u>Когда:</u>\n\n⏰ %s %s, <u>Весь день</u>\n"
+	eventDateStart                 = "<u>Когда:</u>\n\n⏰ <b>Начало:</b> %s %s\n"
+	eventPlaceText                 = "\n<u>Где:</u>\n\n📍 %s\n"
+	eventOrganizerText             = "\nСоздатель - <b>%s</b> (%s)\n"
 	eventSplitLine                 = "---------------\n"
-	eventCalendarText              = "🗓 Календарь <b>%s</b>"
+	EventCalendarText              = "🗓 Календарь <b>%s</b>"
 	eventAttendeesHeaderText       = "<u><i>Участники:</i></u>\n\n"
 	eventAttendeeText              = "%s (%s) "
 	eventAttendeeStatusAccepted    = "✅\n"
@@ -38,6 +38,7 @@ const (
 	findTimeInfoHeader          = "<b>Поиск будет производиться этом временном промежутке </b>\n\n"
 	findTimeStartTime           = "<b>Начало поиска: </b> %s\n"
 	findTimeStopTime            = "<b>Окончание поиска: </b> %s"
+	findTimeDuration            = "<b>Продолжительность события: </b> %s"
 	findTimeTextFormat          = "%s с %s до %s"
 	FindTimeChooseDayPartHeader = "<b>Выберите период дня для события</b>\n\n"
 	FindTimeChooseLengthHeader  = "<b>Выберите продолжительность события</b>\n\n"
@@ -76,14 +77,15 @@ const (
 
 	createEventInitText = "<b>Введите время начала события</b>\n\nДля выбора даты и времени начала события" +
 		" воспользуйтесь кнопками или введите дату в формате <pre>&lt;число&gt; &lt;название месяца&gt; " +
-		"&lt;ЧЧ:ММ&gt;</pre> (например: <pre>22 марта 15:00</pre>)"
+		"&lt;ЧЧ:ММ&gt;</pre> (например: 22 марта 15:00)"
 	createEventToText = "<b>Введите время окончания события</b>\n\nДля продолжительности события" +
 		" воспользуйтесь кнопками или введите дату оконочания в формате <pre>&lt;число&gt; &lt;название месяца&gt; " +
-		"&lt;ЧЧ:ММ&gt;</pre> (например: <pre>22 марта 15:00</pre>)"
+		"&lt;ЧЧ:ММ&gt;</pre> (например: 22 марта 15:00)"
 	createEventTitleText    = "<b>Введите название события</b>"
 	CreateEventDescText     = "<b>Введите описание события</b>"
 	CreateEventLocationText = "<b>Введите место события</b>"
-	CreateEventUserText     = "<b>Введите email пользователя, которого хотите добавить</b>"
+	CreateEventUserText     = "<b>Введите email пользователя, которого хотите добавить. Можно ввести несколько" +
+		" через запятую</b>"
 
 	createEventCreateText   = "Создать событие"
 	createEventCreatedText  = "Событие успешно создано"
@@ -127,7 +129,7 @@ const (
 	CreateEventFindTimeNoButton  = "⏰ Создать на конкретное время"
 
 	middlewaresUserNotAuthenticated = "Вы не можете воспользоваться данной функцией пока не авторизуетесь в боте через" +
-		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start."
+		" аккаунт mail.ru. Для авторизации воспользуйтесь командой /start в личном чате с ботом"
 	middlewaresGroupAlertBase  = "Вы уверены, что хотите показать "
 	middlewaresGroupAlertToday = "<b>ВСЕМ</b> свои события на сегодня?"
 	middlewaresGroupAlertNext  = "<b>ВСЕМ</b> своё следующее событие на сегодня?"
@@ -175,7 +177,7 @@ func parseDateFullDay(event *types.Event) []interface{} {
 	return []interface{}{fromDate, toDate}
 }
 
-func SingleEventShortText(event *types.Event) string {
+func SingleEventShortText(event *types.Event, isCalendarSend bool) string {
 	shortEventText := ""
 	title := event.Title
 	if title == "" {
@@ -187,9 +189,11 @@ func SingleEventShortText(event *types.Event) string {
 	} else {
 		shortEventText += fmt.Sprintf(eventTimeFullDay, parseDateFullDay(event)...)
 	}
-	shortEventText += eventSplitLine
-	shortEventText += fmt.Sprintf(eventCalendarText, event.Calendar.Title)
 
+	if isCalendarSend {
+		shortEventText += eventSplitLine
+		shortEventText += fmt.Sprintf(EventCalendarText, event.Calendar.Title)
+	}
 	return shortEventText
 }
 
@@ -260,7 +264,7 @@ func SingleEventFullText(event *types.Event) string {
 
 	if event.Calendar.Title != "" {
 		fullEventText += eventSplitLine
-		fullEventText += fmt.Sprintf(eventCalendarText, event.Calendar.Title)
+		fullEventText += fmt.Sprintf(EventCalendarText, event.Calendar.Title)
 	}
 
 	return fullEventText
@@ -429,6 +433,13 @@ func GetFindTimeStopText(time time.Time) string {
 func GetFindTimeInfoText(timeFrom, timeTo time.Time) string {
 	return findTimeInfoHeader + fmt.Sprintf(findTimeStartTime, monday.Format(timeFrom, formatDate, locale)) +
 		fmt.Sprintf(findTimeStopTime, monday.Format(timeTo, formatDate, locale))
+}
+
+func GetFindTimeInfoTextWithRange(timeFrom, timeTo time.Time, dur string) string {
+	return findTimeInfoHeader + fmt.Sprintf(findTimeStartTime, monday.Format(timeFrom, formatDate, locale)) +
+		fmt.Sprintf(findTimeStopTime, monday.Format(timeTo, formatDate, locale)) + "\n" +
+		fmt.Sprintf(findTimeDuration, dur)
+
 }
 
 func GenOptionsForPoll(spans spaniel.Spans) []string {

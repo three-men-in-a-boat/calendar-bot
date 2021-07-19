@@ -175,6 +175,7 @@ type BotRedisSession struct {
 	InfoMsg          utils.CustomEditable `json:"info_msg"`
 	PollMsg          utils.CustomEditable `json:"poll_msg"`
 	InlineMsg        utils.CustomEditable `json:"inline_msg"`
+	FindTimeInfoMsg  utils.CustomEditable `json:"find_time_info_msg"`
 }
 
 type ParseDateReq struct {

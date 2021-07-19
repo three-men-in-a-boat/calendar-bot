@@ -6,6 +6,7 @@ import (
 	"github.com/calendar-bot/pkg/bots/telegram/messages/calendarMessages"
 	"github.com/calendar-bot/pkg/types"
 	"github.com/go-redis/redis/v8"
+	"github.com/goodsign/monday"
 	tb "gopkg.in/tucnak/telebot.v2"
 	"strconv"
 	"strings"
@@ -171,44 +172,44 @@ func FindTimeLengthButtons() [][]tb.InlineButton {
 			{
 				Text:   "30 мин",
 				Unique: telegram.FindTimeLength,
-				Data:   "30m",
+				Data:   "30m|30 мин",
 			},
 			{
 				Text:   "1 час",
 				Unique: telegram.FindTimeLength,
-				Data:   "1h",
+				Data:   "1h|1 час",
 			},
 			{
 				Text:   "1,5 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "1h30m",
+				Data:   "1h30m|1,5 часа",
 			},
 			{
 				Text:   "2 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "2h",
+				Data:   "2h|2 часа",
 			},
 		},
 		{
 			{
 				Text:   "2,5 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "2h30m",
+				Data:   "2h30m|2,5 часа",
 			},
 			{
 				Text:   "3 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "3h",
+				Data:   "3h|3 часа",
 			},
 			{
 				Text:   "4 часа",
 				Unique: telegram.FindTimeLength,
-				Data:   "4h",
+				Data:   "4h|4 часа",
 			},
 			{
 				Text:   "5 часов",
 				Unique: telegram.FindTimeLength,
-				Data:   "5h",
+				Data:   "5h|5 часов",
 			},
 		},
 
@@ -270,40 +271,46 @@ func FindTimeAddUser(sender int) [][]tb.InlineButton {
 }
 
 func GetDateFastCommand(cancelText bool) [][]tb.InlineButton {
+	const (
+		formatDate = "2 January"
+		locale     = monday.LocaleRuRU
+	)
+
 	unique := telegram.HandleGroupText
+	now := time.Now()
 	ret := [][]tb.InlineButton{
 		{
 			{
-				Text:   "Сегодня",
+				Text:   monday.Format(now, formatDate, locale) + ", Сегодня",
 				Unique: unique,
-				Data:   "Сегодня",
+				Data:   monday.Format(now, formatDate, locale) + ", Сегодня",
 			},
 			{
-				Text:   "Завтра",
+				Text:   monday.Format(now.AddDate(0, 0, 1), formatDate, locale) + ", Завтра",
 				Unique: unique,
-				Data:   "Завтра",
+				Data:   monday.Format(now.AddDate(0, 0, 1), formatDate, locale) + ", Завтра",
 			},
 			{
-				Text:   "Через два дня",
+				Text:   monday.Format(now.AddDate(0, 0, 2), formatDate, locale),
 				Unique: unique,
-				Data:   "Через два дня",
+				Data:   monday.Format(now.AddDate(0, 0, 2), formatDate, locale),
 			},
 		},
 		{
 			{
-				Text:   "Через три дня",
+				Text:   monday.Format(now.AddDate(0, 0, 3), formatDate, locale),
 				Unique: unique,
-				Data:   "Через три дня",
+				Data:   monday.Format(now.AddDate(0, 0, 3), formatDate, locale),
 			},
 			{
-				Text:   "Через четыре дня",
+				Text:   monday.Format(now.AddDate(0, 0, 4), formatDate, locale),
 				Unique: unique,
-				Data:   "Через четыре дня",
+				Data:   monday.Format(now.AddDate(0, 0, 4), formatDate, locale),
 			},
 			{
-				Text:   "Через пять дней",
+				Text:   monday.Format(now.AddDate(0, 0, 5), formatDate, locale),
 				Unique: unique,
-				Data:   "Через пять дней",
+				Data:   monday.Format(now.AddDate(0, 0, 5), formatDate, locale),
 			},
 		},
 	}
@@ -473,7 +480,7 @@ func GetCreateDuration() [][]tb.InlineButton {
 }
 
 func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton {
-	btns := make([][]tb.InlineButton, 4)
+	btns := make([][]tb.InlineButton, 5)
 	for i := range btns {
 		btns[i] = make([]tb.InlineButton, 2)
 	}
@@ -563,6 +570,12 @@ func GetCreateOptionButtons(session *types.BotRedisSession) [][]tb.InlineButton 
 			Unique: unique,
 			Data:   calendarMessages.GetCreateFullDay(),
 		}
+	}
+
+	btns[4][0] = tb.InlineButton{
+		Text:   calendarMessages.GetCreateCancelText(),
+		Unique: unique,
+		Data:   calendarMessages.GetCreateCancelText(),
 	}
 
 	return btns
