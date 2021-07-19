@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "database/sql"
 	"github.com/asaskevich/govalidator"
+	"github.com/calendar-bot/pkg/bots/telegram"
 	teleHandlers "github.com/calendar-bot/pkg/bots/telegram/handlers"
 	"github.com/calendar-bot/pkg/config"
 	eRepo "github.com/calendar-bot/pkg/events/repository"
@@ -80,7 +81,7 @@ func main() {
 
 	botSettings := tb.Settings{
 		Token:  appConf.BotToken,
-		Poller: webhook,
+		Poller: telegram.NewPollerWithTotalHitsMetric(webhook),
 	}
 
 	if appConf.Environment == config.AppEnvironmentDev {
@@ -123,7 +124,7 @@ func main() {
 	allHandler.telegramBaseHandlers.InitHandlers(bot)
 	allHandler.telegramCalendarHandlers.InitHandlers(bot)
 
-	echoProm.NewPrometheus("http", nil).Use(server)
+	echoProm.NewPrometheus("calendar-bot", nil).Use(server)
 
 	go func() { zap.S().Fatal(server.Start(appConf.Address)) }()
 
