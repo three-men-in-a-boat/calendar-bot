@@ -14,6 +14,13 @@ var (
 	AccessTokenDoesNotExist = Error{errors.New("OAuth access token does not exist in redis")}
 )
 
+const (
+	APIResponseErrInvalidClient             = 1
+	APIResponseErrInvalidRequest            = 2
+	APIResponseErrInvalidUsernameOrPassword = 3
+	APIResponseErrTokenNotFound             = 6
+)
+
 type APIResponseErr struct {
 	ErrorName        string `json:"error,omitempty"`
 	ErrorCode        int    `json:"error_code,omitempty"`
