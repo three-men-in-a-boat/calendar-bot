@@ -57,7 +57,7 @@ func (uuc *UserUseCase) GetOrRefreshOAuthAccessTokenByTelegramUserID(telegramID 
 
 	oAuthToken, err := uuc.getOAuthAccessTokenByTelegramUserID(telegramID)
 	switch {
-	case err == oauth.AccessTokenDoesNotExist:
+	case errors.Is(err, oauth.AccessTokenDoesNotExist):
 		oAuthToken, err = uuc.refreshOAuthTokenByTelegramUserID(telegramID)
 		if err != nil {
 			switch concreteErr := err.(type) {
@@ -73,7 +73,6 @@ func (uuc *UserUseCase) GetOrRefreshOAuthAccessTokenByTelegramUserID(telegramID 
 	return oAuthToken, nil
 }
 
-// TODO(nickeskov): add timezone
 func (uuc *UserUseCase) TelegramCreateAuthenticatedUser(tgUserID int64, mailAuthCode string) (err error) {
 	timer := prometheus.NewTimer(metricTelegramCreateAuthenticatedUserDuration)
 	defer func() {
@@ -204,30 +203,87 @@ func (uuc *UserUseCase) IsUserAuthenticatedByTelegramUserID(telegramID int64) (i
 		timer.ObserveDuration()
 	}()
 
-	_, err = uuc.getOAuthAccessTokenByTelegramUserID(telegramID)
-	if err == nil {
+	// nickeskov: validate user authentication if access token stored in local tokens storage
+	switch accessToken, err := uuc.getOAuthAccessTokenByTelegramUserID(telegramID); {
+	case err == nil:
+		isValid, err := uuc.isValidOAuthAccessToken(accessToken)
+		if err != nil {
+			return false, errors.Wrapf(err,
+				"failed to check is user authenticated by telegram user ID %d", telegramID)
+		}
+		if !isValid {
+			// nickeskov: user revoked his token
+			if err := uuc.DeleteLocalAuthenticatedUserByTelegramUserID(telegramID); err != nil {
+				return false, errors.Wrapf(err,
+					"failed to delete user who revoked his token, telegram user ID %d", telegramID)
+			}
+			return false, nil
+		}
+		// nickeskov: token is valid and user is authenticated
 		return true, nil
-	}
-	if err != oauth.AccessTokenDoesNotExist {
-		return false, errors.WithStack(err)
+	case errors.Is(err, oauth.AccessTokenDoesNotExist):
+		// nickeskov: going to the next validation step
+	default:
+		// nickeskov: unknown or unexpected error
+		return false, errors.Wrapf(err,
+			"failed to get saved oauth access token for telegram user ID %d", telegramID)
 	}
 
-	_, err = uuc.userRepository.GetOAuthRefreshTokenByTelegramUserID(telegramID)
-	if err == nil {
-		// TODO(nickeskov): maybe need refreshOAuthTokenByTelegramUserID?
+	// nickeskov: validate user authentication if access token was outdated
+	switch _, err := uuc.refreshOAuthTokenByTelegramUserID(telegramID); {
+	case err == nil:
+		// nickeskov: we've just refreshed access token and user is definitely authenticated
 		return true, nil
-	}
-	if err == repository.UserDoesNotExist {
+	case errors.Is(err, repository.UserDoesNotExist):
+		// nickeskov: user isn't authenticated because he doesn't exist
 		return false, nil
+	case isBadTokenError(err):
+		// nickeskov: user revoked his token
+		if err := uuc.DeleteLocalAuthenticatedUserByTelegramUserID(telegramID); err != nil {
+			return false, errors.Wrapf(err,
+				"failed to delete user who revoked his token, telegram user ID %d", telegramID)
+		}
+		return false, nil
+	default:
+		// nickeskov: unknown or unexpected error
+		return false, errors.Wrapf(err,
+			"failed to refresh oauth token by telegram user ID %d", telegramID)
 	}
+}
 
-	return false, errors.WithStack(err)
+func (uuc *UserUseCase) isValidOAuthAccessToken(accessToken string) (bool, error) {
+	// nickeskov: trying to fetch UserInfo by token to check access token validity and revoke status
+	_, err := uuc.oauthService.GetUserInfo(accessToken)
+	switch {
+	case err == nil:
+		return true, nil
+	case isBadTokenError(err):
+		return false, nil
+	default:
+		return false, errors.Wrap(err, "failed to validate access token")
+	}
+}
+
+func isBadTokenError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if err, ok := err.(*oauth.APIResponseErr); ok {
+		switch err.ErrorCode {
+		case oauth.APIResponseErrTokenNotFound:
+			return true
+		case oauth.APIResponseErrInvalidRequest:
+			// TODO(nickeskov): I'm not sure in this case.
+			return true
+		}
+	}
+	return false
 }
 
 func (uuc *UserUseCase) refreshOAuthTokenByTelegramUserID(telegramID int64) (string, error) {
 	refreshToken, err := uuc.userRepository.GetOAuthRefreshTokenByTelegramUserID(telegramID)
 	switch {
-	case err == repository.UserDoesNotExist:
+	case errors.Is(err, repository.UserDoesNotExist):
 		return "", err
 	case err != nil:
 		return "", errors.WithStack(err)
@@ -235,7 +291,13 @@ func (uuc *UserUseCase) refreshOAuthTokenByTelegramUserID(telegramID int64) (str
 
 	tokenResp, err := uuc.oauthService.RenewAccessTokenByRefreshToken(refreshToken)
 	if err != nil {
-		return "", errors.Wrap(err, "refreshOAuthTokenByTelegramUserID")
+		switch err.(type) {
+		case *oauth.APIResponseErr:
+			return "", err
+		default:
+			return "", errors.Wrapf(err,
+				"failed to RenewAccessTokenByRefreshToken for telegram user ID %d", telegramID)
+		}
 	}
 
 	err = uuc.setOAuthAccessTokenByTelegramUserID(

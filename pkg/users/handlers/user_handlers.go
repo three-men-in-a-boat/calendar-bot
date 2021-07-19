@@ -58,7 +58,7 @@ func (uh *UserHandlers) telegramOAuth(ctx echo.Context) error {
 	}
 	if !isAuthenticated {
 		if err := uh.userUseCase.TelegramCreateAuthenticatedUser(telegramID, code); err != nil {
-			return errors.Wrapf(err, "cannot create and authetificate user wit telegramUserID=%d", telegramID)
+			return errors.Wrapf(err, "cannot create and autheticated user with telegramUserID=%d", telegramID)
 		}
 	}
 
